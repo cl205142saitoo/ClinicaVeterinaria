@@ -1,0 +1,87 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Usuario {
+  id        Int        @id @default(autoincrement())
+  nome      String
+  email     String     @unique
+  senhaHash String
+  role      String     @default("ATENDENTE")
+  ativo     Boolean    @default(true)
+  criadoEm  DateTime   @default(now())
+  consultas Consulta[]
+}
+
+model Cliente {
+  id         Int      @id @default(autoincrement())
+  nome       String
+  cpf        String   @unique
+  telefone   String
+  email      String?
+  cep        String
+  logradouro String
+  bairro     String
+  cidade     String
+  uf         String
+  aceiteLgpd Boolean  @default(true)
+  criadoEm   DateTime @default(now())
+  pets       Pet[]
+}
+
+model Pet {
+  id         Int        @id @default(autoincrement())
+  nome       String
+  especie    String
+  raca       String
+  peso       Float
+  nascimento String?
+  clienteId  Int
+  cliente    Cliente    @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  consultas  Consulta[]
+  anexos     Anexo[]
+}
+
+model Consulta {
+  id            Int      @id @default(autoincrement())
+  dataHora      DateTime
+  motivo        String
+  diagnostico   String?
+  status        String   @default("AGENDADA")
+  petId         Int
+  pet           Pet      @relation(fields: [petId], references: [id], onDelete: Cascade)
+  veterinarioId Int
+  veterinario   Usuario  @relation(fields: [veterinarioId], references: [id])
+}
+
+model Produto {
+  id            Int     @id @default(autoincrement())
+  nome          String
+  categoria     String
+  estoqueMinimo Int     @default(5)
+  precoBrl      Float
+  lotes         Lote[]
+}
+
+model Lote {
+  id         Int      @id @default(autoincrement())
+  codigo     String
+  validade   DateTime
+  quantidade Int
+  produtoId  Int
+  produto    Produto  @relation(fields: [produtoId], references: [id], onDelete: Cascade)
+}
+
+model Anexo {
+  id           Int    @id @default(autoincrement())
+  nomeArquivo  String
+  caminhoLocal String
+  tipo         String
+  petId        Int
+  pet          Pet    @relation(fields: [petId], references: [id], onDelete: Cascade)
+}

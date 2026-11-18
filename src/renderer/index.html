@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Clínica Veterinária - MVP</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f4f6f9; color: #333; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .card { background: white; padding: 16px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    input, select, button { padding: 8px; margin: 4px 0; width: 100%; box-sizing: border-box; }
+    button { background: #2563eb; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+    button.danger { background: #dc2626; width: auto; padding: 4px 8px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
+    th, td { border-bottom: 1px solid #ddd; padding: 8px; text-align: left; }
+  </style>
+</head>
+<body>
+  <h1>Clínica Veterinária - Gestão de Clientes e Pets</h1>
+  <div class="grid">
+    <div class="card">
+      <h2>Novo Cliente (com ViaCEP)</h2>
+      <input id="cNome" placeholder="Nome completo" />
+      <input id="cCpf" placeholder="CPF (único)" />
+      <input id="cTel" placeholder="Telefone" />
+      <div style="display:flex; gap:6px;">
+        <input id="cCep" placeholder="CEP (ex: 13600000)" />
+        <button type="button" onclick="buscarCep()" style="width:40%;">Buscar CEP</button>
+      </div>
+      <input id="cRua" placeholder="Logradouro" />
+      <input id="cBairro" placeholder="Bairro" />
+      <input id="cCidade" placeholder="Cidade" />
+      <input id="cUf" placeholder="UF" />
+      <label><input type="checkbox" id="cLgpd" checked style="width:auto;" /> Aceita termos LGPD</label>
+      <button onclick="salvarCliente()">Cadastrar Cliente</button>
+    </div>
+
+    <div class="card">
+      <h2>Novo Pet</h2>
+      <select id="pCliente"></select>
+      <input id="pNome" placeholder="Nome do Pet" />
+      <input id="pEspecie" placeholder="Espécie (Canino, Felino...)" />
+      <input id="pRaca" placeholder="Raça" />
+      <input id="pPeso" type="number" step="0.1" placeholder="Peso (kg)" />
+      <button onclick="salvarPet()">Cadastrar Pet</button>
+    </div>
+  </div>
+
+  <div class="grid" style="margin-top:20px;">
+    <div class="card">
+      <h3>Clientes Cadastrados</h3>
+      <table><thead><tr><th>Nome</th><th>Cidade</th><th>Pets</th><th>Ação</th></tr></thead><tbody id="tbClientes"></tbody></table>
+    </div>
+    <div class="card">
+      <h3>Pets Cadastrados</h3>
+      <table><thead><tr><th>Pet</th><th>Espécie/Raça</th><th>Tutor</th><th>Ação</th></tr></thead><tbody id="tbPets"></tbody></table>
+    </div>
+  </div>
+
+  <script>
+    async function buscarCep() {
+      try {
+        const end = await window.api.buscarCep(document.getElementById('cCep').value);
+        document.getElementById('cRua').value = end.logradouro;
+        document.getElementById('cBairro').value = end.bairro;
+        document.getElementById('cCidade').value = end.cidade;
+        document.getElementById('cUf').value = end.uf;
+      } catch (e) { alert(e.message); }
+    }
+
+    async function salvarCliente() {
+      try {
+        await window.api.criarCliente({
+          nome: document.getElementById('cNome').value,
+          cpf: document.getElementById('cCpf').value,
+          telefone: document.getElementById('cTel').value,
+          cep: document.getElementById('cCep').value,
+          logradouro: document.getElementById('cRua').value,
+          bairro: document.getElementById('cBairro').value,
+          cidade: document.getElementById('cCidade').value,
+          uf: document.getElementById('cUf').value,
+          aceiteLgpd: document.getElementById('cLgpd').checked
+        });
+        carregarTudo();
+      } catch (e) { alert('Erro ao salvar cliente: ' + e.message); }
+    }
+
+    async function salvarPet() {
+      try {
+        await window.api.criarPet({
+          clienteId: document.getElementById('pCliente').value,
+          nome: document.getElementById('pNome').value,
+          especie: document.getElementById('pEspecie').value,
+          raca: document.getElementById('pRaca').value,
+          peso: document.getElementById('pPeso').value
+        });
+        carregarTudo();
+      } catch (e) { alert('Erro ao salvar pet: ' + e.message); }
+    }
+
+    async function deletarCliente(id) { await window.api.deletarCliente(id); carregarTudo(); }
+    async function deletarPet(id) { await window.api.deletarPet(id); carregarTudo(); }
+
+    async function carregarTudo() {
+      const clientes = await window.api.listarClientes();
+      const pets = await window.api.listarPets();
+
+      document.getElementById('pCliente').innerHTML = clientes.map(c => `<option value="${c.id}">${c.nome} (${c.cpf})</option>`).join('');
+      document.getElementById('tbClientes').innerHTML = clientes.map(c => `
+        <tr><td>${c.nome}</td><td>${c.cidade}-${c.uf}</td><td>${c.pets.length}</td>
+        <td><button class="danger" onclick="deletarCliente(${c.id})">X</button></td></tr>`).join('');
+      document.getElementById('tbPets').innerHTML = pets.map(p => `
+        <tr><td>${p.nome}</td><td>${p.especie} / ${p.raca}</td><td>${p.cliente.nome}</td>
+        <td><button class="danger" onclick="deletarPet(${p.id})">X</button></td></tr>`).join('');
+    }
+    carregarTudo();
+  </script>
+</body>
+</html>

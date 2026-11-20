@@ -6,8 +6,13 @@
     "outDir": "./dist",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "strict": false,
+    "strict": true,
     "skipLibCheck": true
+  },
+  "ts-node": {
+    "compilerOptions": {
+      "rootDir": "."
+    }
   },
   "include": ["src/**/*"]
 }

@@ -1,33 +1,105 @@
 import axios from 'axios';
+import { ErroAplicacao } from '../../shared/errors';
+import type { Cliente, DadosCliente, DadosPet, Endereco, Pet } from '../../shared/types';
 import { ClientePetRepository } from '../repositories/ClientePetRepository';
+
+interface ViaCepResponse {
+  logradouro?: string;
+  bairro?: string;
+  localidade?: string;
+  uf?: string;
+  erro?: boolean;
+}
+
+const MENSAGEM_FALHA_CEP = 'Não foi possível consultar o CEP. Verifique a conexão e tente novamente.';
 
 export class ClientePetService {
   private repo = new ClientePetRepository();
 
-  async buscarEnderecoPorCep(cep: string) {
+  async buscarEnderecoPorCep(cep: string): Promise<Endereco> {
     const cepLimpo = cep.replace(/\D/g, '');
     if (cepLimpo.length !== 8) {
-      throw new Error('CEP inválido. Digite 8 números.');
+      throw new ErroAplicacao('CEP inválido. Digite 8 números.');
     }
-    const { data } = await axios.get(`https://viacep.com.br/ws/${cepLimpo}/json/`);
-    if (data.erro) {
-      throw new Error('CEP não encontrado.');
+
+    let resposta: ViaCepResponse | null = null;
+    try {
+      const resultado = await axios.get<ViaCepResponse>(
+        `https://viacep.com.br/ws/${cepLimpo}/json/`,
+        { timeout: 5000 }
+      );
+      resposta = resultado.data;
+    } catch {
+      throw new ErroAplicacao(MENSAGEM_FALHA_CEP);
     }
+
+    if (resposta === null || typeof resposta !== 'object' || Array.isArray(resposta)) {
+      throw new ErroAplicacao(MENSAGEM_FALHA_CEP);
+    }
+    if (resposta.erro) {
+      throw new ErroAplicacao('CEP não encontrado.');
+    }
+
     return {
-      logradouro: data.logradouro || '',
-      bairro: data.bairro || '',
-      cidade: data.localidade || '',
-      uf: data.uf || '',
+      logradouro: typeof resposta.logradouro === 'string' ? resposta.logradouro : '',
+      bairro: typeof resposta.bairro === 'string' ? resposta.bairro : '',
+      cidade: typeof resposta.localidade === 'string' ? resposta.localidade : '',
+      uf: typeof resposta.uf === 'string' ? resposta.uf : '',
     };
   }
 
-  listarClientes() { return this.repo.listarClientes(); }
-  criarCliente(dados: any) { return this.repo.criarCliente(dados); }
-  atualizarCliente(id: number, dados: any) { return this.repo.atualizarCliente(id, dados); }
-  deletarCliente(id: number) { return this.repo.deletarCliente(id); }
+  listarClientes(): Promise<Cliente[]> {
+    return this.repo.listarClientes();
+  }
 
-  listarPets() { return this.repo.listarPets(); }
-  criarPet(dados: any) { return this.repo.criarPet({ ...dados, peso: Number(dados.peso), clienteId: Number(dados.clienteId) }); }
-  atualizarPet(id: number, dados: any) { return this.repo.atualizarPet(id, dados); }
-  deletarPet(id: number) { return this.repo.deletarPet(id); }
+  criarCliente(dados: DadosCliente): Promise<Cliente> {
+    // Decisão mantida: o cadastro exige consentimento. Quando aceiteLgpd é
+    // true, o repositório registra data, finalidade e versão do termo.
+    if (!dados.aceiteLgpd) {
+      throw new ErroAplicacao('É necessário aceitar os termos da LGPD.');
+    }
+    return this.repo.criarCliente(dados);
+  }
+
+  atualizarCliente(
+    id: number,
+    dados: Partial<Pick<Cliente, 'nome' | 'telefone' | 'email'>>
+  ): Promise<Cliente> {
+    return this.repo.atualizarCliente(id, dados);
+  }
+
+  async deletarCliente(id: number): Promise<Cliente> {
+    const quantidadePets = await this.repo.contarPetsDoCliente(id);
+    if (quantidadePets > 0) {
+      throw new ErroAplicacao(
+        'Não é possível excluir este cliente porque ele possui pets cadastrados. Exclua ou arquive os pets antes de continuar.'
+      );
+    }
+    return this.repo.deletarCliente(id);
+  }
+
+  listarPets(): Promise<Pet[]> {
+    return this.repo.listarPets();
+  }
+
+  criarPet(dados: DadosPet): Promise<Pet> {
+    return this.repo.criarPet(dados);
+  }
+
+  atualizarPet(id: number, dados: Partial<Pick<Pet, 'nome' | 'peso' | 'raca'>>): Promise<Pet> {
+    return this.repo.atualizarPet(id, dados);
+  }
+
+  async deletarPet(id: number): Promise<Pet> {
+    const [quantidadeConsultas, quantidadeAnexos] = await Promise.all([
+      this.repo.contarConsultasDoPet(id),
+      this.repo.contarAnexosDoPet(id),
+    ]);
+    if (quantidadeConsultas > 0 || quantidadeAnexos > 0) {
+      throw new ErroAplicacao(
+        'Não é possível excluir este pet porque ele possui consultas ou anexos. O prontuário deve ser preservado.'
+      );
+    }
+    return this.repo.deletarPet(id);
+  }
 }

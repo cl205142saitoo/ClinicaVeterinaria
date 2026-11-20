@@ -2,10 +2,11 @@
   "name": "clinicaveterinaria",
   "version": "1.0.0",
   "description": "",
- "main": "dist/main/main.js",
+  "main": "dist/main/main.js",
   "scripts": {
-    "build": "tsc",
-    "start": "tsc && electron ."
+    "build": "tsc && node scripts/copy-assets.js",
+    "start": "npm run build && electron .",
+    "seed:admin": "ts-node --compiler typescript5 scripts/seed-admin.ts"
   },
   "repository": {
     "type": "git",
@@ -23,6 +24,7 @@
     "@prisma/client": "^6.19.3",
     "axios": "^1.21.1",
     "bcryptjs": "^3.0.3",
+    "bootstrap": "^5.3.9",
     "electron": "^45.3.4",
     "nodemailer": "^10.6.0",
     "prisma": "^6.19.3"
@@ -31,7 +33,9 @@
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^26.6.6",
     "@types/nodemailer": "^8.0.2",
+    "esbuild": "^0.25.12",
     "ts-node": "^10.9.2",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "typescript5": "npm:typescript@^5.9.3"
   }
 }

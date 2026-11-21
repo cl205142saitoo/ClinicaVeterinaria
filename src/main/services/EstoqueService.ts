@@ -1,5 +1,9 @@
+import { dataCivilClinica } from '../../shared/datas';
 import { ErroAplicacao } from '../../shared/errors';
 import type {
+  DadosAtualizacaoLote,
+  DadosAtualizacaoProduto,
+  DadosInativacao,
   DadosLote,
   DadosProduto,
   Lote,
@@ -27,6 +31,10 @@ function exigirAdmin(usuario: Usuario): void {
   }
 }
 
+function dataOpcional(valor: Date | null): string | null {
+  return valor === null ? null : valor.toISOString();
+}
+
 function paraLote(lote: LotePersistido): Lote {
   const dados: Lote = {
     id: lote.id,
@@ -34,6 +42,9 @@ function paraLote(lote: LotePersistido): Lote {
     validade: lote.validade.toISOString().slice(0, 10),
     quantidade: lote.quantidade,
     produtoId: lote.produtoId,
+    ativo: lote.ativo,
+    baixadoEm: dataOpcional(lote.baixadoEm),
+    motivoBaixa: lote.motivoBaixa,
     criadoEm: lote.criadoEm.toISOString(),
     atualizadoEm: lote.atualizadoEm.toISOString(),
   };
@@ -56,12 +67,18 @@ function paraProduto(produto: ProdutoPersistido): Produto {
     categoria: produto.categoria,
     estoqueMinimo: produto.estoqueMinimo,
     precoBrl: produto.precoBrl.toNumber(),
+    ativo: produto.ativo,
+    inativadoEm: dataOpcional(produto.inativadoEm),
+    motivoInativacao: produto.motivoInativacao,
     lotes: produto.lotes.map(paraLote),
   };
 }
 
 export class EstoqueService {
-  constructor(private readonly repo: EstoqueRepositorio) {}
+  constructor(
+    private readonly repo: EstoqueRepositorio,
+    private readonly agora: () => Date = () => new Date()
+  ) {}
 
   async listarProdutos(usuario: Usuario): Promise<Produto[]> {
     exigirLeitura(usuario);
@@ -86,23 +103,120 @@ export class EstoqueService {
     return paraProduto(produto);
   }
 
-  async criarLote(dados: DadosLote, usuario: Usuario): Promise<Lote> {
+  async atualizarProduto(dados: DadosAtualizacaoProduto, usuario: Usuario): Promise<Produto> {
     exigirAdmin(usuario);
-    if (!(await this.repo.produtoExiste(dados.produtoId))) {
+    const anterior = await this.repo.buscarProdutoPorId(dados.id);
+    if (anterior === null) {
       throw new ErroAplicacao('Produto não encontrado. Confira o produto selecionado.');
     }
-
-    const codigo = dados.codigo.trim();
-    if (await this.repo.loteComCodigoExiste(codigo)) {
-      throw new ErroAplicacao('Já existe um lote com este código. Informe um código diferente.');
+    if (!anterior.ativo) {
+      throw new ErroAplicacao('Não é possível editar um produto inativado.');
     }
+    const produto = await this.repo.atualizarProduto(dados);
+    return paraProduto(produto);
+  }
+
+  async inativarProduto(dados: DadosInativacao, usuario: Usuario): Promise<Produto> {
+    exigirAdmin(usuario);
+    const anterior = await this.repo.buscarProdutoPorId(dados.id);
+    if (anterior === null) {
+      throw new ErroAplicacao('Produto não encontrado. Confira o produto selecionado.');
+    }
+    if (!anterior.ativo) {
+      throw new ErroAplicacao('Este produto já está inativado.');
+    }
+    if ((await this.repo.contarLotesAtivos(dados.id)) > 0) {
+      throw new ErroAplicacao(
+        'Não é possível inativar este produto enquanto houver lotes ativos. Baixe os lotes antes de continuar.'
+      );
+    }
+    const atualizado = await this.repo.inativarProduto(
+      dados.id,
+      usuario.id,
+      this.agora(),
+      dados.motivo
+    );
+    if (atualizado === null) {
+      throw new ErroAplicacao('Não foi possível inativar o produto. Tente novamente.');
+    }
+    return paraProduto(atualizado);
+  }
+
+  async criarLote(dados: DadosLote, usuario: Usuario): Promise<Lote> {
+    exigirAdmin(usuario);
+    await this.validarProdutoECodigo(dados.produtoId, dados.codigo);
 
     const lote = await this.repo.criarLote({
       produtoId: dados.produtoId,
-      codigo,
+      codigo: dados.codigo.trim(),
       validade: dados.validade,
       quantidade: dados.quantidade,
     });
     return paraLote(lote);
+  }
+
+  async atualizarLote(dados: DadosAtualizacaoLote, usuario: Usuario): Promise<Lote> {
+    exigirAdmin(usuario);
+    const anterior = await this.repo.buscarLotePorId(dados.id);
+    if (anterior === null) {
+      throw new ErroAplicacao('Lote não encontrado. Confira o lote selecionado.');
+    }
+    if (!anterior.ativo) {
+      throw new ErroAplicacao('Não é possível editar um lote baixado.');
+    }
+    await this.validarProdutoECodigo(dados.produtoId, dados.codigo, dados.id);
+    if (dados.validade < dataCivilClinica(this.agora())) {
+      throw new ErroAplicacao('A validade do lote não pode ser anterior à data atual.');
+    }
+    if (!Number.isInteger(dados.quantidade) || dados.quantidade <= 0) {
+      throw new ErroAplicacao('A quantidade do lote deve ser um número inteiro maior que zero.');
+    }
+
+    const lote = await this.repo.atualizarLote({
+      id: dados.id,
+      produtoId: dados.produtoId,
+      codigo: dados.codigo.trim(),
+      validade: dados.validade,
+      quantidade: dados.quantidade,
+    });
+    return paraLote(lote);
+  }
+
+  async baixarLote(dados: DadosInativacao, usuario: Usuario): Promise<Lote> {
+    exigirAdmin(usuario);
+    const anterior = await this.repo.buscarLotePorId(dados.id);
+    if (anterior === null) {
+      throw new ErroAplicacao('Lote não encontrado. Confira o lote selecionado.');
+    }
+    if (!anterior.ativo) {
+      throw new ErroAplicacao('Este lote já foi baixado.');
+    }
+    const atualizado = await this.repo.baixarLote(
+      dados.id,
+      usuario.id,
+      this.agora(),
+      dados.motivo
+    );
+    if (atualizado === null) {
+      throw new ErroAplicacao('Não foi possível baixar o lote. Tente novamente.');
+    }
+    return paraLote(atualizado);
+  }
+
+  private async validarProdutoECodigo(
+    produtoId: number,
+    codigo: string,
+    ignorarLoteId?: number
+  ): Promise<void> {
+    const produto = await this.repo.buscarProdutoPorId(produtoId);
+    if (produto === null) {
+      throw new ErroAplicacao('Produto não encontrado. Confira o produto selecionado.');
+    }
+    if (!produto.ativo) {
+      throw new ErroAplicacao('Não é possível vincular o lote a um produto inativado.');
+    }
+    if (await this.repo.loteComCodigoExiste(codigo.trim(), ignorarLoteId)) {
+      throw new ErroAplicacao('Já existe um lote com este código. Informe um código diferente.');
+    }
   }
 }

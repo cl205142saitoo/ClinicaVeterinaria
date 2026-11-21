@@ -1,6 +1,16 @@
 import axios from 'axios';
 import { ErroAplicacao } from '../../shared/errors';
-import type { Cliente, DadosCliente, DadosPet, Endereco, Pet } from '../../shared/types';
+import type {
+  Cliente,
+  DadosAtualizacaoCliente,
+  DadosAtualizacaoPet,
+  DadosCliente,
+  DadosInativacao,
+  DadosPet,
+  Endereco,
+  Pet,
+  Usuario,
+} from '../../shared/types';
 import { ClientePetRepository } from '../repositories/ClientePetRepository';
 
 interface ViaCepResponse {
@@ -68,6 +78,43 @@ export class ClientePetService {
     return this.repo.atualizarCliente(id, dados);
   }
 
+  async atualizarClienteCompleto(dados: DadosAtualizacaoCliente): Promise<Cliente> {
+    if (!dados.aceiteLgpd) {
+      throw new ErroAplicacao('É necessário aceitar os termos da LGPD.');
+    }
+    const atual = await this.repo.buscarClientePorId(dados.id);
+    if (atual === null) {
+      throw new ErroAplicacao('Cliente não encontrado.');
+    }
+    if (!atual.ativo) {
+      throw new ErroAplicacao('Não é possível editar um cliente inativado.');
+    }
+    if (await this.repo.clienteComCpf(dados.cpf.replace(/\D/g, ''), dados.id)) {
+      throw new ErroAplicacao('Já existe outro cliente com este CPF. Confira o número digitado.');
+    }
+    return this.repo.atualizarClienteDados(dados);
+  }
+
+  async inativarCliente(dados: DadosInativacao, usuario: Usuario): Promise<Cliente> {
+    const atual = await this.repo.buscarClientePorId(dados.id);
+    if (atual === null) {
+      throw new ErroAplicacao('Cliente não encontrado.');
+    }
+    if (!atual.ativo) {
+      throw new ErroAplicacao('Este cliente já está inativado.');
+    }
+    const atualizado = await this.repo.inativarCliente(
+      dados.id,
+      dados.motivo,
+      usuario.id,
+      new Date()
+    );
+    if (atualizado === null) {
+      throw new ErroAplicacao('Não foi possível inativar o cliente. Tente novamente.');
+    }
+    return atualizado;
+  }
+
   async deletarCliente(id: number): Promise<Cliente> {
     const quantidadePets = await this.repo.contarPetsDoCliente(id);
     if (quantidadePets > 0) {
@@ -88,6 +135,45 @@ export class ClientePetService {
 
   atualizarPet(id: number, dados: Partial<Pick<Pet, 'nome' | 'peso' | 'raca'>>): Promise<Pet> {
     return this.repo.atualizarPet(id, dados);
+  }
+
+  async atualizarPetCompleto(dados: DadosAtualizacaoPet): Promise<Pet> {
+    const atual = await this.repo.buscarPetPorId(dados.id);
+    if (atual === null) {
+      throw new ErroAplicacao('Pet não encontrado.');
+    }
+    if (!atual.ativo) {
+      throw new ErroAplicacao('Não é possível editar um pet inativado.');
+    }
+
+    const cliente = await this.repo.buscarClientePorId(dados.clienteId);
+    if (cliente === null) {
+      throw new ErroAplicacao('Cliente não encontrado. Confira o tutor selecionado.');
+    }
+    if (!cliente.ativo) {
+      throw new ErroAplicacao('Não é possível vincular o pet a um cliente inativado.');
+    }
+    if (atual.clienteId !== dados.clienteId && (await this.repo.petComHistorico(dados.id))) {
+      throw new ErroAplicacao(
+        'Não é possível transferir um pet com consultas, vacinas ou anexos registrados.'
+      );
+    }
+    return this.repo.atualizarPetDados(dados);
+  }
+
+  async inativarPet(dados: DadosInativacao, usuario: Usuario): Promise<Pet> {
+    const atual = await this.repo.buscarPetPorId(dados.id);
+    if (atual === null) {
+      throw new ErroAplicacao('Pet não encontrado.');
+    }
+    if (!atual.ativo) {
+      throw new ErroAplicacao('Este pet já está inativado.');
+    }
+    const atualizado = await this.repo.inativarPet(dados.id, dados.motivo, usuario.id, new Date());
+    if (atualizado === null) {
+      throw new ErroAplicacao('Não foi possível inativar o pet. Tente novamente.');
+    }
+    return atualizado;
   }
 
   async deletarPet(id: number): Promise<Pet> {

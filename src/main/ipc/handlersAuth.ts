@@ -1,6 +1,7 @@
 import { IPC_CHANNELS } from '../../shared/ipc-channels';
 import { ehDadosRegistro, ehEmail, ehSenhaPreenchida, exigir } from '../../shared/validators';
 import type { AuthService } from '../services/AuthService';
+import type { PolicyService } from '../services/PolicyService';
 import type { SessaoService } from '../services/SessaoService';
 import type { HandlerIpc } from './tipos';
 
@@ -11,7 +12,8 @@ type CanaisAuth =
 
 export function criarHandlersAuth(
   authService: AuthService,
-  sessaoService: SessaoService
+  sessaoService: SessaoService,
+  _policy?: PolicyService
 ): Record<CanaisAuth, HandlerIpc> {
   return {
     [IPC_CHANNELS.AUTH_LOGIN]: async (args) => {

@@ -35,9 +35,14 @@ model Usuario {
   ativo        Boolean  @default(true)
   crmv         String?  @db.VarChar(30)
   rg           String?  @db.VarChar(30)
+  inativadoPorId    Int?
+  inativadoPor      Usuario?  @relation("InativadorUsuarios", fields: [inativadoPorId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  inativadoEm       DateTime? @db.DateTime(6)
+  motivoInativacao  String?   @db.VarChar(500)
   criadoEm     DateTime @default(now()) @db.DateTime(6)
   atualizadoEm DateTime @updatedAt @db.DateTime(6)
 
+  usuariosInativados  Usuario[]        @relation("InativadorUsuarios")
   consultas           Consulta[]       @relation("VeterinarioConsultas")
   consultasCriadas    Consulta[]       @relation("CriadorConsulta")
   consultasCanceladas Consulta[]       @relation("CanceladorConsulta")
@@ -49,6 +54,11 @@ model Usuario {
   anexosResponsaveis  AnexoClinico[]   @relation("ResponsavelAnexos")
   anexosRegistrados   AnexoClinico[]   @relation("RegistradorAnexos")
   anexosInativados    AnexoClinico[]   @relation("InativadorAnexos")
+  clientesInativados  Cliente[]        @relation("InativadorClientes")
+  petsInativados      Pet[]            @relation("InativadorPets")
+  produtosInativados  Produto[]        @relation("InativadorProdutos")
+  lotesBaixados       Lote[]           @relation("BaixadorLotes")
+  vacinasEstornadas   RegistroVacina[] @relation("EstornadorVacinas")
 }
 
 model Cliente {
@@ -66,12 +76,19 @@ model Cliente {
   lgpdAceiteEm    DateTime? @db.DateTime(6)
   lgpdFinalidade  String?   @db.VarChar(255)
   lgpdVersaoTermo String?   @db.VarChar(20)
+  ativo           Boolean   @default(true)
+  inativadoPorId  Int?
+  inativadoPor    Usuario?  @relation("InativadorClientes", fields: [inativadoPorId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  inativadoEm     DateTime? @db.DateTime(6)
+  motivoInativacao String?  @db.VarChar(500)
   criadoEm        DateTime  @default(now()) @db.DateTime(6)
   atualizadoEm    DateTime  @updatedAt @db.DateTime(6)
   criadoPorId     Int?
   criadoPor       Usuario?  @relation("CriadorCliente", fields: [criadoPorId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
   pets Pet[]
+
+  @@index([ativo])
 }
 
 model Pet {
@@ -87,11 +104,17 @@ model Pet {
   atualizadoEm   DateTime         @updatedAt @db.DateTime(6)
   criadoPorId    Int?
   criadoPor      Usuario?         @relation("CriadorPet", fields: [criadoPorId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  ativo           Boolean          @default(true)
+  inativadoPorId  Int?
+  inativadoPor    Usuario?         @relation("InativadorPets", fields: [inativadoPorId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  inativadoEm     DateTime?        @db.DateTime(6)
+  motivoInativacao String?         @db.VarChar(500)
   consultas      Consulta[]
   anexosClinicos AnexoClinico[]
   vacinas        RegistroVacina[]
 
   @@index([clienteId])
+  @@index([ativo])
 }
 
 model Consulta {
@@ -136,7 +159,14 @@ model Produto {
   categoria     String  @db.VarChar(80)
   estoqueMinimo Int     @default(5)
   precoBrl      Decimal @db.Decimal(10, 2)
+  ativo         Boolean @default(true)
+  inativadoPorId  Int?
+  inativadoPor    Usuario? @relation("InativadorProdutos", fields: [inativadoPorId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  inativadoEm     DateTime? @db.DateTime(6)
+  motivoInativacao String?  @db.VarChar(500)
   lotes         Lote[]
+
+  @@index([ativo])
 }
 
 model Lote {
@@ -146,11 +176,17 @@ model Lote {
   quantidade   Int
   produtoId    Int
   produto      Produto  @relation(fields: [produtoId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  ativo        Boolean  @default(true)
+  baixadoPorId Int?
+  baixadoPor   Usuario? @relation("BaixadorLotes", fields: [baixadoPorId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  baixadoEm    DateTime? @db.DateTime(6)
+  motivoBaixa  String?  @db.VarChar(500)
   criadoEm     DateTime @default(now()) @db.DateTime(6)
   atualizadoEm DateTime @updatedAt @db.DateTime(6)
 
   @@index([produtoId])
   @@index([validade])
+  @@index([ativo])
 }
 
 // Anexos clínicos (Etapa 9): evolução do stub `Anexo`, sem criar uma 9ª tabela.
@@ -213,6 +249,11 @@ model RegistroVacina {
   registradoPor   Usuario   @relation("RegistradorVacinas", fields: [registradoPorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   registradoEm    DateTime  @default(now()) @db.DateTime(6)
   atualizadoEm    DateTime  @updatedAt @db.DateTime(6)
+  estornado       Boolean   @default(false)
+  estornadoPorId  Int?
+  estornadoPor    Usuario?  @relation("EstornadorVacinas", fields: [estornadoPorId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  estornadoEm     DateTime? @db.DateTime(6)
+  motivoEstorno   String?   @db.VarChar(500)
 
   @@index([petId, aplicadaEm])
   @@index([veterinarioId])

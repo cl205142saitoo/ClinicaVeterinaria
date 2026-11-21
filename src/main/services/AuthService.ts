@@ -32,13 +32,16 @@ export class AuthService {
 
   async login(email: string, senha: string): Promise<Usuario> {
     const usuario = await this.repo.buscarPorEmail(email.trim());
+    // A mesma mensagem para conta inexistente, desativada ou senha errada evita
+    // revelar quais e-mails estão cadastrados (enumeração de contas).
+    const mensagemInvalida = 'E-mail ou senha inválidos.';
     if (!usuario || !usuario.ativo) {
-      throw new ErroAplicacao('Usuário não encontrado ou desativado.');
+      throw new ErroAplicacao(mensagemInvalida);
     }
 
     const senhaCorreta = await bcrypt.compare(senha, usuario.senhaHash);
     if (!senhaCorreta) {
-      throw new ErroAplicacao('Senha incorreta.');
+      throw new ErroAplicacao(mensagemInvalida);
     }
 
     return this.paraUsuario(usuario);
@@ -53,6 +56,8 @@ export class AuthService {
       id: usuario.id,
       nome: usuario.nome,
       email: usuario.email,
+      crmv: usuario.crmv,
+      rg: usuario.rg,
       role: usuario.role,
       ativo: usuario.ativo,
       criadoEm: usuario.criadoEm,

@@ -81,6 +81,13 @@ export interface DadosConclusaoConsulta {
   concluidaEm: Date;
 }
 
+/** Reagendamento/correção: nenhum campo clínico é alterado. */
+export interface DadosReagendamentoConsulta {
+  dataHora: Date;
+  motivo: string;
+  veterinarioId: number;
+}
+
 /** Somente colunas clínicas: status e auditorias de conclusão não são tocadas. */
 export interface DadosEscritaProntuario {
   exameClinico: string;
@@ -105,6 +112,7 @@ export interface ConsultaRepositorio {
     ignorarConsultaId?: number
   ): Promise<RegistroConflito[]>;
   criar(dados: DadosCriacaoConsulta): Promise<RegistroAgenda>;
+  atualizar(id: number, dados: DadosReagendamentoConsulta): Promise<boolean>;
   cancelar(id: number, dados: DadosCancelamentoConsulta): Promise<boolean>;
   concluir(id: number, dados: DadosConclusaoConsulta): Promise<boolean>;
   salvarProntuario(id: number, dados: DadosEscritaProntuario): Promise<boolean>;
@@ -229,6 +237,19 @@ export class ConsultaRepository implements ConsultaRepositorio {
       },
       select: selecaoAgenda,
     });
+  }
+
+  /** `where` preserva a janela de status entre a checagem e a escrita. */
+  async atualizar(id: number, dados: DadosReagendamentoConsulta): Promise<boolean> {
+    const resultado = await this.prisma.consulta.updateMany({
+      where: { id, status: { in: [...STATUS_CANCELAVEIS] } },
+      data: {
+        dataHora: dados.dataHora,
+        motivo: dados.motivo.trim(),
+        veterinarioId: dados.veterinarioId,
+      },
+    });
+    return resultado.count === 1;
   }
 
   async cancelar(id: number, dados: DadosCancelamentoConsulta): Promise<boolean> {

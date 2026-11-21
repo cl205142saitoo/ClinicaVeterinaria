@@ -16,10 +16,17 @@
  * expõe a API JS que o ts-node 10 exige; o build do app continua no TypeScript 7.
  */
 /** Primeiro import: o Prisma Client não carrega .env sozinho fora do CLI. */
-import '../src/main/config/carregarEnv';
+import { carregarEnv } from '../src/main/config/carregarEnv';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { CUSTO_HASH_SENHA } from '../src/shared/constants';
+
+carregarEnv([
+  'DATABASE_URL',
+  'PHD_ADMIN_NOME',
+  'PHD_ADMIN_EMAIL',
+  'PHD_ADMIN_SENHA',
+]);
 
 interface ConfiguracaoAdmin {
   nome: string;

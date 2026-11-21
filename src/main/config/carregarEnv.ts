@@ -5,14 +5,15 @@
  * módulo, `DATABASE_URL` não existe dentro do Electron e todo acesso ao banco
  * (inclusive o primeiro cadastro) falha mesmo com o arquivo configurado.
  *
- * Nenhuma variável é repassada ao renderer: este módulo só escreve em
- * `process.env` do main e apenas para as chaves explicitamente permitidas.
+ * Por padrão só `DATABASE_URL` entra no runtime do aplicativo. As credenciais
+ * de bootstrap do administrador são carregadas explicitamente pelo seed, para
+ * não ficarem no processo do app. Nada é repassado ao renderer.
  */
 
 import { existsSync, readFileSync } from 'fs';
 import path from 'path';
 
-const CHAVES_PERMITIDAS = new Set([
+const TODAS_AS_CHAVES = new Set([
   'DATABASE_URL',
   'PHD_ADMIN_NOME',
   'PHD_ADMIN_EMAIL',
@@ -28,41 +29,41 @@ function candidatos(): string[] {
 function valorDaLinha(bruto: string): string {
   const valor = bruto.trim();
   const aspas = valor[0];
-  if (
-    valor.length >= 2 &&
-    (aspas === '"' || aspas === "'") &&
-    valor[valor.length - 1] === aspas
-  ) {
+  if (valor.length >= 2 && (aspas === '"' || aspas === "'") && valor[valor.length - 1] === aspas) {
     return valor.slice(1, -1);
   }
   return valor.replace(/\s+#.*$/, '').trim();
 }
 
-function aplicar(conteudo: string): void {
-  for (const linhaOriginal of conteudo.split(/\r?\n/)) {
-    const linha = linhaOriginal.trim();
-    if (linha === '' || linha.startsWith('#')) continue;
+/** Carrega apenas as chaves permitidas; variáveis já definidas no shell prevalecem. */
+export function carregarEnv(chavesPermitidas: readonly string[] = ['DATABASE_URL']): boolean {
+  const permitidas = new Set(chavesPermitidas.filter((chave) => TODAS_AS_CHAVES.has(chave)));
+  if (permitidas.size === 0) return false;
 
-    const encontrada =
-      /^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/.exec(linha);
-    if (encontrada === null) continue;
+  const arquivo = candidatos().find((caminho) => existsSync(caminho));
+  if (arquivo === undefined) return false;
 
-    const chave = encontrada[1];
-    if (chave === undefined || !CHAVES_PERMITIDAS.has(chave)) continue;
-    // Variável já definida no ambiente tem precedência sobre o arquivo.
-    if (process.env[chave] !== undefined) continue;
+  try {
+    for (const linhaOriginal of readFileSync(arquivo, 'utf8').split(/\r?\n/)) {
+      const linha = linhaOriginal.trim();
+      if (linha === '' || linha.startsWith('#')) continue;
+      const encontrada = /^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/.exec(linha);
+      if (encontrada === null) continue;
 
-    const valor = valorDaLinha(encontrada[2] ?? '');
-    if (valor !== '') process.env[chave] = valor;
+      const chave = encontrada[1];
+      if (chave === undefined || !permitidas.has(chave)) continue;
+      if (process.env[chave] !== undefined) continue;
+
+      const valor = valorDaLinha(encontrada[2] ?? '');
+      if (valor !== '') process.env[chave] = valor;
+    }
+    return true;
+  } catch (erro) {
+    console.error('[config] Não foi possível ler o .env:', erro);
+    return false;
   }
 }
 
-const arquivo = candidatos().find((caminho) => existsSync(caminho));
-if (arquivo !== undefined) {
-  try {
-    aplicar(readFileSync(arquivo, 'utf8'));
-    console.log('[config] Configuração do banco carregada do .env.');
-  } catch (erro) {
-    console.error('[config] Não foi possível ler o .env:', erro);
-  }
+if (carregarEnv()) {
+  console.log('[config] DATABASE_URL carregada do .env para o processo principal.');
 }

@@ -2,7 +2,7 @@
 
 Sistema de gestão para clínica veterinária (Electron + Prisma).
 
-## Status da migração para MySQL — Etapa 4 + complementos das Etapas 5 a 7 + Etapas 8 e 9
+## Status da migração para MySQL — Etapa 4 + complementos das Etapas 5 a 9 + Etapa 10
 
 > **A migração foi preparada/regenerada e validada offline, mas NÃO foi aplicada
 > a nenhum banco de dados.** Não havia MySQL, `DATABASE_URL`, `.env` ou cliente
@@ -71,6 +71,10 @@ Copy-Item .env.example .env
 # Edite .env e substitua usuario/senha/pethealthpd pelos valores reais.
 ```
 
+Se o `.env` já existir com placeholders, basta substituir os valores — não é
+preciso recriá-lo. O usuário informou que o MySQL e o banco já existem; nesse
+caso, confira apenas `DATABASE_URL` antes de continuar.
+
 O processo principal carrega o `.env` explicitamente em
 `src/main/config/carregarEnv.ts`: o Prisma CLI lê o arquivo sozinho, mas o
 Prisma Client (usado pelo Electron e pelo `seed:admin`) **não**. Sem esse
@@ -95,8 +99,15 @@ Regras:
 
 ## 2. Preparar o banco no MySQL (uma vez)
 
-Use um usuário administrador apenas para criar o schema; a aplicação deve usar
-um usuário com **menor privilégio** (somente DML):
+> **Antes de continuar:** é necessário ter o **MySQL Server** rodando na
+> máquina (ou acessível na rede). MySQL Workbench, phpMyAdmin ou o cliente
+> `mysql` sozinhos **não** são o servidor. Se `npx prisma migrate status`
+> retornar `P1001: Can't reach database server at localhost:3306`, o servidor
+> não está instalado, não está iniciado ou está em outra porta/host.
+
+Crie o banco e o usuário usados pela aplicação. Como a mesma `DATABASE_URL` é
+usada pelo `prisma migrate deploy` e pela aplicação, o usuário precisa também
+de permissões de DDL para criar/alterar tabelas:
 
 ```sql
 CREATE DATABASE pethealthpd
@@ -104,9 +115,14 @@ CREATE DATABASE pethealthpd
   COLLATE utf8mb4_unicode_ci;
 
 CREATE USER 'pethealthpd_app'@'localhost' IDENTIFIED BY '<senha-forte>';
-GRANT SELECT, INSERT, UPDATE, DELETE ON pethealthpd.* TO 'pethealthpd_app'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, DROP, INDEX, REFERENCES
+  ON pethealthpd.* TO 'pethealthpd_app'@'localhost';
 FLUSH PRIVILEGES;
 ```
+
+Em produção, o ideal é separar: um usuário de migração com DDL e outro da
+aplicação com apenas DML. Aqui, para uso local, o usuário único acima é
+suficiente.
 
 > O `ENGINE=InnoDB` e o charset `utf8mb4 / utf8mb4_unicode_ci` já estão
 > explícitos na migração. O collation escolhido preserva corretamente acentos
@@ -116,13 +132,14 @@ FLUSH PRIVILEGES;
 
 ```powershell
 npx prisma migrate status
-npx prisma migrate deploy
+npm run db:deploy
 npx prisma generate
 ```
 
-`migrate deploy` aplica apenas migrações versionadas e não cria migrações
-novas. Não use `prisma migrate dev` em produção (ele pode criar migrações e
-recriar o banco).
+`npm run db:deploy` (atalho para `npx prisma migrate deploy`) aplica, em ordem,
+a migração inicial e a migração da Etapa 10. Ele não cria migrações novas. Não
+use `prisma migrate dev` em produção (ele pode criar migrações e recriar o
+banco).
 
 Para inspecionar o SQL sem aplicar:
 
@@ -499,6 +516,121 @@ conteúdo, preview de imagem/PDF embutido, download pelo tutor, portal/e-mail,
 exclusão programada, retenção automática, versionamento/retificação, envio
 múltiplo, sincronização em nuvem e criptografia em repouso adicional.
 
+## Etapa 10 — atendimento aos 6 requisitos obrigatórios
+
+Decisões aprovadas pelo usuário antes da implementação: **exclusão lógica com
+motivo** para entidades clínicas/auditoriais; **ViaCEP + IBGE + feriados
+nacionais + API própria local** para as quatro situações de API; e
+**controladores em classes** no renderer.
+
+### 1. Banco relacional
+
+`prisma/schema.prisma` mantém 8 tabelas (`Usuario`, `Cliente`, `Pet`,
+`Consulta`, `Produto`, `Lote`, `AnexoClinico`, `RegistroVacina`) com 24 FKs
+reais. A Etapa 10 acrescentou apenas colunas de auditoria da exclusão lógica
+(`ativo`, `inativadoPorId`, `inativadoEm`, `motivoInativacao` e equivalentes
+para baixa/estorno), uma nova migração versionada e índices em `ativo`.
+
+- Migração inicial: `prisma/migrations/20261119163348_init_mysql/migration.sql`.
+- Migração da Etapa 10:
+  `prisma/migrations/20261120120000_crud_logico/migration.sql`.
+- **Aplicar na ordem** com `npm run db:deploy` quando o MySQL real estiver
+  configurado. Nenhuma migração foi aplicada neste ambiente.
+
+### 2. CRUD completo
+
+"Delete" significa **inativação/estorno com motivo, responsável e data**;
+nenhuma linha clínica é apagada. Exclusão física não existe na API.
+
+| Entidade | C | R | U | D (lógico) |
+| --- | --- | --- | --- | --- |
+| Usuário | cadastro público (ATENDENTE) + `seed:admin` | `usuarios:listar` | `usuarios:atualizar` | `usuarios:inativar` |
+| Cliente | `clientes:criar` | `clientes:listar` | `clientes:atualizar` | `clientes:inativar` |
+| Pet | `pets:criar` | `pets:listar` | `pets:atualizar` | `pets:inativar` |
+| Consulta | `consultas:criar` | `consultas:listar` | `consultas:atualizar` (reagendamento) | `consultas:excluir` (cancelamento) |
+| Produto | `estoque:produtosCriar` | `estoque:produtosListar` | `estoque:produtosAtualizar` | `estoque:produtosInativar` |
+| Lote | `estoque:lotesCriar` | `estoque:lotesListar` | `estoque:lotesAtualizar` | `estoque:lotesBaixar` |
+| RegistroVacina | `vacinas:registrar` | `vacinas:listarPet` | `vacinas:atualizar` | `vacinas:estornar` |
+| AnexoClinico | `anexos:registrar` | `anexos:listarPet` | `anexos:atualizar` (metadados) | `anexos:inativar` |
+
+Proteções de domínio: último ADMIN ativo não pode ser rebaixado nem
+inativado; CPF duplicado é bloqueado; pet com histórico clínico não troca de
+tutor; produto com lotes ativos não é descontinuado; a listagem de usuários
+devolve `crmv`/`rg` ao ADMIN para que a edição não limpe esses campos; consulta
+só é reagendada
+em `AGENDADA|CONFIRMADA`, com revalidação de sobreposição em transação; vacina
+e anexo preservam o registro original.
+
+### 3. Quatro consumos de API com propósito real
+
+1. **ViaCEP** — preenchimento de endereço no cadastro de cliente
+   (`api:buscarCep`).
+2. **IBGE** — código oficial do município para relatórios/campanhas municipais
+   (`api:ibgeMunicipio`), com normalização de acentos e cache de 24 h.
+3. **Feriados nacionais (Nager.Date)** — aviso visual na agenda
+   (`api:feriadosAno`); nunca bloqueia agendamento nem calcula calendário
+   vacinal.
+4. **API própria HTTP local** — `GET /api/resumo`, servida por
+   `ServidorApiLocal` em `127.0.0.1:0` e consumida por `axios` em
+   `IntegracoesService.resumoDashboard()` (`api:resumoDashboard`). O resumo
+   alimenta o painel com clientes/pets ativos, consultas de hoje, consultas
+   pendentes e vacinas registradas hoje. Se o servidor não estiver ativo, o
+   mesmo cálculo é feito diretamente via Prisma, sem mudar o contrato.
+
+Todas as integrações são chamadas no **processo principal**, exigem sessão
+válida e toleram ausência de internet (IBGE devolve `null`, feriados devolvem
+`[]`). Nenhuma URL, chave ou caminho é exposto ao renderer.
+
+### 4. Segurança — justificativas específicas
+
+| Controle | Justificativa |
+| --- | --- |
+| Sessão no main + `contextIsolation`, `nodeIntegration: false`, `sandbox: true` | O renderer nunca recebe `ipcRenderer`, não acessa Node e não pode falsificar perfil. |
+| Whitelist de 48 canais + handlers `unknown[]` com `exigir()` | Nenhum canal arbitrário chega ao banco; toda fronteira valida tipo, faixa e formato em pt-BR. |
+| `PolicyService` como ponto único de perfil | Substitui regras duplicadas em services; handlers novos usam `exigirAutenticadoVerificado()` e revalidation de `ativo`. |
+| `senhaHash` nunca nos DTOs; bcrypt | Mesmo o repositório de usuários projeta apenas campos seguros nas listagens; hash sai somente do cadastro/login interno. |
+| Erros: `ErroAplicacao` no main e whitelist no renderer | Detalhes de Prisma, SQL, IP e caminho não aparecem na tela; qualquer erro cru vira mensagem genérica. |
+| CPF/telefone/email validados; Motivo de 3–500 caracteres | Evita dados inválidos e torna toda exclusão lógica auditável. |
+| API local apenas em loopback | Não abre porta para a rede; nenhuma credencial ou caminho nas respostas. |
+| `.env` carregado só no main (`carregarEnv`) | `DATABASE_URL` não vai para o renderer; `PHD_ADMIN_SENHA` é lida só pelo seed, não pelo runtime do app. |
+
+Limitações registradas (decisões de produto, não regressões): o cadastro
+público continua criando ATENDENTE — é o caminho que permitiu o primeiro
+cadastro da tela inicial — e CPF completo ainda trafega no IPC para perfis
+autenticados, com máscara aplicada apenas na tela.
+
+### 5. Lógica de negócio em classes (POO)
+
+- **Main:** 11 services (`Auth`, `Sessao`, `Policy`, `Usuario`, `ClientePet`,
+  `Consulta`, `Vacina`, `Estoque`, `Anexo`, `AnexoArquivo`, `Integracoes`),
+  6 repositórios e o adaptador `ServidorApiLocal`. Regras de domínio ficam nos
+  services, nunca nos handlers.
+- **Renderer:** `src/renderer/controladores/` contém 10 controladores
+  (`AuthController`, `ClienteController`, `PetController`, `AgendaController`,
+  `ProntuarioController`, `VacinaController`, `EstoqueController`,
+  `AnexoController`, `UsuarioController`, `IntegracaoController`), todos com
+  `iniciar(): void` e estado privado. `src/renderer/main.ts` instancia e
+  coordena as classes; `ui.ts` mantém apenas helpers de apresentação.
+
+### 6. Electron + TypeScript
+
+Todo o código de aplicação em `src/**` é TypeScript `strict`. O único `.js`
+fora de `node_modules`/`dist` é `scripts/copy-assets.js`, usado apenas pelo
+build e não versionado. `dist/**` é ignorado pelo Git.
+
+### Validações executadas nesta etapa
+
+| Verificação | Resultado |
+| --- | --- |
+| `npx tsc --noEmit` | OK |
+| `npm run build` | OK (`dist/renderer/app.js`, assets copiados) |
+| `npx prisma validate` (com `DATABASE_URL` fictícia na sessão) | OK |
+| `npx prisma generate` | OK (cliente atualizado com as novas colunas) |
+| Canais IPC | 48 canais na whitelist, 48 handlers registrados |
+| Migrações versionadas | 2 pastas; 8 tabelas e 24 FKs ao final |
+| Segurança | `sandbox: true`; erro cru sanitizado no renderer; `PHD_ADMIN_*` fora do runtime |
+| POO | 10 controladores no renderer; services/repositórios em classes |
+
 ## Plano de validação (executar quando houver MySQL disponível)
 
 1. **Migração:** `npx prisma migrate status` antes (esperado: nenhuma migração
@@ -600,9 +732,9 @@ Nenhuma migração foi alterada.
 | Foco em modal | `shown.bs.modal` em agenda, prontuário, exclusão e anexos |
 | Data civil às 21h em `America/Sao_Paulo` | `2026-11-21T00:30Z` → `2026-11-20` |
 | HTML: IDs duplicados e referências `for`/`aria-describedby` quebradas | 0 |
-| Whitelist IPC | 29 canais, 29 handlers, `Record<IpcChannel, HandlerIpc>` exaustivo |
-| Migração | 8 tabelas, 19 CHECKs, ainda não aplicada |
-| Ambiente | sem `.env`; `prisma/dev.db` com 0 bytes; nenhum commit nesta sessão |
+| Whitelist IPC | 29 canais naquela revisão (48 após a Etapa 10), `Record<IpcChannel, HandlerIpc>` exaustivo |
+| Migração | 8 tabelas, 19 CHECKs na migração inicial; ainda não aplicada |
+| Ambiente | `.env` com placeholders criado depois dessa revisão; `prisma/dev.db` com 0 bytes; nenhum commit nesta sessão |
 
 O único `any` no repositório é uma ocorrência pré-existente em comentário de
 `src/main/ipc/invocar.ts`; o cast real fica isolado naquele helper.
@@ -639,10 +771,12 @@ O único `any` no repositório é uma ocorrência pré-existente em comentário 
 
 ### Atenções registradas (fora das cinco correções aprovadas)
 
-- Sessão não revalida `usuario.ativo`; um perfil desativado continua operando
-  até relogar.
-- Mensagens de login distinguem “usuário inexistente/desativado” de “senha
-  incorreta” (enumeração de contas). Cadastro público como ATENDENTE é decisão
+- ~~Sessão não revalida `usuario.ativo`; um perfil desativado continua operando
+  até relogar.~~ **Corrigido na Etapa 10:** `PolicyService.exigirAutenticadoVerificado()`
+  consulta o banco em todos os canais autenticados.
+- ~~Mensagens de login distinguem “usuário inexistente/desativado” de “senha
+  incorreta” (enumeração de contas).~~ **Corrigido na Etapa 10:** mensagem única
+  “E-mail ou senha inválidos.”. Cadastro público como ATENDENTE é decisão
   deliberada da Etapa 3, não um defeito.
 - `console.error` no main pode registrar detalhes de query/caminho no console
   local (não cruza o IPC).
@@ -662,8 +796,8 @@ nas cinco correções aprovadas e não foram alterados nesta rodada.
 
 ## Pendências (fora do escopo deste complemento)
 
-1. **Aplicar** a migração em MySQL real com `npx prisma migrate deploy` e rodar
-   `npm run seed:admin`.
+1. **Aplicar** as duas migrações em MySQL real com `npm run db:deploy` (ou
+   `npx prisma migrate deploy`) e rodar `npm run seed:admin`.
 2. **Rastreabilidade:** propagar o `Usuario` da `SessaoService` até o service
    para preencher `criadoPorId` (hoje gravamos `null` para não alterar contratos
    IPC nesta etapa).
@@ -672,15 +806,16 @@ nas cinco correções aprovadas e não foram alterados nesta rodada.
 4. **Performance:** rodar `EXPLAIN` nas consultas de agenda/prontuário/estoque
    com massa de dados real e ajustar índices compostos se necessário.
 5. **Regras de negócio:** validar com `clinica-veterinaria` a eventual unicidade
-   de `Cliente.email`, a exclusão lógica de prontuários e a política de retenção
-   LGPD (inclusive alteração de versão do termo).
+   de `Cliente.email` e a política de retenção LGPD (inclusive alteração de
+   versão do termo). A exclusão lógica com motivo já foi implementada na Etapa 10.
 6. **Dados legados:** se existir um `dev.db` com dados em outro ambiente,
    planejar exportação/conversão (SQLite → MySQL) antes de descartá-lo. Aqui o
    arquivo está vazio e foi preservado.
-7. **Etapas futuras:** vacinação (Etapa 7), estoque (Etapa 8) e anexos clínicos
-   (Etapa 9) foram implementados; demais evoluções (catálogo/lembretes de
-   vacinas, vínculo com `Lote`, movimentações de entrada/saída, volume,
-   via/local de aplicação e retificação auditada) continuam em etapas separadas.
+7. **Etapas futuras:** vacinação (Etapa 7), estoque (Etapa 8), anexos clínicos
+   (Etapa 9) e CRUD/API/POO (Etapa 10) foram implementados; demais evoluções
+   (catálogo/lembretes de vacinas, vínculo com `Lote`, movimentações de
+   entrada/saída, volume e via/local de aplicação) continuam em etapas
+   separadas. A retificação auditada de consulta, vacina e anexo já existe.
 8. **Regras do prontuário:** validar com `clinica-veterinaria` se
    `exameClinico`/`conduta` serão obrigatórios no ato da conclusão e qual a
    política de retenção/alteração do prontuário (LGPD). Nada disso foi assumido

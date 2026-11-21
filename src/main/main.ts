@@ -12,7 +12,11 @@ import { ConsultaRepository } from './repositories/ConsultaRepository';
 import { ConsultaService } from './services/ConsultaService';
 import { EstoqueRepository } from './repositories/EstoqueRepository';
 import { EstoqueService } from './services/EstoqueService';
+import { IntegracoesService } from './services/IntegracoesService';
+import { PolicyService } from './services/PolicyService';
 import { SessaoService } from './services/SessaoService';
+import { UsuarioRepository } from './repositories/UsuarioRepository';
+import { UsuarioService } from './services/UsuarioService';
 import { VacinaRepository } from './repositories/VacinaRepository';
 import { VacinaService } from './services/VacinaService';
 
@@ -26,6 +30,10 @@ class MainApp {
   private arquivoService = new AnexoArquivoService();
   private estoqueService = new EstoqueService(new EstoqueRepository());
   private sessaoService = new SessaoService();
+  private policyService = new PolicyService(this.sessaoService);
+  private usuarioService = new UsuarioService(new UsuarioRepository(), this.policyService);
+  private integracoesService = new IntegracoesService();
+  private removerHandlers: (() => void) | null = null;
 
   constructor() {
     app.whenReady().then(async () => {
@@ -34,7 +42,8 @@ class MainApp {
       } catch (erro) {
         console.error('[Anexos] Falha ao preparar o diretório de staging:', erro);
       }
-      registrarHandlersIpc({
+      await this.integracoesService.iniciar();
+      this.removerHandlers = registrarHandlersIpc({
         clientePetService: this.clientePetService,
         authService: this.authService,
         consultaService: this.consultaService,
@@ -43,12 +52,23 @@ class MainApp {
         arquivoService: this.arquivoService,
         estoqueService: this.estoqueService,
         sessaoService: this.sessaoService,
+        usuarioService: this.usuarioService,
+        policyService: this.policyService,
+        integracoesService: this.integracoesService,
       });
       this.criarJanela();
     });
 
     app.on('window-all-closed', () => {
       if (process.platform !== 'darwin') app.quit();
+    });
+
+    app.on('before-quit', () => {
+      this.removerHandlers?.();
+      this.removerHandlers = null;
+      void this.integracoesService.parar().catch((erro: unknown) => {
+        console.error('[Integrações] Falha ao encerrar a API local:', erro);
+      });
     });
   }
 
@@ -60,6 +80,7 @@ class MainApp {
         preload: path.join(__dirname, 'preload.js'),
         contextIsolation: true,
         nodeIntegration: false,
+        sandbox: true,
       },
     });
 

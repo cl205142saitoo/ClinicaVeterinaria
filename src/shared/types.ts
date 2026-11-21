@@ -21,6 +21,10 @@ export interface Pet {
   peso: number;
   nascimento: string | null;
   clienteId: number;
+  /** Exclusão lógica: presente nas listagens após a Etapa 10. */
+  ativo?: boolean;
+  inativadoEm?: string | null;
+  motivoInativacao?: string | null;
   /** Presente quando o pet vem de `listarPets()`. */
   cliente?: Cliente;
 }
@@ -38,6 +42,10 @@ export interface Cliente {
   uf: string;
   aceiteLgpd: boolean;
   criadoEm: Date;
+  /** Exclusão lógica: presente nas listagens após a Etapa 10. */
+  ativo?: boolean;
+  inativadoEm?: string | null;
+  motivoInativacao?: string | null;
   /** Presente quando o cliente vem de `listarClientes()`. */
   pets?: Pet[];
 }
@@ -47,9 +55,14 @@ export interface Usuario {
   id: number;
   nome: string;
   email: string;
+  /** Identificação profissional; visível apenas para ADMIN na interface. */
+  crmv: string | null;
+  rg: string | null;
   role: Role;
   ativo: boolean;
   criadoEm: Date;
+  inativadoEm?: string | null;
+  motivoInativacao?: string | null;
 }
 
 export interface DadosCliente {
@@ -160,6 +173,10 @@ export interface RegistroVacina {
   registradoPorId: number;
   /** ISO 8601 UTC. */
   registradoEm: string;
+  /** Exclusão lógica: estorno preserva a prova sanitária original. */
+  estornado?: boolean;
+  estornadoEm?: string | null;
+  motivoEstorno?: string | null;
   veterinario: { id: number; nome: string; crmv: string | null };
 }
 
@@ -233,6 +250,10 @@ export interface Lote {
   produtoId: number;
   /** Presente em `estoqueLotesListar()`. */
   produto?: { id: number; nome: string; categoria: string };
+  /** Baixa lógica: a quantidade não desaparece sem rastreio. */
+  ativo?: boolean;
+  baixadoEm?: string | null;
+  motivoBaixa?: string | null;
   criadoEm: string;
   atualizadoEm: string;
 }
@@ -244,6 +265,9 @@ export interface Produto {
   estoqueMinimo: number;
   /** BRL convertido de Prisma.Decimal para number. */
   precoBrl: number;
+  ativo?: boolean;
+  inativadoEm?: string | null;
+  motivoInativacao?: string | null;
   lotes: Lote[];
 }
 
@@ -259,6 +283,85 @@ export interface DadosLote {
   codigo: string;
   validade: string;
   quantidade: number;
+}
+
+/* ---------- CRUD completo: atualização e exclusão lógica ---------- */
+
+/** "Delete" de entidades clínicas/auditoriais preserva o registro e o motivo. */
+export interface DadosInativacao {
+  id: number;
+  /** Motivo obrigatório (3–500 caracteres), gravado na auditoria. */
+  motivo: string;
+}
+
+export interface DadosAtualizacaoCliente extends DadosCliente {
+  id: number;
+}
+
+export interface DadosAtualizacaoPet extends DadosPet {
+  id: number;
+}
+
+export interface DadosAtualizacaoUsuario {
+  id: number;
+  nome: string;
+  email: string;
+  crmv: string | null;
+  rg: string | null;
+  role: Role;
+  ativo: boolean;
+}
+
+/** Reagendamento/correção administrativa; nunca altera campos clínicos. */
+export interface DadosAtualizacaoConsulta {
+  id: number;
+  dataHora: string;
+  motivo: string;
+  veterinarioId: number;
+}
+
+export interface DadosAtualizacaoProduto extends DadosProduto {
+  id: number;
+}
+
+export interface DadosAtualizacaoLote extends DadosLote {
+  id: number;
+}
+
+export interface DadosAtualizacaoVacina extends DadosRegistroVacina {
+  id: number;
+}
+
+export interface DadosAtualizacaoAnexo {
+  id: number;
+  descricao: string;
+  categoria: CategoriaAnexo;
+  dataDocumento: string;
+}
+
+/* ---------- Integrações (4 situações de API com propósito real) ---------- */
+
+/** Código IBGE oficial do município, usado em relatórios e campanhas municipais. */
+export interface MunicipioIbge {
+  id: number;
+  nome: string;
+  uf: string;
+}
+
+/** Feriado nacional do ano corrente, para alertar a agenda. */
+export interface Feriado {
+  data: string;
+  nome: string;
+  tipo: 'nacional';
+}
+
+/** Resumo servido pela API HTTP local do próprio sistema. */
+export interface ResumoDashboard {
+  clientesAtivos: number;
+  petsAtivos: number;
+  consultasHoje: number;
+  consultasAgendadas: number;
+  vacinasRegistradasHoje: number;
 }
 
 /** Superfície exposta pelo preload. Os nomes dos métodos são imutáveis. */
@@ -292,4 +395,23 @@ export interface Api {
   estoqueProdutosCriar(dados: DadosProduto): Promise<Produto>;
   estoqueLotesListar(): Promise<Lote[]>;
   estoqueLotesCriar(dados: DadosLote): Promise<Lote>;
+  atualizarCliente(dados: DadosAtualizacaoCliente): Promise<Cliente>;
+  inativarCliente(dados: DadosInativacao): Promise<Cliente>;
+  atualizarPet(dados: DadosAtualizacaoPet): Promise<Pet>;
+  inativarPet(dados: DadosInativacao): Promise<Pet>;
+  listarUsuarios(): Promise<Usuario[]>;
+  atualizarUsuario(dados: DadosAtualizacaoUsuario): Promise<Usuario>;
+  inativarUsuario(dados: DadosInativacao): Promise<Usuario>;
+  consultasAtualizar(dados: DadosAtualizacaoConsulta): Promise<ConsultaAgenda>;
+  consultasExcluir(dados: DadosInativacao): Promise<ConsultaAgenda>;
+  estoqueProdutosAtualizar(dados: DadosAtualizacaoProduto): Promise<Produto>;
+  estoqueProdutosInativar(dados: DadosInativacao): Promise<Produto>;
+  estoqueLotesAtualizar(dados: DadosAtualizacaoLote): Promise<Lote>;
+  estoqueLotesBaixar(dados: DadosInativacao): Promise<Lote>;
+  vacinasAtualizar(dados: DadosAtualizacaoVacina): Promise<RegistroVacina>;
+  vacinasEstornar(dados: DadosInativacao): Promise<RegistroVacina>;
+  anexosAtualizar(dados: DadosAtualizacaoAnexo): Promise<AnexoClinico>;
+  buscarMunicipioIbge(nome: string, uf: string): Promise<MunicipioIbge | null>;
+  listarFeriados(ano: number): Promise<Feriado[]>;
+  resumoDashboard(): Promise<ResumoDashboard>;
 }

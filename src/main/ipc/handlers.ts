@@ -6,7 +6,10 @@ import type { AuthService } from '../services/AuthService';
 import type { ClientePetService } from '../services/ClientePetService';
 import type { ConsultaService } from '../services/ConsultaService';
 import type { EstoqueService } from '../services/EstoqueService';
+import type { IntegracoesService } from '../services/IntegracoesService';
+import type { PolicyService } from '../services/PolicyService';
 import type { SessaoService } from '../services/SessaoService';
+import type { UsuarioService } from '../services/UsuarioService';
 import type { VacinaService } from '../services/VacinaService';
 import { paraErroSeguro } from './erros';
 import { criarHandlersAnexo } from './handlersAnexo';
@@ -14,7 +17,9 @@ import { criarHandlersAuth } from './handlersAuth';
 import { criarHandlersClientePet } from './handlersClientePet';
 import { criarHandlersConsulta } from './handlersConsulta';
 import { criarHandlersEstoque } from './handlersEstoque';
+import { criarHandlersIntegracoes } from './handlersIntegracoes';
 import { criarHandlersProntuario } from './handlersProntuario';
+import { criarHandlersUsuarios } from './handlersUsuarios';
 import { criarHandlersVacina } from './handlersVacina';
 import type { HandlerIpc } from './tipos';
 
@@ -27,6 +32,9 @@ export interface DependenciasIpc {
   arquivoService: AnexoArquivoService;
   estoqueService: EstoqueService;
   sessaoService: SessaoService;
+  usuarioService: UsuarioService;
+  policyService: PolicyService;
+  integracoesService: IntegracoesService;
 }
 
 const CANAIS: readonly IpcChannel[] = [
@@ -59,6 +67,25 @@ const CANAIS: readonly IpcChannel[] = [
   IPC_CHANNELS.ESTOQUE_PRODUTOS_CRIAR,
   IPC_CHANNELS.ESTOQUE_LOTES_LISTAR,
   IPC_CHANNELS.ESTOQUE_LOTES_CRIAR,
+  IPC_CHANNELS.CLIENTES_ATUALIZAR,
+  IPC_CHANNELS.CLIENTES_INATIVAR,
+  IPC_CHANNELS.PETS_ATUALIZAR,
+  IPC_CHANNELS.PETS_INATIVAR,
+  IPC_CHANNELS.USUARIOS_LISTAR,
+  IPC_CHANNELS.USUARIOS_ATUALIZAR,
+  IPC_CHANNELS.USUARIOS_INATIVAR,
+  IPC_CHANNELS.CONSULTAS_ATUALIZAR,
+  IPC_CHANNELS.CONSULTAS_EXCLUIR,
+  IPC_CHANNELS.ESTOQUE_PRODUTOS_ATUALIZAR,
+  IPC_CHANNELS.ESTOQUE_PRODUTOS_INATIVAR,
+  IPC_CHANNELS.ESTOQUE_LOTES_ATUALIZAR,
+  IPC_CHANNELS.ESTOQUE_LOTES_BAIXAR,
+  IPC_CHANNELS.VACINAS_ATUALIZAR,
+  IPC_CHANNELS.VACINAS_ESTORNAR,
+  IPC_CHANNELS.ANEXOS_ATUALIZAR,
+  IPC_CHANNELS.API_IBGE_MUNICIPIO,
+  IPC_CHANNELS.API_FERIADOS_ANO,
+  IPC_CHANNELS.API_RESUMO_DASHBOARD,
 ];
 
 async function executar(
@@ -76,17 +103,44 @@ async function executar(
 /** Registra apenas canais do contrato e devolve a rotina de limpeza. */
 export function registrarHandlersIpc(dependencias: DependenciasIpc): () => void {
   const handlers: Record<IpcChannel, HandlerIpc> = {
-    ...criarHandlersClientePet(dependencias.clientePetService, dependencias.sessaoService),
-    ...criarHandlersAuth(dependencias.authService, dependencias.sessaoService),
-    ...criarHandlersConsulta(dependencias.consultaService, dependencias.sessaoService),
-    ...criarHandlersProntuario(dependencias.consultaService, dependencias.sessaoService),
-    ...criarHandlersVacina(dependencias.vacinaService, dependencias.sessaoService),
+    ...criarHandlersClientePet(
+      dependencias.clientePetService,
+      dependencias.sessaoService,
+      dependencias.policyService
+    ),
+    ...criarHandlersAuth(dependencias.authService, dependencias.sessaoService, dependencias.policyService),
+    ...criarHandlersConsulta(
+      dependencias.consultaService,
+      dependencias.sessaoService,
+      dependencias.policyService
+    ),
+    ...criarHandlersProntuario(
+      dependencias.consultaService,
+      dependencias.sessaoService,
+      dependencias.policyService
+    ),
+    ...criarHandlersVacina(
+      dependencias.vacinaService,
+      dependencias.sessaoService,
+      dependencias.policyService
+    ),
     ...criarHandlersAnexo(
       dependencias.anexoService,
       dependencias.arquivoService,
-      dependencias.sessaoService
+      dependencias.sessaoService,
+      dependencias.policyService
     ),
-    ...criarHandlersEstoque(dependencias.estoqueService, dependencias.sessaoService),
+    ...criarHandlersEstoque(
+      dependencias.estoqueService,
+      dependencias.sessaoService,
+      dependencias.policyService
+    ),
+    ...criarHandlersIntegracoes(dependencias.integracoesService, dependencias.policyService),
+    ...criarHandlersUsuarios(
+      dependencias.usuarioService,
+      dependencias.sessaoService,
+      dependencias.policyService
+    ),
   };
 
   for (const canal of CANAIS) {

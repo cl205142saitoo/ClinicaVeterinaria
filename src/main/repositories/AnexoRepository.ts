@@ -1,6 +1,10 @@
 import type { Prisma } from '@prisma/client';
 import { LIMITE_LISTAGEM_ANEXOS } from '../../shared/constants';
-import type { CategoriaAnexo, VeterinarioResumo } from '../../shared/types';
+import type {
+  CategoriaAnexo,
+  DadosAtualizacaoAnexo,
+  VeterinarioResumo,
+} from '../../shared/types';
 import { ehCategoriaAnexo, exigir } from '../../shared/validators';
 import { Database } from '../database/PrismaClient';
 
@@ -90,6 +94,10 @@ export interface AnexoRepositorio {
   listarPorPet(petId: number, responsavelId?: number): Promise<AnexoPersistido[]>;
   criar(dados: DadosCriacaoAnexo): Promise<AnexoPersistido>;
   buscarPorId(id: number): Promise<AnexoPersistido | null>;
+  atualizarMetadados(
+    id: number,
+    dados: Pick<DadosAtualizacaoAnexo, 'descricao' | 'categoria' | 'dataDocumento'>
+  ): Promise<AnexoPersistido>;
   inativar(
     id: number,
     inativadoPorId: number,
@@ -161,6 +169,22 @@ export class AnexoRepository implements AnexoRepositorio {
       select: selecaoAnexo,
     });
     return registro === null ? null : paraPersistido(registro);
+  }
+
+  async atualizarMetadados(
+    id: number,
+    dados: Pick<DadosAtualizacaoAnexo, 'descricao' | 'categoria' | 'dataDocumento'>
+  ): Promise<AnexoPersistido> {
+    const registro = await this.prisma.anexoClinico.update({
+      where: { id },
+      data: {
+        descricao: dados.descricao.trim(),
+        categoria: dados.categoria,
+        dataDocumento: dataCivil(dados.dataDocumento),
+      },
+      select: selecaoAnexo,
+    });
+    return paraPersistido(registro);
   }
 
   async inativar(

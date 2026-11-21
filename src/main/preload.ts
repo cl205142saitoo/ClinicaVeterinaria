@@ -7,8 +7,17 @@ import type {
   Cliente,
   ConsultaAgenda,
   ConsultaProntuario,
+  DadosAtualizacaoAnexo,
+  DadosAtualizacaoCliente,
+  DadosAtualizacaoConsulta,
+  DadosAtualizacaoLote,
+  DadosAtualizacaoPet,
+  DadosAtualizacaoProduto,
+  DadosAtualizacaoUsuario,
+  DadosAtualizacaoVacina,
   DadosCliente,
   DadosConsulta,
+  DadosInativacao,
   DadosLote,
   DadosPet,
   DadosProduto,
@@ -17,11 +26,14 @@ import type {
   DadosRegistroAnexo,
   DadosRegistroVacina,
   Endereco,
+  Feriado,
   FiltroAgenda,
   Lote,
+  MunicipioIbge,
   Pet,
   Produto,
   RegistroVacina,
+  ResumoDashboard,
   Usuario,
   VeterinarioResumo,
 } from '../shared/types';
@@ -70,6 +82,39 @@ const api: Api = {
     invocar<Produto>(IPC_CHANNELS.ESTOQUE_PRODUTOS_CRIAR, dados),
   estoqueLotesListar: () => invocar<Lote[]>(IPC_CHANNELS.ESTOQUE_LOTES_LISTAR),
   estoqueLotesCriar: (dados: DadosLote) => invocar<Lote>(IPC_CHANNELS.ESTOQUE_LOTES_CRIAR, dados),
+  atualizarCliente: (dados: DadosAtualizacaoCliente) =>
+    invocar<Cliente>(IPC_CHANNELS.CLIENTES_ATUALIZAR, dados),
+  inativarCliente: (dados: DadosInativacao) =>
+    invocar<Cliente>(IPC_CHANNELS.CLIENTES_INATIVAR, dados),
+  atualizarPet: (dados: DadosAtualizacaoPet) => invocar<Pet>(IPC_CHANNELS.PETS_ATUALIZAR, dados),
+  inativarPet: (dados: DadosInativacao) => invocar<Pet>(IPC_CHANNELS.PETS_INATIVAR, dados),
+  listarUsuarios: () => invocar<Usuario[]>(IPC_CHANNELS.USUARIOS_LISTAR),
+  atualizarUsuario: (dados: DadosAtualizacaoUsuario) =>
+    invocar<Usuario>(IPC_CHANNELS.USUARIOS_ATUALIZAR, dados),
+  inativarUsuario: (dados: DadosInativacao) =>
+    invocar<Usuario>(IPC_CHANNELS.USUARIOS_INATIVAR, dados),
+  consultasAtualizar: (dados: DadosAtualizacaoConsulta) =>
+    invocar<ConsultaAgenda>(IPC_CHANNELS.CONSULTAS_ATUALIZAR, dados),
+  consultasExcluir: (dados: DadosInativacao) =>
+    invocar<ConsultaAgenda>(IPC_CHANNELS.CONSULTAS_EXCLUIR, dados),
+  estoqueProdutosAtualizar: (dados: DadosAtualizacaoProduto) =>
+    invocar<Produto>(IPC_CHANNELS.ESTOQUE_PRODUTOS_ATUALIZAR, dados),
+  estoqueProdutosInativar: (dados: DadosInativacao) =>
+    invocar<Produto>(IPC_CHANNELS.ESTOQUE_PRODUTOS_INATIVAR, dados),
+  estoqueLotesAtualizar: (dados: DadosAtualizacaoLote) =>
+    invocar<Lote>(IPC_CHANNELS.ESTOQUE_LOTES_ATUALIZAR, dados),
+  estoqueLotesBaixar: (dados: DadosInativacao) =>
+    invocar<Lote>(IPC_CHANNELS.ESTOQUE_LOTES_BAIXAR, dados),
+  vacinasAtualizar: (dados: DadosAtualizacaoVacina) =>
+    invocar<RegistroVacina>(IPC_CHANNELS.VACINAS_ATUALIZAR, dados),
+  vacinasEstornar: (dados: DadosInativacao) =>
+    invocar<RegistroVacina>(IPC_CHANNELS.VACINAS_ESTORNAR, dados),
+  anexosAtualizar: (dados: DadosAtualizacaoAnexo) =>
+    invocar<AnexoClinico>(IPC_CHANNELS.ANEXOS_ATUALIZAR, dados),
+  buscarMunicipioIbge: (nome: string, uf: string) =>
+    invocar<MunicipioIbge | null>(IPC_CHANNELS.API_IBGE_MUNICIPIO, nome, uf),
+  listarFeriados: (ano: number) => invocar<Feriado[]>(IPC_CHANNELS.API_FERIADOS_ANO, ano),
+  resumoDashboard: () => invocar<ResumoDashboard>(IPC_CHANNELS.API_RESUMO_DASHBOARD),
 };
 
 contextBridge.exposeInMainWorld('api', api);

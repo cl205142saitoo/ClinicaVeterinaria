@@ -1,7 +1,12 @@
 import { ANEXO_MOTIVO_MAXIMO } from '../../shared/constants';
 import { dataCivilClinica } from '../../shared/datas';
 import { ErroAplicacao } from '../../shared/errors';
-import type { AnexoClinico, DadosRegistroAnexo, Usuario } from '../../shared/types';
+import type {
+  AnexoClinico,
+  DadosAtualizacaoAnexo,
+  DadosRegistroAnexo,
+  Usuario,
+} from '../../shared/types';
 import { ehIdPositivo } from '../../shared/validators';
 import type {
   AnexoPersistido,
@@ -126,6 +131,34 @@ export class AnexoService {
       nomeArquivoGerado: registro.nomeArquivoGerado,
       inativo: registro.inativo,
     };
+  }
+
+  /** Metadados são editáveis; o arquivo e seu responsável nunca mudam. */
+  async atualizarMetadados(
+    dados: DadosAtualizacaoAnexo,
+    usuario: Usuario
+  ): Promise<AnexoClinico> {
+    exigirAcessoAnexos(usuario);
+    const registro = await this.repo.buscarPorId(dados.id);
+    if (registro === null) {
+      throw new ErroAplicacao('Anexo não encontrado.');
+    }
+    this.verificarResponsavel(registro, usuario);
+    if (registro.inativo) {
+      throw new ErroAplicacao('Este anexo foi inativado e não pode ser editado.');
+    }
+
+    const hoje = dataCivilClinica(this.agora());
+    if (dados.dataDocumento > hoje) {
+      throw new ErroAplicacao('A data do documento não pode estar no futuro.');
+    }
+
+    const atualizado = await this.repo.atualizarMetadados(dados.id, {
+      descricao: dados.descricao,
+      categoria: dados.categoria,
+      dataDocumento: dados.dataDocumento,
+    });
+    return paraDto(atualizado);
   }
 
   async inativar(id: number, motivo: string, usuario: Usuario): Promise<AnexoClinico> {

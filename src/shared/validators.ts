@@ -25,8 +25,17 @@ import {
 import { ErroAplicacao } from './errors';
 import type {
   CategoriaAnexo,
+  DadosAtualizacaoAnexo,
+  DadosAtualizacaoCliente,
+  DadosAtualizacaoConsulta,
+  DadosAtualizacaoLote,
+  DadosAtualizacaoPet,
+  DadosAtualizacaoProduto,
+  DadosAtualizacaoUsuario,
+  DadosAtualizacaoVacina,
   DadosCliente,
   DadosConsulta,
+  DadosInativacao,
   DadosLote,
   DadosPet,
   DadosProduto,
@@ -310,6 +319,71 @@ export function ehDadosRegistroAnexo(valor: unknown): valor is DadosRegistroAnex
     ehCategoriaAnexo(valor.categoria) &&
     ehDataCivil(valor.dataDocumento)
   );
+}
+
+/* ---------- Guards das operações de CRUD completo ---------- */
+
+export function ehDadosInativacao(valor: unknown): valor is DadosInativacao {
+  return ehObjeto(valor) && ehIdPositivo(valor.id) && ehTexto(valor.motivo, 3, 500);
+}
+
+export function ehDadosAtualizacaoCliente(valor: unknown): valor is DadosAtualizacaoCliente {
+  return ehObjeto(valor) && ehIdPositivo(valor.id) && ehDadosCliente(valor);
+}
+
+export function ehDadosAtualizacaoPet(valor: unknown): valor is DadosAtualizacaoPet {
+  return ehObjeto(valor) && ehIdPositivo(valor.id) && ehDadosPet(valor);
+}
+
+export function ehDadosAtualizacaoUsuario(valor: unknown): valor is DadosAtualizacaoUsuario {
+  if (!ehObjeto(valor) || !ehIdPositivo(valor.id) || !ehRole(valor.role)) return false;
+  return (
+    ehTexto(valor.nome, 2, 120) &&
+    ehEmail(valor.email) &&
+    (valor.crmv === null || (typeof valor.crmv === 'string' && valor.crmv.length <= 30)) &&
+    (valor.rg === null || (typeof valor.rg === 'string' && valor.rg.length <= 30)) &&
+    typeof valor.ativo === 'boolean'
+  );
+}
+
+export function ehDadosAtualizacaoConsulta(valor: unknown): valor is DadosAtualizacaoConsulta {
+  return (
+    ehObjeto(valor) &&
+    ehIdPositivo(valor.id) &&
+    ehIdPositivo(valor.veterinarioId) &&
+    ehDataIso(valor.dataHora) &&
+    ehTexto(valor.motivo, 2, PRONTUARIO_TEXTO_MAXIMO)
+  );
+}
+
+export function ehDadosAtualizacaoProduto(valor: unknown): valor is DadosAtualizacaoProduto {
+  return ehObjeto(valor) && ehIdPositivo(valor.id) && ehDadosProduto(valor);
+}
+
+export function ehDadosAtualizacaoLote(valor: unknown): valor is DadosAtualizacaoLote {
+  return ehObjeto(valor) && ehIdPositivo(valor.id) && ehDadosLote(valor);
+}
+
+export function ehDadosAtualizacaoVacina(valor: unknown): valor is DadosAtualizacaoVacina {
+  return ehObjeto(valor) && ehIdPositivo(valor.id) && ehDadosRegistroVacina(valor);
+}
+
+export function ehDadosAtualizacaoAnexo(valor: unknown): valor is DadosAtualizacaoAnexo {
+  return (
+    ehObjeto(valor) &&
+    ehIdPositivo(valor.id) &&
+    ehTexto(valor.descricao, ANEXO_DESCRICAO_MINIMO, ANEXO_DESCRICAO_MAXIMO) &&
+    ehCategoriaAnexo(valor.categoria) &&
+    ehDataCivil(valor.dataDocumento)
+  );
+}
+
+export function ehAno(valor: unknown): valor is number {
+  return typeof valor === 'number' && Number.isInteger(valor) && valor >= 2020 && valor <= 2100;
+}
+
+export function ehNomeMunicipio(valor: unknown): valor is string {
+  return typeof valor === 'string' && ehTexto(valor, 2, 120);
 }
 
 export function exigir<T>(valor: unknown, guarda: (valor: unknown) => valor is T, mensagem: string): T {

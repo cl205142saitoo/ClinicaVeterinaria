@@ -1,6 +1,63 @@
 /** Utilitários de interface: DOM seguro, validação, feedback e formatação. */
 
+import { ErroAplicacao } from '../shared/errors';
 import { ehCpf } from '../shared/validators';
+
+/** Texto usado sempre que o erro não é uma falha de domínio explicitamente segura. */
+const MENSAGEM_ERRO_GENERICA = 'Não foi possível concluir a operação. Tente novamente.';
+
+/**
+ * Padrões que identificam detalhes de implementação. Um `ErroAplicacao` legítimo
+ * nunca deve conter stack, caminho de arquivo, SQL, host ou endereço IP.
+ */
+const PADROES_TECNICOS: readonly RegExp[] = [
+  /\bat\s+[\w.$]+\s*\(/i,
+  /\b(?:PrismaClient|Prisma|PrismaClientKnownRequestError|TypeError|ReferenceError|SyntaxError)\b/i,
+  /\b(?:Error|error):\s/i,
+  /\b(?:SELECT|INSERT|UPDATE|DELETE|DROP)\s+/i,
+  /\bnode_modules\b/i,
+  /[A-Za-z]:[\\/]/,
+  /\\\\[\w.]+/,
+  /\b\d{1,3}(?:\.\d{1,3}){3}\b/,
+  /\b(?:ECONNRESET|ECONNREFUSED|ETIMEDOUT|ENOTFOUND)\b/i,
+  /\.\w{1,4}:\d+:\d+/,
+  /\bstack\s*:/i,
+  /=>|[{}\[\]]/,
+  /0x[0-9a-f]+/i,
+  /```/,
+  /[\r\n]/,
+];
+
+interface ErroSerializado {
+  readonly name?: unknown;
+  readonly message?: unknown;
+}
+
+/** O IPC pode entregar o erro como objeto simples; só confiamos na marca `name`. */
+function eErroAplicacaoSerializado(erro: unknown): erro is ErroSerializado {
+  if (typeof erro !== 'object' || erro === null) return false;
+  return (erro as ErroSerializado).name === 'ErroAplicacao';
+}
+
+/** Aceita apenas texto curto, de linha única, sem indícios técnicos. */
+function mensagemSegura(mensagem: unknown): string {
+  if (typeof mensagem !== 'string') return MENSAGEM_ERRO_GENERICA;
+  const texto = mensagem.trim();
+  if (texto.length < 3 || texto.length > 300) return MENSAGEM_ERRO_GENERICA;
+  if (PADROES_TECNICOS.some((padrao) => padrao.test(texto))) return MENSAGEM_ERRO_GENERICA;
+  return texto;
+}
+
+/**
+ * Converte qualquer falha em texto seguro para a tela. Somente `ErroAplicacao`
+ * (instância ou serialização IPC com `name === 'ErroAplicacao'`) pode exibir a
+ * própria mensagem; erros crus de Prisma, rede ou sistema recebem texto genérico.
+ */
+export function mensagemErro(erro: unknown): string {
+  if (erro instanceof ErroAplicacao) return mensagemSegura(erro.message);
+  if (eErroAplicacaoSerializado(erro)) return mensagemSegura(erro.message);
+  return MENSAGEM_ERRO_GENERICA;
+}
 
 export function obrigatorio<T extends Element>(seletor: string): T {
   const elemento = document.querySelector<T>(seletor);
@@ -20,10 +77,6 @@ export function escapeHtml(texto: string): string {
     .replace(/'/g, '&#39;');
 }
 
-export function mensagemErro(erro: unknown): string {
-  return erro instanceof Error && erro.message.trim() ? erro.message : 'Ocorreu um erro inesperado. Tente novamente.';
-}
-
 export function criarCelula(texto: string, classe = ''): HTMLTableCellElement {
   const celula = document.createElement('td');
   if (classe) celula.className = classe;
@@ -41,6 +94,62 @@ export function criarBotaoExcluir(tipo: 'cliente' | 'pet', id: number, nome: str
   botao.setAttribute('aria-label', `Excluir ${tipo} ${nome}`);
   botao.textContent = 'Excluir';
   return botao;
+}
+
+/** Botão de ação de tabela: todos os dados sensíveis ficam em mapas em memória. */
+export function criarBotaoAcao(
+  acao: string,
+  id: number,
+  texto: string,
+  rotulo: string,
+  classe = 'btn-outline-primary'
+): HTMLButtonElement {
+  const botao = document.createElement('button');
+  botao.type = 'button';
+  botao.className = `btn btn-sm ${classe}`;
+  botao.dataset.acao = acao;
+  botao.dataset.id = String(id);
+  botao.setAttribute('aria-label', rotulo);
+  botao.textContent = texto;
+  return botao;
+}
+
+/** Linha única de status/estado vazio, com `colspan` configurável. */
+export function linhaMensagem(
+  texto: string,
+  colunas: number,
+  classe = 'text-center text-muted fst-italic py-4'
+): HTMLTableRowElement {
+  const linha = document.createElement('tr');
+  const celula = criarCelula(texto, classe);
+  celula.colSpan = colunas;
+  linha.append(celula);
+  return linha;
+}
+
+export function criarBadge(texto: string, classe: string): HTMLSpanElement {
+  const badge = document.createElement('span');
+  badge.className = `badge ${classe}`;
+  badge.textContent = texto;
+  return badge;
+}
+
+export function textoOuTraco(valor: string | null | undefined): string {
+  const texto = valor?.trim();
+  return texto ? texto : '—';
+}
+
+/** Instante: fuso local da máquina, sem fixar `timeZone` (fuso da clínica). */
+export function formatarDataHora(dataIso: string): string {
+  const data = new Date(dataIso);
+  return Number.isNaN(data.getTime()) ? '—' : data.toLocaleString('pt-BR');
+}
+
+/** Data civil (AAAA-MM-DD) em UTC, sem deslocar o dia por fuso horário. */
+export function formatarDataCivil(valor: string | null | undefined): string {
+  if (!valor || !/^\d{4}-\d{2}-\d{2}$/.test(valor)) return '—';
+  const data = new Date(`${valor}T00:00:00.000Z`);
+  return Number.isNaN(data.getTime()) ? '—' : data.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
 }
 
 /** Campos que participam da validação visual padronizada do renderer. */
@@ -134,28 +243,73 @@ export function mostrarToast(mensagem: string, tipo: TipoToast = 'info'): void {
   new window.bootstrap.Toast(toast, { delay: 5000 }).show();
 }
 
-export function confirmarExclusao(nome: string): Promise<boolean> {
-  const modalElemento = obrigatorio<HTMLDivElement>('#modalConfirmacao');
-  const descricao = obrigatorio<HTMLElement>('#modalConfirmacaoDescricao');
-  const confirmar = obrigatorio<HTMLButtonElement>('#btnConfirmarExclusao');
-  const cancelar = obrigatorio<HTMLButtonElement>('#btnCancelarExclusao');
+/**
+ * Compatibilidade com o helper antigo: toda ação destrutiva agora passa pelo
+ * modal de motivo auditável. Retorna o motivo informado ou `null` se desistir.
+ */
+export function confirmarExclusao(nome: string): Promise<string | null> {
+  return pedirMotivo({
+    titulo: 'Confirmar exclusão',
+    descricao: `Deseja realmente excluir "${nome}"? Informe o motivo desta ação para registro em auditoria.`,
+    rotuloConfirmar: 'Excluir',
+  });
+}
 
-  descricao.textContent = `Deseja realmente excluir "${nome}"? Esta ação não pode ser desfeita.`;
+export interface OpcoesMotivo {
+  readonly titulo: string;
+  readonly descricao: string;
+  readonly rotuloConfirmar: string;
+}
+
+/**
+ * Modal único para inativar, baixar, estornar ou cancelar: exige motivo
+ * auditável (3 a 500 caracteres) e nunca usa `prompt`/`confirm` nativos.
+ * Retorna `null` quando o usuário desiste.
+ */
+export function pedirMotivo(opcoes: OpcoesMotivo): Promise<string | null> {
+  const modalElemento = obrigatorio<HTMLDivElement>('#modalMotivo');
+  const formulario = obrigatorio<HTMLFormElement>('#formMotivo');
+  const titulo = obrigatorio<HTMLElement>('#modalMotivoTitulo');
+  const descricao = obrigatorio<HTMLElement>('#modalMotivoDescricao');
+  const motivo = obrigatorio<HTMLTextAreaElement>('#txtMotivo');
+  const confirmar = obrigatorio<HTMLButtonElement>('#btnConfirmarMotivo');
+  const fechar = obrigatorio<HTMLButtonElement>('#btnFecharMotivo');
+
+  titulo.textContent = opcoes.titulo;
+  descricao.textContent = opcoes.descricao;
+  confirmar.textContent = opcoes.rotuloConfirmar;
+  motivo.value = '';
+  limparValidacao(formulario);
+
   const modal = new window.bootstrap.Modal(modalElemento, { backdrop: 'static', keyboard: false });
 
-  return new Promise<boolean>((resolve) => {
-    const concluir = (resposta: boolean): void => {
+  return new Promise<string | null>((resolve) => {
+    let resolvido = false;
+    const finalizar = (resposta: string | null): void => {
+      if (resolvido) return;
+      resolvido = true;
       confirmar.removeEventListener('click', aceitar);
-      cancelar.removeEventListener('click', recusar);
+      fechar.removeEventListener('click', recusar);
+      modalElemento.removeEventListener('hidden.bs.modal', aoOcultar);
       modal.hide();
       resolve(resposta);
     };
-    const aceitar = (): void => concluir(true);
-    const recusar = (): void => concluir(false);
+    const aceitar = (): void => {
+      limparValidacao(formulario);
+      const texto = motivo.value.trim();
+      if (!exigir(motivo, texto.length >= 3 && texto.length <= 500, 'Informe o motivo (de 3 a 500 caracteres).')) {
+        motivo.focus();
+        return;
+      }
+      finalizar(texto);
+    };
+    const recusar = (): void => finalizar(null);
+    const aoOcultar = (): void => finalizar(null);
 
-    confirmar.addEventListener('click', aceitar, { once: true });
-    cancelar.addEventListener('click', recusar, { once: true });
-    modalElemento.addEventListener('shown.bs.modal', () => confirmar.focus(), { once: true });
+    confirmar.addEventListener('click', aceitar);
+    fechar.addEventListener('click', recusar);
+    modalElemento.addEventListener('hidden.bs.modal', aoOcultar);
+    modalElemento.addEventListener('shown.bs.modal', () => motivo.focus(), { once: true });
     modal.show();
   });
 }

@@ -3,7 +3,9 @@ import { ErroAplicacao } from '../../shared/errors';
 import type {
   ConsultaAgenda,
   ConsultaProntuario,
+  DadosAtualizacaoConsulta,
   DadosConsulta,
+  DadosInativacao,
   DadosProntuario,
   FiltroAgenda,
   Usuario,
@@ -139,6 +141,65 @@ export class ConsultaService {
     return paraAgenda(registro);
   }
 
+  /** Reagendamento/correção administrativa: nunca toca os campos clínicos. */
+  async atualizar(dados: DadosAtualizacaoConsulta, usuario: Usuario): Promise<ConsultaAgenda> {
+    exigirPerfilConhecido(usuario);
+    if (usuario.role === 'ATENDENTE') {
+      throw new ErroAplicacao('Somente o veterinário responsável ou um administrador pode reagendar consultas.');
+    }
+
+    const registro = await this.repo.buscarPorId(dados.id);
+    if (registro === null) {
+      throw new ErroAplicacao('Consulta não encontrada.');
+    }
+    exigirResponsavel(registro, usuario, 'reagendar');
+    if (!ehStatusCancelavel(registro.status)) {
+      throw new ErroAplicacao('Só é possível reagendar consultas agendadas ou confirmadas.');
+    }
+    if (!ehDuracaoMinutos(registro.duracaoMinutos)) {
+      throw new ErroAplicacao('Duração de consulta inválida no cadastro. Procure o administrador.');
+    }
+    if (usuario.role === 'VETERINARIO' && dados.veterinarioId !== usuario.id) {
+      throw new ErroAplicacao('Veterinários só podem reagendar consultas pelas quais são responsáveis.');
+    }
+
+    const inicio = new Date(dados.dataHora);
+    if (inicio.getTime() <= this.agora().getTime()) {
+      throw new ErroAplicacao('A data e o horário da consulta devem estar no futuro.');
+    }
+    const fim = new Date(inicio.getTime() + registro.duracaoMinutos * MILISSEGUNDOS_POR_MINUTO);
+
+    const atualizado = await this.repo.transacao(async (tx) => {
+      await tx.bloquearPetEVeterinario(registro.petId, dados.veterinarioId);
+      const veterinario = await tx.buscarVeterinarioAtivo(dados.veterinarioId);
+      if (veterinario === null) {
+        throw new ErroAplicacao('Veterinário não encontrado, inativo ou sem perfil de veterinário.');
+      }
+      await this.verificarDisponibilidade(
+        dados.veterinarioId,
+        registro.petId,
+        inicio,
+        fim,
+        tx,
+        dados.id
+      );
+      const alterado = await tx.atualizar(dados.id, {
+        dataHora: inicio,
+        motivo: dados.motivo.trim(),
+        veterinarioId: dados.veterinarioId,
+      });
+      if (!alterado) {
+        throw new ErroAplicacao('Não foi possível reagendar a consulta. Tente novamente.');
+      }
+      const resultado = await tx.buscarAgendaPorId(dados.id);
+      if (resultado === null) {
+        throw new ErroAplicacao('Consulta não encontrada após o reagendamento.');
+      }
+      return resultado;
+    });
+    return paraAgenda(atualizado);
+  }
+
   /**
    * Janela `[inicio, fim)` com duração persistida (padrão de 60 min).
    * Duas janelas se intersectam quando `inicio < fimExistente` e
@@ -204,6 +265,11 @@ export class ConsultaService {
       throw new ErroAplicacao('Consulta não encontrada após o cancelamento.');
     }
     return paraAgenda(atualizado);
+  }
+
+  /** O "excluir" da API é cancelamento lógico: o prontuário nunca é apagado. */
+  async cancelarRegistro(dados: DadosInativacao, usuario: Usuario): Promise<ConsultaAgenda> {
+    return this.cancelar(dados.id, dados.motivo, usuario);
   }
 
   async concluir(id: number, usuario: Usuario): Promise<ConsultaAgenda> {

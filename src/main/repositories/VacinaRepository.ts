@@ -20,6 +20,9 @@ const selecaoVacina = {
   observacoes: true,
   registradoPorId: true,
   registradoEm: true,
+  estornado: true,
+  estornadoEm: true,
+  motivoEstorno: true,
   veterinario: { select: { id: true, nome: true, crmv: true } },
 } satisfies Prisma.RegistroVacinaSelect;
 
@@ -47,6 +50,9 @@ export interface RegistroVacinaPersistido {
   observacoes: string | null;
   registradoPorId: number;
   registradoEm: Date;
+  estornado: boolean;
+  estornadoEm: Date | null;
+  motivoEstorno: string | null;
   veterinario: { id: number; nome: string; crmv: string | null };
 }
 
@@ -75,10 +81,33 @@ export interface DadosCriacaoVacina {
   registradoEm: Date;
 }
 
+/** Pet e veterinário são imutáveis: a correção alcança somente os campos clínicos. */
+export interface DadosAtualizacaoVacinaBanco {
+  id: number;
+  consultaId: number | null;
+  vacina: string;
+  fabricante: string;
+  lote: string;
+  validade: string;
+  aplicadaEm: string;
+  dose: string;
+  proximaDose: string | null;
+  reacao: string | null;
+  observacoes: string | null;
+}
+
 /** Porta de persistência: o service não conhece Prisma nem Electron. */
 export interface VacinaRepositorio {
   listarPorPet(petId: number, veterinarioId?: number): Promise<RegistroVacinaPersistido[]>;
+  buscarPorId(id: number): Promise<RegistroVacinaPersistido | null>;
   criar(dados: DadosCriacaoVacina): Promise<RegistroVacinaPersistido>;
+  atualizar(dados: DadosAtualizacaoVacinaBanco): Promise<RegistroVacinaPersistido>;
+  estornar(
+    id: number,
+    responsavelId: number,
+    agora: Date,
+    motivo: string
+  ): Promise<RegistroVacinaPersistido | null>;
   petExiste(id: number): Promise<boolean>;
   buscarVeterinarioAtivo(id: number): Promise<VeterinarioResumo | null>;
   buscarConsulta(id: number): Promise<ResumoConsultaVinculada | null>;
@@ -104,6 +133,10 @@ export class VacinaRepository implements VacinaRepositorio {
     });
   }
 
+  buscarPorId(id: number): Promise<RegistroVacinaPersistido | null> {
+    return this.prisma.registroVacina.findUnique({ where: { id }, select: selecaoVacina });
+  }
+
   criar(dados: DadosCriacaoVacina): Promise<RegistroVacinaPersistido> {
     return this.prisma.registroVacina.create({
       data: {
@@ -124,6 +157,44 @@ export class VacinaRepository implements VacinaRepositorio {
       },
       select: selecaoVacina,
     });
+  }
+
+  atualizar(dados: DadosAtualizacaoVacinaBanco): Promise<RegistroVacinaPersistido> {
+    return this.prisma.registroVacina.update({
+      where: { id: dados.id },
+      data: {
+        consultaId: dados.consultaId,
+        vacina: dados.vacina,
+        fabricante: dados.fabricante,
+        lote: dados.lote,
+        validade: dataCivil(dados.validade),
+        aplicadaEm: new Date(dados.aplicadaEm),
+        dose: dados.dose,
+        proximaDose: dados.proximaDose === null ? null : dataCivil(dados.proximaDose),
+        reacao: dados.reacao,
+        observacoes: dados.observacoes,
+      },
+      select: selecaoVacina,
+    });
+  }
+
+  async estornar(
+    id: number,
+    responsavelId: number,
+    agora: Date,
+    motivo: string
+  ): Promise<RegistroVacinaPersistido | null> {
+    const resultado = await this.prisma.registroVacina.updateMany({
+      where: { id, estornado: false },
+      data: {
+        estornado: true,
+        estornadoPorId: responsavelId,
+        estornadoEm: agora,
+        motivoEstorno: motivo.trim(),
+      },
+    });
+    if (resultado.count !== 1) return null;
+    return this.buscarPorId(id);
   }
 
   async petExiste(id: number): Promise<boolean> {

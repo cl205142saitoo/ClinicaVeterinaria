@@ -21,7 +21,7 @@ import {
   setCarregando,
 } from './ui';
 
-const COLUNAS_HISTORICO = 7;
+const COLUNAS_HISTORICO = 8;
 
 const ROTULOS_STATUS: Readonly<Record<string, string>> = {
   AGENDADA: 'Agendada',
@@ -178,6 +178,7 @@ function renderizarHistorico(consultas: ConsultaProntuario[]): void {
       criarCelula(consulta.motivo, 'text-break small'),
       criarCelula(descricaoVeterinario(consulta.veterinario), 'small'),
       criarCelula(textoOuTraco(consulta.diagnostico), 'text-break small'),
+      criarCelula(textoOuTraco(consulta.prescricao), 'text-break small'),
       criarCelula(
         `${numeroOuTraco(consulta.pesoAferido, ' kg')} / ${numeroOuTraco(consulta.temperaturaC, ' °C')}`,
         'text-nowrap small'
@@ -263,6 +264,7 @@ function preencherFormulario(consulta: ConsultaProntuario): void {
   obrigatorio<HTMLTextAreaElement>('#prExameClinico').value = consulta.exameClinico ?? '';
   obrigatorio<HTMLTextAreaElement>('#prDiagnostico').value = consulta.diagnostico ?? '';
   obrigatorio<HTMLTextAreaElement>('#prConduta').value = consulta.conduta ?? '';
+  obrigatorio<HTMLTextAreaElement>('#prPrescricao').value = consulta.prescricao ?? '';
   obrigatorio<HTMLInputElement>('#prPeso').value =
     consulta.pesoAferido === null ? '' : String(consulta.pesoAferido);
   obrigatorio<HTMLInputElement>('#prTemperatura').value =
@@ -332,6 +334,7 @@ async function salvarProntuario(evento: Event): Promise<void> {
   const exame = obrigatorio<HTMLTextAreaElement>('#prExameClinico');
   const diagnostico = obrigatorio<HTMLTextAreaElement>('#prDiagnostico');
   const conduta = obrigatorio<HTMLTextAreaElement>('#prConduta');
+  const prescricao = obrigatorio<HTMLTextAreaElement>('#prPrescricao');
   const pesoCampo = obrigatorio<HTMLInputElement>('#prPeso');
   const temperaturaCampo = obrigatorio<HTMLInputElement>('#prTemperatura');
 
@@ -339,6 +342,7 @@ async function salvarProntuario(evento: Event): Promise<void> {
     validarTexto(exame, 'o exame clínico'),
     validarTexto(diagnostico, 'o diagnóstico'),
     validarTexto(conduta, 'a conduta'),
+    validarTexto(prescricao, 'a prescrição'),
   ];
   const peso = lerNumeroOpcional(
     pesoCampo,
@@ -362,6 +366,7 @@ async function salvarProntuario(evento: Event): Promise<void> {
     exameClinico: exame.value.trim(),
     diagnostico: diagnostico.value.trim(),
     conduta: conduta.value.trim(),
+    prescricao: prescricao.value.trim(),
     pesoAferido: peso,
     temperaturaC: temperatura,
   };

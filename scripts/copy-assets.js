@@ -1,7 +1,9 @@
 /**
- * Prepara os arquivos estáticos do renderer em dist/renderer/.
- * Executa depois do `tsc`: empacota os módulos TypeScript (o tsc emite CommonJS,
- * que não funciona em `file://`) e copia HTML, tema e Bootstrap local.
+ * Prepara os arquivos estáticos do renderer em dist/renderer/ e empacota o
+ * preload do main. Executa depois do `tsc`: o tsc emite CommonJS, que não
+ * funciona em `file://` no renderer, e o preload roda com `sandbox: true`, onde
+ * `require()` de módulos locais é bloqueado (erro "module not found").
+ * Por isso ambos são transformados em um único arquivo pelo esbuild.
  */
 const fs = require('node:fs');
 const path = require('node:path');
@@ -26,6 +28,21 @@ for (const nome of fs.readdirSync(origem)) {
     if (fs.existsSync(compilado)) fs.rmSync(compilado);
   }
 }
+
+// O preload roda com sandbox: true. Nesse modo o Electron só permite
+// `require('electron')`; qualquer require de arquivo local falha. Empacotar
+// resolve as importações de ../shared/ipc-channels e ./ipc/invocar em tempo de
+// build, deixando apenas o require do módulo do Electron no arquivo final.
+esbuild.buildSync({
+  entryPoints: [path.join(raiz, 'src', 'main', 'preload.ts')],
+  outfile: path.join(raiz, 'dist', 'main', 'preload.js'),
+  bundle: true,
+  format: 'cjs',
+  platform: 'node',
+  target: 'node20',
+  external: ['electron'],
+  logLevel: 'info',
+});
 
 esbuild.buildSync({
   entryPoints: [path.join(origem, 'main.ts')],

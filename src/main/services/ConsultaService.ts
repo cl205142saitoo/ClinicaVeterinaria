@@ -54,6 +54,7 @@ function paraProntuario(registro: RegistroConsulta): ConsultaProntuario {
     diagnostico: registro.diagnostico,
     exameClinico: registro.exameClinico,
     conduta: registro.conduta,
+    prescricao: registro.prescricao,
     pesoAferido: registro.pesoAferido,
     temperaturaC: registro.temperaturaC,
   };
@@ -321,6 +322,7 @@ export class ConsultaService {
       exameClinico: dados.exameClinico.trim(),
       diagnostico: dados.diagnostico.trim(),
       conduta: dados.conduta.trim(),
+      prescricao: dados.prescricao.trim(),
       pesoAferido: dados.pesoAferido ?? null,
       temperaturaC: dados.temperaturaC ?? null,
     });

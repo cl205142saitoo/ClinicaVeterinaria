@@ -35,6 +35,7 @@ export const IPC_CHANNELS = {
   PETS_ATUALIZAR: 'pets:atualizar',
   PETS_INATIVAR: 'pets:inativar',
   USUARIOS_LISTAR: 'usuarios:listar',
+  USUARIOS_CRIAR: 'usuarios:criar',
   USUARIOS_ATUALIZAR: 'usuarios:atualizar',
   USUARIOS_INATIVAR: 'usuarios:inativar',
   CONSULTAS_ATUALIZAR: 'consultas:atualizar',
@@ -49,6 +50,11 @@ export const IPC_CHANNELS = {
   API_IBGE_MUNICIPIO: 'api:ibgeMunicipio',
   API_FERIADOS_ANO: 'api:feriadosAno',
   API_RESUMO_DASHBOARD: 'api:resumoDashboard',
+  VACINAS_ALERTAS: 'vacinas:alertas',
+  VACINAS_ENVIAR_AVISOS: 'vacinas:enviarAvisos',
+  API_COTACAO_DOLAR: 'api:cotacaoDolar',
+  RELATORIOS_GERAR: 'relatorios:gerar',
+  RELATORIOS_EXPORTAR_CSV: 'relatorios:exportarCsv',
 } as const;
 
 export type IpcChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS];

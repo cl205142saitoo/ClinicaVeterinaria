@@ -21,6 +21,7 @@ const selecaoPet = {
   nome: true,
   especie: true,
   raca: true,
+  idade: true,
   peso: true,
   nascimento: true,
   clienteId: true,
@@ -33,6 +34,8 @@ const selecaoCliente = {
   id: true,
   nome: true,
   cpf: true,
+  rg: true,
+  dataNascimento: true,
   telefone: true,
   email: true,
   cep: true,
@@ -66,12 +69,22 @@ function dataOpcional(valor: Date | null): string | null {
   return valor === null ? null : valor.toISOString();
 }
 
+/** Coluna @db.Date: ISO ancorado em UTC preserva o dia civil (sem fuso). */
+function dataCivilOpcional(valor: Date | null): string | null {
+  return valor === null ? null : valor.toISOString().slice(0, 10);
+}
+
+function paraDataCivil(valor: string): Date {
+  return new Date(`${valor}T00:00:00.000Z`);
+}
+
 function paraPet(registro: RegistroPet): Pet {
   return {
     id: registro.id,
     nome: registro.nome,
     especie: registro.especie,
     raca: registro.raca,
+    idade: registro.idade,
     peso: registro.peso,
     nascimento: registro.nascimento,
     clienteId: registro.clienteId,
@@ -86,6 +99,8 @@ function paraCliente(registro: RegistroCliente): Cliente {
     id: registro.id,
     nome: registro.nome,
     cpf: registro.cpf,
+    rg: registro.rg,
+    dataNascimento: dataCivilOpcional(registro.dataNascimento),
     telefone: registro.telefone,
     email: registro.email,
     cep: registro.cep,
@@ -151,6 +166,8 @@ export class ClientePetRepository {
       data: {
         nome: dados.nome.trim(),
         cpf,
+        rg: dados.rg.trim(),
+        dataNascimento: paraDataCivil(dados.dataNascimento),
         telefone,
         cep,
         logradouro: dados.logradouro.trim(),
@@ -189,6 +206,8 @@ export class ClientePetRepository {
       data: {
         nome: dados.nome.trim(),
         cpf: dados.cpf.replace(/\D/g, ''),
+        rg: dados.rg.trim(),
+        dataNascimento: paraDataCivil(dados.dataNascimento),
         telefone: dados.telefone.replace(/\D/g, ''),
         cep: dados.cep.replace(/\D/g, ''),
         logradouro: dados.logradouro.trim(),
@@ -253,6 +272,7 @@ export class ClientePetRepository {
         nome: dados.nome.trim(),
         especie: dados.especie.trim(),
         raca: dados.raca.trim(),
+        idade: dados.idade,
         peso: dados.peso,
         nascimento: dados.nascimento,
         // Mesma pendência de rastreabilidade de criador de Cliente.
@@ -276,6 +296,7 @@ export class ClientePetRepository {
         nome: dados.nome.trim(),
         especie: dados.especie.trim(),
         raca: dados.raca.trim(),
+        idade: dados.idade,
         peso: dados.peso,
         nascimento: dados.nascimento,
       },

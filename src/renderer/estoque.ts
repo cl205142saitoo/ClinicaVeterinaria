@@ -1,6 +1,6 @@
 /** Estoque e lotes: consulta liberada a todos os perfis e cadastro só de ADMIN. */
 
-import { ESTOQUE_ALERTA_VALIDADE_DIAS } from '../shared/constants';
+import { ESTOQUE_ALERTA_PADRAO, ESTOQUE_ALERTA_VALIDADE_DIAS } from '../shared/constants';
 import { dataCivilClinica } from '../shared/datas';
 import { isAdmin, obterUsuario } from './auth';
 import type { DadosLote, DadosProduto, Lote, Produto } from './types';
@@ -344,6 +344,7 @@ async function salvarProduto(evento: Event): Promise<void> {
     nome: nome.value.trim(),
     categoria: categoria.value.trim(),
     estoqueMinimo,
+    alertaEstoque: ESTOQUE_ALERTA_PADRAO,
     precoBrl,
   };
 

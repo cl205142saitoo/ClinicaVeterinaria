@@ -1,13 +1,16 @@
 import { ipcMain, type IpcMainInvokeEvent } from 'electron';
 import { IPC_CHANNELS, type IpcChannel } from '../../shared/ipc-channels';
+import type { AlertaVacinaService } from '../services/AlertaVacinaService';
 import type { AnexoArquivoService } from '../services/AnexoArquivoService';
 import type { AnexoService } from '../services/AnexoService';
 import type { AuthService } from '../services/AuthService';
 import type { ClientePetService } from '../services/ClientePetService';
 import type { ConsultaService } from '../services/ConsultaService';
+import type { CotacaoService } from '../services/CotacaoService';
 import type { EstoqueService } from '../services/EstoqueService';
 import type { IntegracoesService } from '../services/IntegracoesService';
 import type { PolicyService } from '../services/PolicyService';
+import type { RelatorioService } from '../services/RelatorioService';
 import type { SessaoService } from '../services/SessaoService';
 import type { UsuarioService } from '../services/UsuarioService';
 import type { VacinaService } from '../services/VacinaService';
@@ -15,6 +18,7 @@ import { paraErroSeguro } from './erros';
 import { criarHandlersAnexo } from './handlersAnexo';
 import { criarHandlersAuth } from './handlersAuth';
 import { criarHandlersClientePet } from './handlersClientePet';
+import { criarHandlersComplementos } from './handlersComplementos';
 import { criarHandlersConsulta } from './handlersConsulta';
 import { criarHandlersEstoque } from './handlersEstoque';
 import { criarHandlersIntegracoes } from './handlersIntegracoes';
@@ -35,6 +39,9 @@ export interface DependenciasIpc {
   usuarioService: UsuarioService;
   policyService: PolicyService;
   integracoesService: IntegracoesService;
+  alertaVacinaService: AlertaVacinaService;
+  cotacaoService: CotacaoService;
+  relatorioService: RelatorioService;
 }
 
 const CANAIS: readonly IpcChannel[] = [
@@ -72,6 +79,7 @@ const CANAIS: readonly IpcChannel[] = [
   IPC_CHANNELS.PETS_ATUALIZAR,
   IPC_CHANNELS.PETS_INATIVAR,
   IPC_CHANNELS.USUARIOS_LISTAR,
+  IPC_CHANNELS.USUARIOS_CRIAR,
   IPC_CHANNELS.USUARIOS_ATUALIZAR,
   IPC_CHANNELS.USUARIOS_INATIVAR,
   IPC_CHANNELS.CONSULTAS_ATUALIZAR,
@@ -86,6 +94,11 @@ const CANAIS: readonly IpcChannel[] = [
   IPC_CHANNELS.API_IBGE_MUNICIPIO,
   IPC_CHANNELS.API_FERIADOS_ANO,
   IPC_CHANNELS.API_RESUMO_DASHBOARD,
+  IPC_CHANNELS.VACINAS_ALERTAS,
+  IPC_CHANNELS.VACINAS_ENVIAR_AVISOS,
+  IPC_CHANNELS.API_COTACAO_DOLAR,
+  IPC_CHANNELS.RELATORIOS_GERAR,
+  IPC_CHANNELS.RELATORIOS_EXPORTAR_CSV,
 ];
 
 async function executar(
@@ -138,6 +151,13 @@ export function registrarHandlersIpc(dependencias: DependenciasIpc): () => void 
     ...criarHandlersIntegracoes(dependencias.integracoesService, dependencias.policyService),
     ...criarHandlersUsuarios(
       dependencias.usuarioService,
+      dependencias.sessaoService,
+      dependencias.policyService
+    ),
+    ...criarHandlersComplementos(
+      dependencias.alertaVacinaService,
+      dependencias.cotacaoService,
+      dependencias.relatorioService,
       dependencias.sessaoService,
       dependencias.policyService
     ),

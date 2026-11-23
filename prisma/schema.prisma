@@ -65,6 +65,8 @@ model Cliente {
   id              Int       @id @default(autoincrement())
   nome            String    @db.VarChar(120)
   cpf             String    @unique @db.VarChar(11)
+  rg              String?   @db.VarChar(30)
+  dataNascimento  DateTime? @db.Date
   telefone        String    @db.VarChar(11)
   email           String?   @db.VarChar(254)
   cep             String    @db.VarChar(8)
@@ -96,6 +98,7 @@ model Pet {
   nome           String           @db.VarChar(120)
   especie        String           @db.VarChar(80)
   raca           String           @db.VarChar(120)
+  idade          Int
   peso           Float
   nascimento     String?          @db.VarChar(20)
   clienteId      Int
@@ -125,6 +128,7 @@ model Consulta {
   diagnostico        String?          @db.Text
   exameClinico       String?          @db.Text
   conduta            String?          @db.Text
+  prescricao         String?          @db.Text
   pesoAferido        Float?
   temperaturaC       Float?
   status             String           @default("AGENDADA") @db.VarChar(30)
@@ -158,6 +162,8 @@ model Produto {
   nome          String  @db.VarChar(120)
   categoria     String  @db.VarChar(80)
   estoqueMinimo Int     @default(5)
+  /// Liga/desliga somente o alerta de quantidade mínima; validade continua ativa.
+  alertaEstoque Boolean @default(true)
   precoBrl      Decimal @db.Decimal(10, 2)
   ativo         Boolean @default(true)
   inativadoPorId  Int?
@@ -167,6 +173,7 @@ model Produto {
   lotes         Lote[]
 
   @@index([ativo])
+  @@index([alertaEstoque])
 }
 
 model Lote {
@@ -254,8 +261,22 @@ model RegistroVacina {
   estornadoPor    Usuario?  @relation("EstornadorVacinas", fields: [estornadoPorId], references: [id], onDelete: SetNull, onUpdate: Cascade)
   estornadoEm     DateTime? @db.DateTime(6)
   motivoEstorno   String?   @db.VarChar(500)
+  /// Auditoria do último e-mail automático enviado ao tutor.
+  ultimoAvisoEm          DateTime? @db.DateTime(6)
+  /// Próxima dose para a qual o último aviso foi enviado.
+  ultimoAvisoProximaDose DateTime? @db.Date
 
   @@index([petId, aplicadaEm])
   @@index([veterinarioId])
   @@index([consultaId])
+  @@index([proximaDose, estornado])
+}
+
+/// Cotação diária persistida do dólar (BRL por USD), usada no custo de importação.
+model CotacaoDolar {
+  id             Int      @id @default(autoincrement())
+  dataReferencia DateTime @unique @db.Date
+  valor          Decimal  @db.Decimal(10, 4)
+  fonte          String   @db.VarChar(80)
+  consultadoEm   DateTime @db.DateTime(6)
 }

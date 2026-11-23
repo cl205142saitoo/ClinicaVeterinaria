@@ -31,7 +31,14 @@ export class UsuarioRepository {
   }
 
   /** Devolve a entidade completa apenas para AuthService, que filtra o hash no DTO. */
-  async criar(dados: { nome: string; email: string; senhaHash: string; role: Role }) {
+  async criar(dados: {
+    nome: string;
+    email: string;
+    senhaHash: string;
+    role: Role;
+    crmv?: string | null;
+    rg?: string | null;
+  }) {
     return this.prisma.usuario.create({ data: dados });
   }
 

@@ -356,11 +356,19 @@ ALTER TABLE `AnexoClinico` ADD CONSTRAINT `AnexoClinico_nome_original_valido_chk
 ALTER TABLE `AnexoClinico` ADD CONSTRAINT `AnexoClinico_nome_arquivo_valido_chk`
     CHECK (`nomeArquivoGerado` REGEXP '^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}([.][a-z0-9]{1,5})?$');
 
--- Exclusão lógica coerente: inativo=false exige os 3 campos nulos; inativo=true
+-- Exclusão lógica coerente: inativo=false exige data e motivo nulos; inativo=true
 -- exige data e motivo não vazio. `IS NOT NULL` explícito evita o buraco do
 -- CHECK do MySQL, que considera UNKNOWN (NULL) como satisfeito.
+--
+-- AJUSTE MySQL 8.0.16+: `inativadoPorId` NÃO pode entrar no CHECK porque a
+-- coluna participa da FK `AnexoClinico_inativadoPorId_fkey` com ON DELETE SET
+-- NULL. O MySQL rejeita CHECKs sobre colunas usadas por ações referenciais
+-- (erro 3818/ERROR 3819: "cannot be used in a check constraint ... needed in
+-- a foreign key constraint ... referential action"). A integridade do
+-- responsável continua garantida pela FK; a data e o motivo continuam
+-- validados pelo CHECK abaixo.
 ALTER TABLE `AnexoClinico` ADD CONSTRAINT `AnexoClinico_inativacao_coerente_chk` CHECK (
-    (`inativo` = false AND `inativadoPorId` IS NULL AND `inativadoEm` IS NULL AND `motivoInativacao` IS NULL)
+    (`inativo` = false AND `inativadoEm` IS NULL AND `motivoInativacao` IS NULL)
     OR
     (`inativo` = true AND `inativadoEm` IS NOT NULL AND `motivoInativacao` IS NOT NULL AND CHAR_LENGTH(TRIM(`motivoInativacao`)) > 0)
 );

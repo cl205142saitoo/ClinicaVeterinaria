@@ -32,3 +32,97 @@ a:focus-visible {
   background: #123b36;
   color: #fff;
 }
+
+/* Gráficos dos relatórios: SVG e barras CSS, sem bibliotecas adicionais. */
+.grafico-relatorio {
+  min-height: 11rem;
+}
+.grafico-relatorio svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.grafico-relatorio .grafico-barra {
+  fill: var(--bs-primary);
+}
+.grafico-relatorio .grafico-eixo {
+  stroke: #c7d2d0;
+  stroke-width: 1;
+}
+.grafico-relatorio .grafico-texto {
+  fill: var(--bs-secondary-color);
+  font-size: 9px;
+}
+.grafico-relatorio .grafico-valor {
+  fill: var(--bs-body-color);
+  font-size: 10px;
+  font-weight: 600;
+}
+.grafico-relatorio .progress {
+  height: 0.5rem;
+}
+
+/* Na impressão, apenas o painel de relatórios é exibido. */
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 10mm;
+  }
+
+  body {
+    background: #fff !important;
+  }
+  body * {
+    visibility: hidden !important;
+  }
+  #abaRelatorios,
+  #abaRelatorios * {
+    visibility: visible !important;
+  }
+  #abaRelatorios {
+    position: absolute !important;
+    inset: 0 auto auto 0 !important;
+    display: block !important;
+    opacity: 1 !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+  #navAbas,
+  .barra-usuario,
+  #toastContainer,
+  .toast,
+  .modal,
+  #abaRelatorios button,
+  #abaRelatorios .btn,
+  #abaRelatorios .invalid-feedback {
+    display: none !important;
+  }
+  .container-fluid,
+  main,
+  #appPrincipal,
+  .tab-content,
+  .card,
+  .card-body,
+  .table-responsive {
+    overflow: visible !important;
+  }
+  .card,
+  .shadow-sm {
+    box-shadow: none !important;
+  }
+  .card,
+  tr,
+  .grafico-relatorio {
+    break-inside: avoid;
+  }
+  #relKpis .card {
+    border: 1px solid #dee2e6 !important;
+  }
+  .table {
+    font-size: 0.8rem;
+  }
+}

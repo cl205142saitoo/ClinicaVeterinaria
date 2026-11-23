@@ -8,7 +8,8 @@
     "start": "npm run build && electron .",
     "db:generate": "prisma generate",
     "db:deploy": "prisma migrate deploy",
-    "seed:admin": "ts-node --compiler typescript5 scripts/seed-admin.ts"
+    "seed:admin": "ts-node --compiler typescript5 scripts/seed-admin.ts",
+    "seed:dados": "ts-node --compiler typescript5 scripts/seed-dados.ts"
   },
   "repository": {
     "type": "git",

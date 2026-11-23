@@ -2,6 +2,7 @@ import { IPC_CHANNELS } from '../../shared/ipc-channels';
 import {
   ehDadosAtualizacaoUsuario,
   ehDadosInativacao,
+  ehDadosNovoUsuario,
   exigir,
 } from '../../shared/validators';
 import { PolicyService } from '../services/PolicyService';
@@ -11,6 +12,7 @@ import type { HandlerIpc } from './tipos';
 
 type CanaisUsuarios =
   | typeof IPC_CHANNELS.USUARIOS_LISTAR
+  | typeof IPC_CHANNELS.USUARIOS_CRIAR
   | typeof IPC_CHANNELS.USUARIOS_ATUALIZAR
   | typeof IPC_CHANNELS.USUARIOS_INATIVAR;
 
@@ -24,6 +26,17 @@ export function criarHandlersUsuarios(
       const usuario = await policy.exigirAutenticadoVerificado();
       policy.exigirAdmin(usuario);
       return usuarioService.listar();
+    },
+
+    [IPC_CHANNELS.USUARIOS_CRIAR]: async (args) => {
+      const usuario = await policy.exigirAutenticadoVerificado();
+      policy.exigirAdmin(usuario);
+      const dados = exigir(
+        args[0],
+        ehDadosNovoUsuario,
+        'Dados do novo usuário inválidos. Confira nome, e-mail, senha (6+), CRMV e perfil.'
+      );
+      return usuarioService.criar(dados, usuario);
     },
 
     [IPC_CHANNELS.USUARIOS_ATUALIZAR]: async (args) => {

@@ -25,7 +25,7 @@ import {
 } from '../ui';
 import type { ContextoApp } from './contexto';
 
-const COLUNAS_HISTORICO = 7;
+const COLUNAS_HISTORICO = 8;
 
 const ROTULOS_STATUS: Readonly<Record<string, string>> = {
   AGENDADA: 'Agendada',
@@ -225,6 +225,7 @@ export class ProntuarioController {
         criarCelula(consulta.motivo, 'text-break small'),
         criarCelula(`${consulta.veterinario.nome} — ${crmv ? crmv : 'CRMV não informado'}`, 'small'),
         criarCelula(textoOuTraco(consulta.diagnostico), 'text-break small'),
+        criarCelula(textoOuTraco(consulta.prescricao), 'text-break small'),
         criarCelula(
           `${this.numeroOuTraco(consulta.pesoAferido, ' kg')} / ${this.numeroOuTraco(consulta.temperaturaC, ' °C')}`,
           'text-nowrap small'
@@ -274,6 +275,7 @@ export class ProntuarioController {
     obrigatorio<HTMLTextAreaElement>('#prExameClinico').value = consulta.exameClinico ?? '';
     obrigatorio<HTMLTextAreaElement>('#prDiagnostico').value = consulta.diagnostico ?? '';
     obrigatorio<HTMLTextAreaElement>('#prConduta').value = consulta.conduta ?? '';
+    obrigatorio<HTMLTextAreaElement>('#prPrescricao').value = consulta.prescricao ?? '';
     obrigatorio<HTMLInputElement>('#prPeso').value =
       consulta.pesoAferido === null ? '' : String(consulta.pesoAferido);
     obrigatorio<HTMLInputElement>('#prTemperatura').value =
@@ -338,6 +340,7 @@ export class ProntuarioController {
     const exame = obrigatorio<HTMLTextAreaElement>('#prExameClinico');
     const diagnostico = obrigatorio<HTMLTextAreaElement>('#prDiagnostico');
     const conduta = obrigatorio<HTMLTextAreaElement>('#prConduta');
+    const prescricao = obrigatorio<HTMLTextAreaElement>('#prPrescricao');
     const pesoCampo = obrigatorio<HTMLInputElement>('#prPeso');
     const temperaturaCampo = obrigatorio<HTMLInputElement>('#prTemperatura');
 
@@ -345,6 +348,7 @@ export class ProntuarioController {
       this.validarTexto(exame, 'o exame clínico'),
       this.validarTexto(diagnostico, 'o diagnóstico'),
       this.validarTexto(conduta, 'a conduta'),
+      this.validarTexto(prescricao, 'a prescrição'),
     ];
     const peso = this.lerNumeroOpcional(pesoCampo, (valor) => valor > 0, 'Informe um peso maior que zero (em kg).');
     const temperatura = this.lerNumeroOpcional(
@@ -364,6 +368,7 @@ export class ProntuarioController {
       exameClinico: exame.value.trim(),
       diagnostico: diagnostico.value.trim(),
       conduta: conduta.value.trim(),
+      prescricao: prescricao.value.trim(),
       pesoAferido: peso,
       temperaturaC: temperatura,
     };

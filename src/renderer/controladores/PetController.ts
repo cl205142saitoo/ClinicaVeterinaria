@@ -1,5 +1,6 @@
 /** Domínio de pets: formulário, vínculo com tutor, listagem, edição e inativação. */
 
+import { PET_IDADE_MAXIMA_ANOS } from '../../shared/constants';
 import type { Cliente, DadosPet, Pet } from '../types';
 import {
   criarBotaoAcao,
@@ -82,7 +83,7 @@ export class PetController {
       const linha = document.createElement('tr');
       linha.append(
         criarCelula(pet.nome),
-        criarCelula(`${pet.especie} / ${pet.raca}`),
+        criarCelula(`${pet.especie} / ${pet.raca} — ${pet.idade} ${pet.idade === 1 ? 'ano' : 'anos'}`),
         criarCelula(pet.cliente?.nome ?? '—')
       );
 
@@ -129,6 +130,7 @@ export class PetController {
     this.definirValor('#pNome', pet.nome);
     this.definirValor('#pEspecie', pet.especie);
     this.definirValor('#pRaca', pet.raca);
+    this.definirValor('#pIdade', String(pet.idade));
     this.definirValor('#pPeso', String(pet.peso));
     obrigatorio<HTMLSelectElement>('#pCliente').value = String(pet.clienteId);
 
@@ -166,6 +168,7 @@ export class PetController {
     const nome = obrigatorio<HTMLInputElement>('#pNome');
     const especie = obrigatorio<HTMLInputElement>('#pEspecie');
     const raca = obrigatorio<HTMLInputElement>('#pRaca');
+    const idade = obrigatorio<HTMLInputElement>('#pIdade');
     const peso = obrigatorio<HTMLInputElement>('#pPeso');
     limparValidacao(formulario);
 
@@ -173,6 +176,13 @@ export class PetController {
       exigir(cliente, cliente.value !== '', 'Selecione o tutor do pet.'),
       exigir(nome, nome.value.trim().length >= 2, 'Informe o nome do pet.'),
       exigir(especie, especie.value.trim() !== '', 'Informe a espécie.'),
+      exigir(
+        idade,
+        /^\d+$/.test(idade.value.trim()) &&
+          Number(idade.value) >= 0 &&
+          Number(idade.value) <= PET_IDADE_MAXIMA_ANOS,
+        `Informe a idade em anos (de 0 a ${PET_IDADE_MAXIMA_ANOS}).`
+      ),
       exigir(peso, pesoValido(peso.value), 'Informe um peso em kg maior que zero.'),
     ];
     if (!resultados.every(Boolean)) {
@@ -185,6 +195,7 @@ export class PetController {
       nome: nome.value.trim(),
       especie: especie.value.trim(),
       raca: raca.value.trim(),
+      idade: Number(idade.value),
       peso: Number(peso.value.replace(',', '.')),
     };
     const id = this.idEdicao;

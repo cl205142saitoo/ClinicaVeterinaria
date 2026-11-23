@@ -18,6 +18,8 @@ export interface Pet {
   nome: string;
   especie: string;
   raca: string;
+  /** Idade do animal em anos (coluna inteira, 0 a 100). */
+  idade: number;
   peso: number;
   nascimento: string | null;
   clienteId: number;
@@ -33,6 +35,9 @@ export interface Cliente {
   id: number;
   nome: string;
   cpf: string;
+  rg: string | null;
+  /** Data civil YYYY-MM-DD. */
+  dataNascimento: string | null;
   telefone: string;
   email: string | null;
   cep: string;
@@ -68,6 +73,9 @@ export interface Usuario {
 export interface DadosCliente {
   nome: string;
   cpf: string;
+  rg: string;
+  /** Data civil YYYY-MM-DD. */
+  dataNascimento: string;
   telefone: string;
   cep: string;
   logradouro: string;
@@ -82,6 +90,8 @@ export interface DadosPet {
   nome: string;
   especie: string;
   raca: string;
+  /** Idade em anos, inteira de 0 a 100. */
+  idade: number;
   peso: number;
   nascimento?: string;
 }
@@ -118,6 +128,8 @@ export interface ConsultaProntuario extends ConsultaAgenda {
   diagnostico: string | null;
   exameClinico: string | null;
   conduta: string | null;
+  /** O que foi receitado na consulta (texto clínico). */
+  prescricao: string | null;
   pesoAferido: number | null;
   temperaturaC: number | null;
 }
@@ -135,6 +147,8 @@ export interface DadosProntuario {
   exameClinico: string;
   diagnostico: string;
   conduta: string;
+  /** O que foi receitado; "Nenhuma medicação prescrita." é aceito. */
+  prescricao: string;
   pesoAferido?: number | null;
   temperaturaC?: number | null;
 }
@@ -177,6 +191,9 @@ export interface RegistroVacina {
   estornado?: boolean;
   estornadoEm?: string | null;
   motivoEstorno?: string | null;
+  /** Auditoria do aviso por e-mail enviado ao tutor. */
+  ultimoAvisoEm?: string | null;
+  ultimoAvisoProximaDose?: string | null;
   veterinario: { id: number; nome: string; crmv: string | null };
 }
 
@@ -263,6 +280,8 @@ export interface Produto {
   nome: string;
   categoria: string;
   estoqueMinimo: number;
+  /** Flag por produto: desliga apenas o alerta de quantidade mínima. */
+  alertaEstoque: boolean;
   /** BRL convertido de Prisma.Decimal para number. */
   precoBrl: number;
   ativo?: boolean;
@@ -275,6 +294,7 @@ export interface DadosProduto {
   nome: string;
   categoria: string;
   estoqueMinimo: number;
+  alertaEstoque: boolean;
   precoBrl: number;
 }
 
@@ -300,6 +320,16 @@ export interface DadosAtualizacaoCliente extends DadosCliente {
 
 export interface DadosAtualizacaoPet extends DadosPet {
   id: number;
+}
+
+/** Criação restrita a ADMIN; o perfil é fixo no backend, nunca vem do renderer. */
+export interface DadosNovoUsuario {
+  nome: string;
+  email: string;
+  senha: string;
+  crmv: string | null;
+  rg: string | null;
+  role: 'VETERINARIO' | 'ATENDENTE';
 }
 
 export interface DadosAtualizacaoUsuario {
@@ -364,6 +394,111 @@ export interface ResumoDashboard {
   vacinasRegistradasHoje: number;
 }
 
+/* ---------- Alertas, cotação e relatórios ---------- */
+
+export type NivelAlertaVacina = 'VENCIDA' | 'PROXIMA';
+
+export interface AlertaVacina {
+  registroVacinaId: number;
+  petId: number;
+  petNome: string;
+  tutorNome: string;
+  tutorEmail: string | null;
+  vacina: string;
+  dose: string;
+  /** Data civil YYYY-MM-DD informada pelo veterinário. */
+  proximaDose: string;
+  /** Negativo = atrasada; zero = vence hoje. */
+  diasParaProximaDose: number;
+  nivel: NivelAlertaVacina;
+  ultimoAvisoEm: string | null;
+  ultimoAvisoProximaDose: string | null;
+}
+
+export interface ResultadoEnvioAvisos {
+  destinatarios: number;
+  enviados: number;
+  ignorados: number;
+  falhas: number;
+  mensagens: string[];
+}
+
+export interface CotacaoDolar {
+  /** BRL por USD. */
+  valor: number;
+  /** Data civil YYYY-MM-DD. */
+  dataReferencia: string;
+  fonte: string;
+  consultadoEm: string;
+}
+
+export interface FiltroRelatorio {
+  /** Data civil YYYY-MM-DD. */
+  de: string;
+  /** Data civil YYYY-MM-DD. */
+  ate: string;
+}
+
+export interface SerieMensal {
+  /** YYYY-MM. */
+  mes: string;
+  clientesNovos: number;
+  consultas: number;
+  vacinas: number;
+  /** Preenchido pela Fase 2; 0 antes do módulo financeiro. */
+  faturamento: number;
+}
+
+export interface ContadorGrupo {
+  rotulo: string;
+  total: number;
+}
+
+export interface AlertaEstoqueRelatorio {
+  produtoId: number;
+  produtoNome: string;
+  quantidade: number;
+  estoqueMinimo: number;
+  alertaHabilitado: boolean;
+  motivos: string[];
+}
+
+export interface RelatorioDados {
+  periodo: FiltroRelatorio;
+  geradoEm: string;
+  kpis: {
+    clientesAtivos: number;
+    clientesNovosPeriodo: number;
+    petsAtivos: number;
+    consultasPeriodo: number;
+    consultasConcluidas: number;
+    consultasCanceladas: number;
+    vacinasPeriodo: number;
+    alertasVacina: number;
+    alertasEstoque: number;
+    /** 0 até a Fase 2. */
+    faturamento: number;
+    /** 0 até a Fase 2. */
+    despesas: number;
+    /** 0 até a Fase 2. */
+    saldo: number;
+    /** 0 até a Fase 2. */
+    ticketMedio: number;
+  };
+  serie: SerieMensal[];
+  statusConsultas: ContadorGrupo[];
+  clientesPorCidade: ContadorGrupo[];
+  consultasPorVeterinario: ContadorGrupo[];
+  produtosMaisUsados: ContadorGrupo[];
+  alertasEstoque: AlertaEstoqueRelatorio[];
+  alertasVacinas: AlertaVacina[];
+}
+
+export interface ResultadoExportacaoCsv {
+  caminho: string;
+  linhas: number;
+}
+
 /** Superfície exposta pelo preload. Os nomes dos métodos são imutáveis. */
 export interface Api {
   buscarCep(cep: string): Promise<Endereco>;
@@ -400,6 +535,7 @@ export interface Api {
   atualizarPet(dados: DadosAtualizacaoPet): Promise<Pet>;
   inativarPet(dados: DadosInativacao): Promise<Pet>;
   listarUsuarios(): Promise<Usuario[]>;
+  criarUsuario(dados: DadosNovoUsuario): Promise<Usuario>;
   atualizarUsuario(dados: DadosAtualizacaoUsuario): Promise<Usuario>;
   inativarUsuario(dados: DadosInativacao): Promise<Usuario>;
   consultasAtualizar(dados: DadosAtualizacaoConsulta): Promise<ConsultaAgenda>;
@@ -414,4 +550,9 @@ export interface Api {
   buscarMunicipioIbge(nome: string, uf: string): Promise<MunicipioIbge | null>;
   listarFeriados(ano: number): Promise<Feriado[]>;
   resumoDashboard(): Promise<ResumoDashboard>;
+  vacinasAlertas(): Promise<AlertaVacina[]>;
+  vacinasEnviarAvisos(): Promise<ResultadoEnvioAvisos>;
+  cotacaoDolar(): Promise<CotacaoDolar>;
+  relatorioGerar(filtro: FiltroRelatorio): Promise<RelatorioDados>;
+  relatorioExportarCsv(filtro: FiltroRelatorio): Promise<ResultadoExportacaoCsv | null>;
 }

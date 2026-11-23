@@ -1,8 +1,10 @@
 /** Deve ser o primeiro import: carrega DATABASE_URL antes de qualquer PrismaClient. */
-import './config/carregarEnv';
+import { carregarEnv } from './config/carregarEnv';
 import { app, BrowserWindow } from 'electron';
 import path from 'path';
 import { registrarHandlersIpc } from './ipc/handlers';
+import { AlertaVacinaRepository } from './repositories/AlertaVacinaRepository';
+import { AlertaVacinaService } from './services/AlertaVacinaService';
 import { AnexoArquivoService } from './services/AnexoArquivoService';
 import { AnexoRepository } from './repositories/AnexoRepository';
 import { AnexoService } from './services/AnexoService';
@@ -10,15 +12,29 @@ import { AuthService } from './services/AuthService';
 import { ClientePetService } from './services/ClientePetService';
 import { ConsultaRepository } from './repositories/ConsultaRepository';
 import { ConsultaService } from './services/ConsultaService';
+import { CotacaoService } from './services/CotacaoService';
 import { EstoqueRepository } from './repositories/EstoqueRepository';
 import { EstoqueService } from './services/EstoqueService';
 import { IntegracoesService } from './services/IntegracoesService';
 import { PolicyService } from './services/PolicyService';
+import { RelatorioService } from './services/RelatorioService';
 import { SessaoService } from './services/SessaoService';
 import { UsuarioRepository } from './repositories/UsuarioRepository';
 import { UsuarioService } from './services/UsuarioService';
 import { VacinaRepository } from './repositories/VacinaRepository';
 import { VacinaService } from './services/VacinaService';
+
+// As chaves SMTP não entram no carregamento padrão do módulo de config.
+carregarEnv([
+  'DATABASE_URL',
+  'PHD_ANEXOS_DIR',
+  'SMTP_HOST',
+  'SMTP_PORT',
+  'SMTP_USER',
+  'SMTP_PASS',
+  'SMTP_FROM',
+  'PHD_CLAREZA_EMAIL',
+]);
 
 class MainApp {
   private mainWindow: BrowserWindow | null = null;
@@ -26,6 +42,7 @@ class MainApp {
   private authService = new AuthService();
   private consultaService = new ConsultaService(new ConsultaRepository());
   private vacinaService = new VacinaService(new VacinaRepository());
+  private alertaVacinaService = new AlertaVacinaService(new AlertaVacinaRepository());
   private anexoService = new AnexoService(new AnexoRepository());
   private arquivoService = new AnexoArquivoService();
   private estoqueService = new EstoqueService(new EstoqueRepository());
@@ -33,6 +50,8 @@ class MainApp {
   private policyService = new PolicyService(this.sessaoService);
   private usuarioService = new UsuarioService(new UsuarioRepository(), this.policyService);
   private integracoesService = new IntegracoesService();
+  private cotacaoService = new CotacaoService();
+  private relatorioService = new RelatorioService(this.alertaVacinaService);
   private removerHandlers: (() => void) | null = null;
 
   constructor() {
@@ -55,6 +74,9 @@ class MainApp {
         usuarioService: this.usuarioService,
         policyService: this.policyService,
         integracoesService: this.integracoesService,
+        alertaVacinaService: this.alertaVacinaService,
+        cotacaoService: this.cotacaoService,
+        relatorioService: this.relatorioService,
       });
       this.criarJanela();
     });

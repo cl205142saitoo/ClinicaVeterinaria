@@ -9,6 +9,7 @@ import { EstoqueController } from './controladores/EstoqueController';
 import { IntegracaoController } from './controladores/IntegracaoController';
 import { PetController } from './controladores/PetController';
 import { ProntuarioController } from './controladores/ProntuarioController';
+import { RelatorioController } from './controladores/RelatorioController';
 import { UsuarioController } from './controladores/UsuarioController';
 import { VacinaController } from './controladores/VacinaController';
 import { limparInvalido, mensagemErro, mostrarToast } from './ui';
@@ -24,6 +25,7 @@ class App implements ContextoApp {
   private readonly anexos: AnexoController;
   private readonly usuarios: UsuarioController;
   private readonly integracoes: IntegracaoController;
+  private readonly relatorios: RelatorioController;
   private carregando = false;
 
   constructor() {
@@ -40,6 +42,7 @@ class App implements ContextoApp {
     this.anexos = new AnexoController(this);
     this.usuarios = new UsuarioController(this);
     this.integracoes = new IntegracaoController(this);
+    this.relatorios = new RelatorioController(this);
   }
 
   /** Liga os eventos uma única vez; nenhuma tela é carregada antes do login. */
@@ -55,6 +58,7 @@ class App implements ContextoApp {
     this.anexos.iniciar();
     this.usuarios.iniciar();
     this.integracoes.iniciar();
+    this.relatorios.iniciar();
     this.limparEstado();
   }
 
@@ -84,6 +88,7 @@ class App implements ContextoApp {
         this.estoque.carregar(),
         this.usuarios.carregar(),
         this.integracoes.carregar(),
+        this.relatorios.carregar(),
       ]);
 
       await Promise.all([
@@ -127,6 +132,7 @@ class App implements ContextoApp {
     this.anexos.limpar();
     this.usuarios.limpar();
     this.integracoes.limpar();
+    this.relatorios.limpar();
     this.auth.aplicarPermissoes();
   }
 

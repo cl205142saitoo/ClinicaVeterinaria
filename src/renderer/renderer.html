@@ -72,8 +72,40 @@
 
     <!-- APLICAÇÃO PRINCIPAL -->
     <main id="appPrincipal" hidden>
-      <h1 class="h4 mb-3">Gestão de clientes e pets</h1>
+      <h1 class="h4 mb-3">PetHealthPD — Gestão da clínica</h1>
 
+      <ul class="nav nav-tabs flex-wrap mb-3" id="navAbas" role="tablist" aria-label="Áreas do sistema">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active" id="abaClientes-tab" data-bs-toggle="tab" data-bs-target="#abaClientes" type="button" role="tab" aria-controls="abaClientes" aria-selected="true">Clientes e pets</button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="abaAgenda-tab" data-bs-toggle="tab" data-bs-target="#abaAgenda" type="button" role="tab" aria-controls="abaAgenda" aria-selected="false">Agenda</button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="abaProntuario-tab" data-bs-toggle="tab" data-bs-target="#abaProntuario" type="button" role="tab" aria-controls="abaProntuario" aria-selected="false">Prontuário</button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="abaVacinas-tab" data-bs-toggle="tab" data-bs-target="#abaVacinas" type="button" role="tab" aria-controls="abaVacinas" aria-selected="false">Vacinas</button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="abaEstoque-tab" data-bs-toggle="tab" data-bs-target="#abaEstoque" type="button" role="tab" aria-controls="abaEstoque" aria-selected="false">Estoque</button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="abaAnexos-tab" data-bs-toggle="tab" data-bs-target="#abaAnexos" type="button" role="tab" aria-controls="abaAnexos" aria-selected="false">Anexos</button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="abaIntegracoes-tab" data-bs-toggle="tab" data-bs-target="#abaIntegracoes" type="button" role="tab" aria-controls="abaIntegracoes" aria-selected="false">Integrações</button>
+        </li>
+        <li class="nav-item" role="presentation" id="abaRelatorios-item" hidden>
+          <button class="nav-link" id="abaRelatorios-tab" data-bs-toggle="tab" data-bs-target="#abaRelatorios" type="button" role="tab" aria-controls="abaRelatorios" aria-selected="false">Relatórios</button>
+        </li>
+        <li class="nav-item" role="presentation" id="abaUsuarios-item" hidden>
+          <button class="nav-link" id="abaUsuarios-tab" data-bs-toggle="tab" data-bs-target="#abaUsuarios" type="button" role="tab" aria-controls="abaUsuarios" aria-selected="false">Usuários</button>
+        </li>
+      </ul>
+
+      <div class="tab-content" id="conteudoAbas">
+      <div class="tab-pane fade show active" id="abaClientes" role="tabpanel" aria-labelledby="abaClientes-tab" tabindex="0">
       <div class="row g-3">
         <div class="col-12 col-lg-6">
           <div class="card shadow-sm h-100">
@@ -97,6 +129,18 @@
                     <label for="cTel" class="form-label">Telefone</label>
                     <input id="cTel" type="text" class="form-control" inputmode="tel" maxlength="15" placeholder="(00) 00000-0000" aria-describedby="cTelFeedback" required />
                     <div id="cTelFeedback" class="invalid-feedback"></div>
+                  </div>
+                </div>
+                <div class="row g-3">
+                  <div class="col-12 col-md-6 mb-3">
+                    <label for="cRg" class="form-label">RG</label>
+                    <input id="cRg" type="text" class="form-control" maxlength="30" aria-describedby="cRgFeedback" required />
+                    <div id="cRgFeedback" class="invalid-feedback"></div>
+                  </div>
+                  <div class="col-12 col-md-6 mb-3">
+                    <label for="cNascimento" class="form-label">Data de nascimento</label>
+                    <input id="cNascimento" type="date" class="form-control" aria-describedby="cNascimentoFeedback" required />
+                    <div id="cNascimentoFeedback" class="invalid-feedback"></div>
                   </div>
                 </div>
                 <div class="mb-3">
@@ -170,10 +214,17 @@
                     <div id="pRacaFeedback" class="invalid-feedback"></div>
                   </div>
                 </div>
-                <div class="mb-3">
-                  <label for="pPeso" class="form-label">Peso (kg)</label>
-                  <input id="pPeso" type="number" class="form-control" step="0.1" min="0.1" inputmode="decimal" placeholder="0,0" aria-describedby="pPesoFeedback" required />
-                  <div id="pPesoFeedback" class="invalid-feedback"></div>
+                <div class="row g-3">
+                  <div class="col-12 col-md-6 mb-3">
+                    <label for="pIdade" class="form-label">Idade (anos)</label>
+                    <input id="pIdade" type="number" class="form-control" step="1" min="0" max="100" inputmode="numeric" aria-describedby="pIdadeFeedback" required />
+                    <div id="pIdadeFeedback" class="invalid-feedback"></div>
+                  </div>
+                  <div class="col-12 col-md-6 mb-3">
+                    <label for="pPeso" class="form-label">Peso (kg)</label>
+                    <input id="pPeso" type="number" class="form-control" step="0.1" min="0.1" inputmode="decimal" placeholder="0,0" aria-describedby="pPesoFeedback" required />
+                    <div id="pPesoFeedback" class="invalid-feedback"></div>
+                  </div>
                 </div>
                 <button id="btnSalvarPet" type="submit" class="btn btn-primary w-100">Cadastrar pet</button>
                 <button id="btnCancelarEdicaoPet" type="button" class="btn btn-outline-secondary w-100 mt-2" hidden>Cancelar edição</button>
@@ -195,6 +246,9 @@
                   <thead>
                     <tr>
                       <th scope="col">Nome</th>
+                      <th scope="col">CPF</th>
+                      <th scope="col">RG</th>
+                      <th scope="col">Nascimento</th>
                       <th scope="col">Cidade/UF</th>
                       <th scope="col" class="text-center">Pets</th>
                       <th scope="col">Ação</th>
@@ -218,7 +272,7 @@
                   <thead>
                     <tr>
                       <th scope="col">Pet</th>
-                      <th scope="col">Espécie/Raça</th>
+                      <th scope="col">Espécie/Raça/Idade</th>
                       <th scope="col">Tutor</th>
                       <th scope="col">Ação</th>
                     </tr>
@@ -230,8 +284,10 @@
           </div>
         </div>
       </div>
+      </div>
 
       <!-- AGENDA DE CONSULTAS -->
+      <div class="tab-pane fade" id="abaAgenda" role="tabpanel" aria-labelledby="abaAgenda-tab" tabindex="0">
       <section class="row g-3 mt-1" aria-labelledby="tituloAgenda">
         <div class="col-12">
           <div class="card shadow-sm">
@@ -315,7 +371,9 @@
           </div>
         </div>
       </section>
+      </div>
 
+      <div class="tab-pane fade" id="abaProntuario" role="tabpanel" aria-labelledby="abaProntuario-tab" tabindex="0">
       <!-- PRONTUÁRIO CLÍNICO DO PET -->
       <section class="row g-3 mt-1" aria-labelledby="tituloProntuario">
         <div class="col-12">
@@ -356,6 +414,7 @@
                             <th scope="col">Motivo</th>
                             <th scope="col">Veterinário</th>
                             <th scope="col">Diagnóstico</th>
+                            <th scope="col">Prescrição</th>
                             <th scope="col">Peso / Temp.</th>
                             <th scope="col">Status</th>
                             <th scope="col">Ações</th>
@@ -389,6 +448,12 @@
                         <textarea id="prConduta" class="form-control" rows="3" minlength="3" maxlength="2000" aria-describedby="prCondutaFeedback" required></textarea>
                         <div id="prCondutaFeedback" class="invalid-feedback"></div>
                       </div>
+                      <div class="mb-3">
+                        <label for="prPrescricao" class="form-label">Prescrição (o que foi receitado)</label>
+                        <textarea id="prPrescricao" class="form-control" rows="3" minlength="3" maxlength="2000" aria-describedby="prPrescricaoFeedback prPrescricaoAjuda" required></textarea>
+                        <div id="prPrescricaoFeedback" class="invalid-feedback"></div>
+                        <div id="prPrescricaoAjuda" class="form-text">Se não houver medicação, registre “Nenhuma medicação prescrita.”</div>
+                      </div>
                       <div class="row g-3">
                         <div class="col-12 col-md-6 mb-3">
                           <label for="prPeso" class="form-label">Peso aferido (kg)</label>
@@ -412,7 +477,9 @@
           </div>
         </div>
       </section>
+      </div>
 
+      <div class="tab-pane fade" id="abaVacinas" role="tabpanel" aria-labelledby="abaVacinas-tab" tabindex="0">
       <!-- CARTEIRA DE VACINAÇÃO -->
       <section class="row g-3 mt-1" aria-labelledby="tituloVacinas">
         <div class="col-12">
@@ -439,7 +506,38 @@
                   </div>
                 </div>
 
-                <div id="vcAvisoCalendario" class="alert alert-warning py-2 small" role="note">Este registro é informativo: o sistema não calcula calendário vacinal, não define obrigatoriedade e não emite alerta de atraso. A próxima dose é preenchida apenas se o veterinário informar. Prazos e exigências — como antirrábica e campanhas municipais — variam por município/estado e devem ser confirmados com o veterinário responsável e com a vigilância sanitária local.</div>
+                <div id="vcAvisoCalendario" class="alert alert-warning py-2 small" role="note">O sistema não calcula calendário vacinal nem define obrigatoriedade: os alertas abaixo consideram somente a próxima dose informada pelo veterinário. Prazos e exigências — como antirrábica e campanhas municipais — variam por município/estado e devem ser confirmados com o veterinário responsável e com a vigilância sanitária local.</div>
+
+                <div id="vcAlertas" class="card mb-3">
+                  <div class="card-header bg-transparent border-0 pb-0">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                      <h3 class="h6 mb-0">Alertas de próxima dose</h3>
+                      <div class="d-flex flex-wrap align-items-center gap-2">
+                        <span id="vcResumoAlertas" class="badge text-bg-light border" hidden></span>
+                        <button id="btnEnviarAvisosVacina" type="button" class="btn btn-sm btn-outline-primary">Enviar avisos por e-mail</button>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="card-body">
+                    <p id="vcStatusAvisos" class="small text-muted mb-3" role="status" aria-live="polite">Selecione “Enviar avisos por e-mail” para notificar os tutores sobre doses vencidas ou próximas.</p>
+                    <div class="table-responsive">
+                      <table class="table table-striped table-hover align-middle mb-0">
+                        <thead>
+                          <tr>
+                            <th scope="col">Pet</th>
+                            <th scope="col">Tutor</th>
+                            <th scope="col">Vacina / Dose</th>
+                            <th scope="col">Próxima dose</th>
+                            <th scope="col">Situação</th>
+                            <th scope="col">Prazo</th>
+                            <th scope="col">Último aviso</th>
+                          </tr>
+                        </thead>
+                        <tbody id="tbAlertasVacinas" aria-busy="false"></tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
 
                 <div class="row g-3 mt-1">
                   <div class="col-12 col-lg-7">
@@ -545,7 +643,9 @@
           </div>
         </div>
       </section>
+      </div>
 
+      <div class="tab-pane fade" id="abaEstoque" role="tabpanel" aria-labelledby="abaEstoque-tab" tabindex="0">
       <!-- ESTOQUE E LOTES -->
       <section class="row g-3 mt-1" aria-labelledby="tituloEstoque">
         <div class="col-12">
@@ -589,6 +689,12 @@
                               <div id="esPrecoFeedback" class="invalid-feedback"></div>
                               <div id="esPrecoAjuda" class="form-text">Até duas casas decimais; vírgula ou ponto.</div>
                             </div>
+                          </div>
+                          <div class="form-check mb-3">
+                            <input id="esAlertaEstoque" type="checkbox" class="form-check-input" aria-describedby="esAlertaEstoqueFeedback esAlertaEstoqueAjuda" checked />
+                            <label for="esAlertaEstoque" class="form-check-label">Alertar quando o estoque atingir o mínimo</label>
+                            <div id="esAlertaEstoqueFeedback" class="invalid-feedback"></div>
+                            <div id="esAlertaEstoqueAjuda" class="form-text">Desativar esta opção não interfere nos alertas de validade dos lotes.</div>
                           </div>
                           <button id="btnSalvarProduto" type="submit" class="btn btn-primary w-100">Salvar produto</button>
                           <button id="btnCancelarEdicaoProduto" type="button" class="btn btn-outline-secondary w-100 mt-2" hidden>Cancelar edição</button>
@@ -641,6 +747,33 @@
               </div>
 
               <div class="row g-3 mt-1">
+                <div class="col-12 col-lg-6">
+                  <div id="esCotacaoDolar" class="card shadow-sm h-100">
+                    <div class="card-header bg-transparent border-0 pb-0">
+                      <h3 class="h6 mb-0">Cotação do dólar</h3>
+                    </div>
+                    <div class="card-body">
+                      <p class="small text-muted">Informe um valor em USD para estimar o custo em reais com a cotação do dia.</p>
+                      <div class="row g-3 align-items-end">
+                        <div class="col-12 col-sm-4">
+                          <label for="inValorUsd" class="form-label">Valor (USD)</label>
+                          <input id="inValorUsd" type="number" class="form-control" min="0" step="0.01" inputmode="decimal" placeholder="0,00" aria-describedby="inCotacaoStatus" />
+                        </div>
+                        <div class="col-12 col-sm-4">
+                          <label for="inValorBrlCalculado" class="form-label">Equivalente (BRL)</label>
+                          <input id="inValorBrlCalculado" type="text" class="form-control" readonly placeholder="—" aria-live="polite" />
+                        </div>
+                        <div class="col-12 col-sm-4">
+                          <button id="btnAtualizarCotacao" type="button" class="btn btn-outline-primary w-100">Atualizar cotação</button>
+                        </div>
+                      </div>
+                      <p id="inCotacaoStatus" class="small text-muted mt-3 mb-0" role="status" aria-live="polite">Consulte a cotação para habilitar o cálculo.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="row g-3 mt-1">
                 <div class="col-12 col-xl-6">
                   <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
                     <h3 class="h6 mb-0">Produtos cadastrados</h3>
@@ -654,6 +787,7 @@
                           <th scope="col">Categoria</th>
                           <th scope="col">Preço</th>
                           <th scope="col">Estoque mínimo</th>
+                          <th scope="col">Alerta</th>
                           <th scope="col">Lotes</th>
                           <th scope="col">Situação</th>
                           <th scope="col">Ações</th>
@@ -690,7 +824,9 @@
           </div>
         </div>
       </section>
+      </div>
 
+      <div class="tab-pane fade" id="abaAnexos" role="tabpanel" aria-labelledby="abaAnexos-tab" tabindex="0">
       <!-- ANEXOS CLÍNICOS -->
       <section class="row g-3 mt-1" aria-labelledby="tituloAnexos">
         <div class="col-12">
@@ -800,7 +936,9 @@
           </div>
         </div>
       </section>
+      </div>
 
+      <div class="tab-pane fade" id="abaIntegracoes" role="tabpanel" aria-labelledby="abaIntegracoes-tab" tabindex="0">
       <!-- INTEGRAÇÕES (IBGE, feriados nacionais e resumo da API local) -->
       <section class="row g-3 mt-1" aria-labelledby="tituloIntegracoes">
         <div class="col-12">
@@ -868,7 +1006,117 @@
           </div>
         </div>
       </section>
+      </div>
 
+      <div class="tab-pane fade" id="abaRelatorios" role="tabpanel" aria-labelledby="abaRelatorios-tab" tabindex="0">
+      <!-- RELATÓRIOS AGREGADOS DO PERÍODO -->
+      <section class="row g-3 mt-1" aria-labelledby="tituloRelatorios">
+        <div class="col-12">
+          <div class="card shadow-sm">
+            <div class="card-header bg-transparent border-0 pb-0">
+              <h2 id="tituloRelatorios" class="h5 mb-0">Relatórios</h2>
+            </div>
+            <div class="card-body">
+              <form id="formRelatorio" class="row g-3 align-items-end mb-3" novalidate>
+                <div class="col-12 col-md-4">
+                  <label for="relDe" class="form-label">De</label>
+                  <input id="relDe" type="date" class="form-control" aria-describedby="relDeFeedback" required />
+                  <div id="relDeFeedback" class="invalid-feedback"></div>
+                </div>
+                <div class="col-12 col-md-4">
+                  <label for="relAte" class="form-label">Até</label>
+                  <input id="relAte" type="date" class="form-control" aria-describedby="relAteFeedback" required />
+                  <div id="relAteFeedback" class="invalid-feedback"></div>
+                </div>
+                <div class="col-12 col-md-4 d-flex flex-wrap gap-2">
+                  <button id="btnGerarRelatorio" type="submit" class="btn btn-primary flex-fill">Gerar relatório</button>
+                  <button id="btnExportarRelatorio" type="button" class="btn btn-outline-secondary">Exportar CSV</button>
+                  <button id="btnImprimirRelatorio" type="button" class="btn btn-outline-dark">Imprimir</button>
+                </div>
+              </form>
+              <p id="relStatus" class="small text-muted mb-3" role="status" aria-live="polite">
+                Escolha o período e selecione “Gerar relatório”.
+              </p>
+
+              <div id="relKpis" class="row g-3 mb-4" aria-busy="false" aria-label="Indicadores do período"></div>
+
+              <div class="row g-3 mb-4">
+                <div class="col-12 col-lg-4">
+                  <div class="card h-100">
+                    <div class="card-header bg-transparent border-0 pb-0"><h3 class="h6 mb-0">Clientes novos por mês</h3></div>
+                    <div class="card-body"><div id="relGraficoClientes" class="grafico-relatorio" aria-busy="false"></div></div>
+                  </div>
+                </div>
+                <div class="col-12 col-lg-4">
+                  <div class="card h-100">
+                    <div class="card-header bg-transparent border-0 pb-0"><h3 class="h6 mb-0">Consultas por mês</h3></div>
+                    <div class="card-body"><div id="relGraficoConsultas" class="grafico-relatorio" aria-busy="false"></div></div>
+                  </div>
+                </div>
+                <div class="col-12 col-lg-4">
+                  <div class="card h-100">
+                    <div class="card-header bg-transparent border-0 pb-0"><h3 class="h6 mb-0">Consultas por status</h3></div>
+                    <div class="card-body"><div id="relGraficoStatus" class="grafico-relatorio" aria-busy="false"></div></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="row g-3">
+                <div class="col-12 col-xl-6">
+                  <h3 class="h6 mb-2">Clientes por cidade</h3>
+                  <div class="table-responsive">
+                    <table class="table table-striped table-hover align-middle mb-0">
+                      <thead>
+                        <tr><th scope="col">Cidade/UF</th><th scope="col" class="text-end">Clientes</th></tr>
+                      </thead>
+                      <tbody id="tbRelatorioClientes" aria-busy="false"></tbody>
+                    </table>
+                  </div>
+                </div>
+                <div class="col-12 col-xl-6">
+                  <h3 class="h6 mb-2">Serviços e produtos</h3>
+                  <div class="table-responsive">
+                    <table class="table table-striped table-hover align-middle mb-0">
+                      <thead>
+                        <tr><th scope="col">Categoria</th><th scope="col">Item</th><th scope="col" class="text-end">Total</th></tr>
+                      </thead>
+                      <tbody id="tbRelatorioServicos" aria-busy="false"></tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              <div class="row g-3 mt-1">
+                <div class="col-12 col-xl-6">
+                  <h3 class="h6 mb-2">Alertas de estoque</h3>
+                  <div class="table-responsive">
+                    <table class="table table-striped table-hover align-middle mb-0">
+                      <thead>
+                        <tr><th scope="col">Produto</th><th scope="col" class="text-end">Qtd.</th><th scope="col" class="text-end">Mínimo</th><th scope="col">Alerta</th><th scope="col">Motivos</th></tr>
+                      </thead>
+                      <tbody id="tbRelatorioAlertasEstoque" aria-busy="false"></tbody>
+                    </table>
+                  </div>
+                </div>
+                <div class="col-12 col-xl-6">
+                  <h3 class="h6 mb-2">Alertas de vacinação</h3>
+                  <div class="table-responsive">
+                    <table class="table table-striped table-hover align-middle mb-0">
+                      <thead>
+                        <tr><th scope="col">Pet</th><th scope="col">Tutor</th><th scope="col">Vacina / Dose</th><th scope="col">Próxima dose</th><th scope="col">Situação</th><th scope="col">Prazo</th></tr>
+                      </thead>
+                      <tbody id="tbRelatorioAlertasVacinas" aria-busy="false"></tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      </div>
+
+      <div class="tab-pane fade" id="abaUsuarios" role="tabpanel" aria-labelledby="abaUsuarios-tab" tabindex="0">
       <!-- ADMINISTRAÇÃO DE USUÁRIOS (somente ADMIN) -->
       <section id="secUsuarios" class="row g-3 mt-1 somente-admin" aria-labelledby="tituloUsuarios" hidden>
         <div class="col-12">
@@ -883,6 +1131,47 @@
                     <h3 id="uFormTitulo" class="h6 mb-0">Editar usuário</h3>
                     <button id="btnNovoUsuario" type="button" class="btn btn-sm btn-outline-secondary">Limpar</button>
                   </div>
+
+                  <form id="formCriarUsuario" class="border-bottom pb-3 mb-3" novalidate>
+                    <h3 class="h6 mb-2">Novo usuário (veterinário/atendente)</h3>
+                    <div class="mb-3">
+                      <label for="nuNome" class="form-label">Nome completo</label>
+                      <input id="nuNome" type="text" class="form-control" autocomplete="name" aria-describedby="nuNomeFeedback" required />
+                      <div id="nuNomeFeedback" class="invalid-feedback"></div>
+                    </div>
+                    <div class="mb-3">
+                      <label for="nuEmail" class="form-label">E-mail</label>
+                      <input id="nuEmail" type="email" class="form-control" autocomplete="email" aria-describedby="nuEmailFeedback" required />
+                      <div id="nuEmailFeedback" class="invalid-feedback"></div>
+                    </div>
+                    <div class="mb-3">
+                      <label for="nuSenha" class="form-label">Senha (mínimo 6 caracteres)</label>
+                      <input id="nuSenha" type="password" class="form-control" autocomplete="new-password" aria-describedby="nuSenhaFeedback" required />
+                      <div id="nuSenhaFeedback" class="invalid-feedback"></div>
+                    </div>
+                    <div class="row g-3">
+                      <div class="col-12 col-sm-6 mb-3">
+                        <label for="nuCrmv" class="form-label">CRMV (veterinário)</label>
+                        <input id="nuCrmv" type="text" class="form-control" maxlength="30" aria-describedby="nuCrmvFeedback" />
+                        <div id="nuCrmvFeedback" class="invalid-feedback"></div>
+                      </div>
+                      <div class="col-12 col-sm-6 mb-3">
+                        <label for="nuRg" class="form-label">RG</label>
+                        <input id="nuRg" type="text" class="form-control" maxlength="30" aria-describedby="nuRgFeedback" />
+                        <div id="nuRgFeedback" class="invalid-feedback"></div>
+                      </div>
+                    </div>
+                    <div class="mb-3">
+                      <label for="nuRole" class="form-label">Perfil</label>
+                      <select id="nuRole" class="form-select" aria-describedby="nuRoleFeedback" required>
+                        <option value="VETERINARIO">Veterinário</option>
+                        <option value="ATENDENTE">Atendente</option>
+                      </select>
+                      <div id="nuRoleFeedback" class="invalid-feedback"></div>
+                    </div>
+                    <button id="btnCriarUsuario" type="submit" class="btn btn-success w-100">Criar usuário</button>
+                  </form>
+
                   <form id="formUsuario" novalidate>
                     <input id="uId" type="hidden" />
                     <div class="mb-3">
@@ -948,6 +1237,8 @@
           </div>
         </div>
       </section>
+      </div>
+      </div>
     </main>
   </div>
 

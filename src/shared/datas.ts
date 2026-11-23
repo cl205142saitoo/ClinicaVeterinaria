@@ -22,3 +22,10 @@ export function dataCivilClinica(data: Date): string {
   const dia = partes.find((parte) => parte.type === 'day')?.value ?? '';
   return `${ano}-${mes}-${dia}`;
 }
+
+/** Formata `YYYY-MM-DD` para `DD/MM/YYYY` sem converter fuso (data civil). */
+export function formatarDataCivil(valor: string | null): string {
+  if (!valor) return '—';
+  const [ano, mes, dia] = valor.split('-');
+  return `${dia}/${mes}/${ano}`;
+}

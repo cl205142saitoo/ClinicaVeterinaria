@@ -18,6 +18,13 @@ const TODAS_AS_CHAVES = new Set([
   'PHD_ADMIN_NOME',
   'PHD_ADMIN_EMAIL',
   'PHD_ADMIN_SENHA',
+  'PHD_ANEXOS_DIR',
+  'SMTP_HOST',
+  'SMTP_PORT',
+  'SMTP_USER',
+  'SMTP_PASS',
+  'SMTP_FROM',
+  'PHD_CLAREZA_EMAIL',
 ]);
 
 function candidatos(): string[] {

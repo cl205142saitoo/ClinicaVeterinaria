@@ -4,10 +4,13 @@ import {
   ANEXO_CATEGORIAS,
   ANEXO_DESCRICAO_MAXIMO,
   ANEXO_DESCRICAO_MINIMO,
+  CLIENTE_NASCIMENTO_ANO_MINIMO,
+  CLIENTE_RG_MAXIMO,
   ESTOQUE_CATEGORIA_MAXIMO,
   ESTOQUE_CODIGO_LOTE_MAXIMO,
   ESTOQUE_NOME_MAXIMO,
   ESTOQUE_PRECO_MAXIMO,
+  PET_IDADE_MAXIMA_ANOS,
   PRONTUARIO_TEMPERATURA_MAXIMA_C,
   PRONTUARIO_TEMPERATURA_MINIMA_C,
   PRONTUARIO_TEXTO_MAXIMO,
@@ -22,6 +25,7 @@ import {
   VACINA_OBSERVACOES_MAXIMO,
   VACINA_REACAO_MAXIMO,
 } from './constants';
+import { dataCivilClinica } from './datas';
 import { ErroAplicacao } from './errors';
 import type {
   CategoriaAnexo,
@@ -37,6 +41,7 @@ import type {
   DadosConsulta,
   DadosInativacao,
   DadosLote,
+  DadosNovoUsuario,
   DadosPet,
   DadosProduto,
   DadosProntuario,
@@ -131,6 +136,28 @@ export function ehDataCivil(valor: unknown): valor is string {
   return data.getUTCFullYear() === ano && data.getUTCMonth() === mes - 1 && data.getUTCDate() === dia;
 }
 
+/** RG: texto não vazio, limitado ao VARCHAR(30) do banco. */
+export function ehRg(valor: unknown): valor is string {
+  return ehTexto(valor, 1, CLIENTE_RG_MAXIMO);
+}
+
+/** Data de nascimento: civil válida, não futura e dentro de faixa plausível. */
+export function ehDataNascimento(valor: unknown): valor is string {
+  if (!ehDataCivil(valor)) return false;
+  const ano = Number(valor.slice(0, 4));
+  return ano >= CLIENTE_NASCIMENTO_ANO_MINIMO && valor <= dataCivilClinica(new Date());
+}
+
+/** Idade do pet em anos, inteira e compatível com o CHECK do banco. */
+export function ehIdadePet(valor: unknown): valor is number {
+  return (
+    typeof valor === 'number' &&
+    Number.isInteger(valor) &&
+    valor >= 0 &&
+    valor <= PET_IDADE_MAXIMA_ANOS
+  );
+}
+
 export function ehStatusConsulta(valor: unknown): valor is StatusConsulta {
   return typeof valor === 'string' && STATUS_CONSULTA.some((status) => status === valor);
 }
@@ -152,6 +179,8 @@ export function ehDadosCliente(valor: unknown): valor is DadosCliente {
   return (
     ehTexto(valor.nome, 2, 120) &&
     ehCpf(valor.cpf) &&
+    ehRg(valor.rg) &&
+    ehDataNascimento(valor.dataNascimento) &&
     ehTelefone(valor.telefone) &&
     ehCep(valor.cep) &&
     ehTexto(valor.logradouro, 1, 200) &&
@@ -169,6 +198,7 @@ export function ehDadosPet(valor: unknown): valor is DadosPet {
     ehIdPositivo(valor.clienteId) &&
     ehTexto(valor.nome, 2, 120) &&
     ehTexto(valor.especie, 1, 80) &&
+    ehIdadePet(valor.idade) &&
     typeof valor.raca === 'string' &&
     valor.raca.trim().length <= 120 &&
     typeof valor.peso === 'number' &&
@@ -239,6 +269,7 @@ export function ehDadosProntuario(valor: unknown): valor is DadosProntuario {
     ehTextoProntuario(valor.exameClinico) &&
     ehTextoProntuario(valor.diagnostico) &&
     ehTextoProntuario(valor.conduta) &&
+    ehTextoProntuario(valor.prescricao) &&
     ehOpcional(valor.pesoAferido, ehPesoAferido) &&
     ehOpcional(valor.temperaturaC, ehTemperaturaC)
   );
@@ -279,6 +310,7 @@ export function ehDadosProduto(valor: unknown): valor is DadosProduto {
   return (
     ehTexto(valor.nome, 2, ESTOQUE_NOME_MAXIMO) &&
     ehTexto(valor.categoria, 1, ESTOQUE_CATEGORIA_MAXIMO) &&
+    typeof valor.alertaEstoque === 'boolean' &&
     typeof valor.estoqueMinimo === 'number' &&
     Number.isInteger(valor.estoqueMinimo) &&
     valor.estoqueMinimo >= 0 &&
@@ -333,6 +365,19 @@ export function ehDadosAtualizacaoCliente(valor: unknown): valor is DadosAtualiz
 
 export function ehDadosAtualizacaoPet(valor: unknown): valor is DadosAtualizacaoPet {
   return ehObjeto(valor) && ehIdPositivo(valor.id) && ehDadosPet(valor);
+}
+
+export function ehDadosNovoUsuario(valor: unknown): valor is DadosNovoUsuario {
+  if (!ehObjeto(valor)) return false;
+  if (valor.role !== 'VETERINARIO' && valor.role !== 'ATENDENTE') return false;
+  return (
+    ehTexto(valor.nome, 2, 120) &&
+    ehEmail(valor.email) &&
+    typeof valor.senha === 'string' &&
+    valor.senha.length >= 6 &&
+    (valor.crmv === null || (typeof valor.crmv === 'string' && valor.crmv.length <= 30)) &&
+    (valor.rg === null || (typeof valor.rg === 'string' && valor.rg.length <= 30))
+  );
 }
 
 export function ehDadosAtualizacaoUsuario(valor: unknown): valor is DadosAtualizacaoUsuario {

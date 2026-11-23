@@ -165,6 +165,60 @@ export class UsuarioController {
     obrigatorio<HTMLInputElement>('#uNome').focus();
   }
 
+  private async criar(evento: Event, botao: HTMLButtonElement): Promise<void> {
+    evento.preventDefault();
+    if (!this.contexto.auth.isAdmin()) {
+      mostrarToast('Somente um administrador pode criar usuários.', 'erro');
+      return;
+    }
+
+    const formulario = obrigatorio<HTMLFormElement>('#formCriarUsuario');
+    const nome = obrigatorio<HTMLInputElement>('#nuNome');
+    const email = obrigatorio<HTMLInputElement>('#nuEmail');
+    const senha = obrigatorio<HTMLInputElement>('#nuSenha');
+    const crmv = obrigatorio<HTMLInputElement>('#nuCrmv');
+    const rg = obrigatorio<HTMLInputElement>('#nuRg');
+    const roleSelect = obrigatorio<HTMLSelectElement>('#nuRole');
+    limparValidacao(formulario);
+
+    const role = roleSelect.value;
+    const resultados = [
+      exigir(nome, nome.value.trim().length >= 2, 'Informe o nome completo do usuário.'),
+      exigir(email, email.value.trim() !== '' && email.checkValidity(), 'Informe um e-mail válido.'),
+      exigir(senha, senha.value.length >= 6, 'A senha deve ter pelo menos 6 caracteres.'),
+      exigir(roleSelect, role === 'VETERINARIO' || role === 'ATENDENTE', 'Selecione um perfil válido.'),
+      exigir(crmv, crmv.value.trim().length <= 30, 'O CRMV deve ter no máximo 30 caracteres.'),
+      exigir(rg, rg.value.trim().length <= 30, 'O RG deve ter no máximo 30 caracteres.'),
+    ];
+    if (!resultados.every(Boolean)) {
+      focarPrimeiroInvalido(formulario);
+      return;
+    }
+
+    setCarregando(botao, true, 'Criando…');
+    try {
+      const criado = await window.api.criarUsuario({
+        nome: nome.value.trim(),
+        email: email.value.trim(),
+        senha: senha.value,
+        crmv: role === 'VETERINARIO' ? crmv.value.trim() || null : null,
+        rg: rg.value.trim() || null,
+        role: role as 'VETERINARIO' | 'ATENDENTE',
+      });
+      formulario.reset();
+      limparValidacao(formulario);
+      mostrarToast(`${criado.nome} criado como ${criado.role === 'VETERINARIO' ? 'veterinário' : 'atendente'}.`, 'sucesso');
+      await this.carregar();
+    } catch (erro) {
+      const mensagem = mensagemErro(erro);
+      marcarInvalido(email, mensagem);
+      mostrarToast(mensagem, 'erro');
+      email.focus();
+    } finally {
+      setCarregando(botao, false);
+    }
+  }
+
   private async salvar(evento: Event, botao: HTMLButtonElement): Promise<void> {
     evento.preventDefault();
     if (!this.contexto.auth.isAdmin()) {
@@ -253,6 +307,9 @@ export class UsuarioController {
   }
 
   private configurarEventos(): void {
+    obrigatorio<HTMLFormElement>('#formCriarUsuario').addEventListener('submit', (evento) => {
+      void this.criar(evento, obrigatorio<HTMLButtonElement>('#btnCriarUsuario'));
+    });
     obrigatorio<HTMLFormElement>('#formUsuario').addEventListener('submit', (evento) => {
       void this.salvar(evento, obrigatorio<HTMLButtonElement>('#btnSalvarUsuario'));
     });

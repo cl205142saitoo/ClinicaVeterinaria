@@ -1,5 +1,13 @@
+import bcrypt from 'bcryptjs';
+import { CUSTO_HASH_SENHA } from '../../shared/constants';
 import { ErroAplicacao } from '../../shared/errors';
-import type { DadosAtualizacaoUsuario, DadosInativacao, Role, Usuario } from '../../shared/types';
+import type {
+  DadosAtualizacaoUsuario,
+  DadosInativacao,
+  DadosNovoUsuario,
+  Role,
+  Usuario,
+} from '../../shared/types';
 import { ehRole, exigir } from '../../shared/validators';
 import { UsuarioRepository } from '../repositories/UsuarioRepository';
 import { PolicyService } from './PolicyService';
@@ -43,6 +51,25 @@ export class UsuarioService {
 
   listar(): Promise<Usuario[]> {
     return this.repo.listarTodos().then((registros) => registros.map(paraDto));
+  }
+
+  /** ADMIN cria VETERINARIO/ATENDENTE com senha; o role vem validado pelo IPC. */
+  async criar(dados: DadosNovoUsuario, responsavel: Usuario): Promise<Usuario> {
+    this.policy.exigirAdmin(responsavel);
+    const email = dados.email.trim().toLowerCase();
+    if (await this.repo.buscarPorEmail(email)) {
+      throw new ErroAplicacao('Já existe um usuário cadastrado com este e-mail.');
+    }
+    const senhaHash = await bcrypt.hash(dados.senha, CUSTO_HASH_SENHA);
+    const registro = await this.repo.criar({
+      nome: dados.nome.trim(),
+      email,
+      senhaHash,
+      role: dados.role,
+      crmv: dados.role === 'VETERINARIO' ? dados.crmv?.trim() || null : null,
+      rg: dados.rg?.trim() || null,
+    });
+    return paraDto(registro);
   }
 
   async atualizar(dados: DadosAtualizacaoUsuario, responsavel: Usuario): Promise<Usuario> {

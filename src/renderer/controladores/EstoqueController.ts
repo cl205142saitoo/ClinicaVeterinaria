@@ -1,8 +1,9 @@
 /** Estoque e lotes: consulta para todos os perfis; cadastro, edição e baixa só de ADMIN. */
 
-import { ESTOQUE_ALERTA_VALIDADE_DIAS } from '../../shared/constants';
+import { ESTOQUE_ALERTA_PADRAO, ESTOQUE_ALERTA_VALIDADE_DIAS } from '../../shared/constants';
 import { dataCivilClinica } from '../../shared/datas';
 import type {
+  CotacaoDolar,
   DadosAtualizacaoLote,
   DadosAtualizacaoProduto,
   DadosLote,
@@ -17,6 +18,7 @@ import {
   exigir,
   focarPrimeiroInvalido,
   formatarDataCivil,
+  formatarDataHora,
   linhaMensagem,
   limparValidacao,
   mensagemErro,
@@ -29,7 +31,7 @@ import {
 import type { ContextoApp } from './contexto';
 
 const FORMATO_DATA_CIVIL = /^\d{4}-\d{2}-\d{2}$/;
-const COLUNAS_PRODUTOS = 7;
+const COLUNAS_PRODUTOS = 8;
 const COLUNAS_LOTES = 6;
 const NOME_MAXIMO = 120;
 const CATEGORIA_MAXIMA = 80;
@@ -47,6 +49,8 @@ export class EstoqueController {
   private idLoteEdicao: number | null = null;
   private sequenciaCarregamento = 0;
   private eventosLigados = false;
+  private cotacao: CotacaoDolar | null = null;
+  private cotacaoSequencia = 0;
 
   constructor(private readonly contexto: ContextoApp) {}
 
@@ -59,6 +63,7 @@ export class EstoqueController {
     this.renderizarVazio();
     this.limparCamposProduto();
     this.limparCamposLote();
+    this.limparCotacao();
   }
 
   /** Recarrega listagens e resumos; ignora respostas de cargas anteriores. */
@@ -84,6 +89,7 @@ export class EstoqueController {
       this.preencherSelectProdutos(produtos);
       this.renderizarProdutos(produtos);
       this.renderizarLotes(lotes);
+      if (this.cotacao === null) void this.atualizarCotacao();
     } catch (erro) {
       if (sequencia !== this.sequenciaCarregamento) return;
       corpoProdutos.replaceChildren(
@@ -119,6 +125,74 @@ export class EstoqueController {
     obrigatorio<HTMLTableSectionElement>('#tbLotes').setAttribute('aria-busy', 'false');
     obrigatorio<HTMLElement>('#esAvisoLeitura').hidden = true;
     obrigatorio<HTMLElement>('#esAreaEdicao').hidden = true;
+    this.limparCotacao();
+  }
+
+  private definirStatusCotacao(texto: string, erro = false): void {
+    const status = obrigatorio<HTMLElement>('#inCotacaoStatus');
+    status.textContent = texto;
+    status.classList.toggle('text-danger', erro);
+    status.classList.toggle('text-muted', !erro);
+  }
+
+  private limparCotacao(): void {
+    this.cotacaoSequencia += 1;
+    this.cotacao = null;
+    obrigatorio<HTMLInputElement>('#inValorUsd').value = '';
+    obrigatorio<HTMLInputElement>('#inValorBrlCalculado').value = '';
+    this.definirStatusCotacao('Consulte a cotação para habilitar o cálculo.');
+    setCarregando(obrigatorio<HTMLButtonElement>('#btnAtualizarCotacao'), false);
+  }
+
+  private recalcularBrl(): void {
+    const texto = obrigatorio<HTMLInputElement>('#inValorUsd').value.trim().replace(',', '.');
+    const calculado = obrigatorio<HTMLInputElement>('#inValorBrlCalculado');
+    const usd = texto === '' ? null : Number(texto);
+
+    if (usd === null || !Number.isFinite(usd) || usd < 0) {
+      calculado.value = '';
+      return;
+    }
+    if (this.cotacao === null) {
+      calculado.value = '';
+      this.definirStatusCotacao('Atualize a cotação para calcular o valor em reais.');
+      return;
+    }
+    calculado.value = (usd * this.cotacao.valor).toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    });
+  }
+
+  /** Consulta a API na abertura da tela e sempre que o usuário pede atualização. */
+  private async atualizarCotacao(): Promise<void> {
+    const sequencia = this.cotacaoSequencia + 1;
+    this.cotacaoSequencia = sequencia;
+    const botao = obrigatorio<HTMLButtonElement>('#btnAtualizarCotacao');
+    this.definirStatusCotacao('Consultando a cotação do dólar…');
+    setCarregando(botao, true, 'Consultando…');
+
+    try {
+      const cotacao = await window.api.cotacaoDolar();
+      if (sequencia !== this.cotacaoSequencia) return;
+      if (!Number.isFinite(cotacao.valor) || cotacao.valor <= 0) {
+        throw new Error('Cotação inválida');
+      }
+      this.cotacao = cotacao;
+      this.definirStatusCotacao(
+        `1 USD = R$ ${cotacao.valor.toFixed(4)} em ${formatarDataCivil(cotacao.dataReferencia)} · ` +
+          `fonte: ${textoOuTraco(cotacao.fonte)} · consultado em ${formatarDataHora(cotacao.consultadoEm)}.`
+      );
+      this.recalcularBrl();
+    } catch (erro) {
+      if (sequencia !== this.cotacaoSequencia) return;
+      this.cotacao = null;
+      obrigatorio<HTMLInputElement>('#inValorBrlCalculado').value = '';
+      this.definirStatusCotacao('Não foi possível obter a cotação do dólar. Tente novamente mais tarde.', true);
+      mostrarToast(mensagemErro(erro), 'erro');
+    } finally {
+      if (sequencia === this.cotacaoSequencia) setCarregando(botao, false);
+    }
   }
 
   private formatarMoeda(valor: number): string {
@@ -147,6 +221,13 @@ export class EstoqueController {
       return { texto: 'Estoque mínimo atingido', classe: 'text-bg-warning' };
     }
     return { texto: 'Estoque OK', classe: 'text-bg-success' };
+  }
+
+  /** A flag desliga somente o alerta de quantidade; a validade dos lotes continua ativa. */
+  private situacaoAlerta(alertaHabilitado: boolean): Situacao {
+    return alertaHabilitado
+      ? { texto: 'Alerta ativo', classe: 'text-bg-success' }
+      : { texto: 'Alerta desativado', classe: 'text-bg-secondary' };
   }
 
   private celulaSituacao(situacao: Situacao): HTMLTableCellElement {
@@ -219,6 +300,7 @@ export class EstoqueController {
         criarCelula(textoOuTraco(produto.categoria), 'text-break small'),
         criarCelula(this.formatarMoeda(produto.precoBrl), 'text-nowrap small'),
         criarCelula(String(produto.estoqueMinimo), 'text-nowrap small'),
+        this.celulaSituacao(this.situacaoAlerta(produto.alertaEstoque)),
         this.celulaLotes(produto.lotes, total),
         this.celulaSituacao(this.situacaoProduto(total, produto.estoqueMinimo))
       );
@@ -351,6 +433,7 @@ export class EstoqueController {
     this.idProdutoEdicao = null;
     const formulario = obrigatorio<HTMLFormElement>('#formProduto');
     formulario.reset();
+    obrigatorio<HTMLInputElement>('#esAlertaEstoque').checked = ESTOQUE_ALERTA_PADRAO;
     limparValidacao(formulario);
     obrigatorio<HTMLButtonElement>('#btnSalvarProduto').textContent = 'Salvar produto';
     obrigatorio<HTMLButtonElement>('#btnCancelarEdicaoProduto').hidden = true;
@@ -377,6 +460,7 @@ export class EstoqueController {
     this.definirValor('#esCategoria', produto.categoria);
     this.definirValor('#esEstoqueMinimo', String(produto.estoqueMinimo));
     this.definirValor('#esPreco', String(produto.precoBrl));
+    obrigatorio<HTMLInputElement>('#esAlertaEstoque').checked = produto.alertaEstoque;
     obrigatorio<HTMLButtonElement>('#btnSalvarProduto').textContent = 'Salvar alterações';
     obrigatorio<HTMLButtonElement>('#btnCancelarEdicaoProduto').hidden = false;
     obrigatorio<HTMLElement>('#tituloFormProduto').textContent = `Editar produto — ${produto.nome}`;
@@ -457,6 +541,7 @@ export class EstoqueController {
       nome: nome.value.trim(),
       categoria: categoria.value.trim(),
       estoqueMinimo,
+      alertaEstoque: obrigatorio<HTMLInputElement>('#esAlertaEstoque').checked,
       precoBrl,
     };
     const id = this.idProdutoEdicao;
@@ -622,6 +707,12 @@ export class EstoqueController {
     });
     obrigatorio<HTMLButtonElement>('#btnCancelarEdicaoLote').addEventListener('click', () => {
       this.limparCamposLote();
+    });
+    obrigatorio<HTMLInputElement>('#inValorUsd').addEventListener('input', () => {
+      this.recalcularBrl();
+    });
+    obrigatorio<HTMLButtonElement>('#btnAtualizarCotacao').addEventListener('click', () => {
+      void this.atualizarCotacao();
     });
 
     obrigatorio<HTMLTableSectionElement>('#tbProdutos').addEventListener('click', (evento) => {

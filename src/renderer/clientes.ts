@@ -1,5 +1,6 @@
 /** Domínio de clientes: formulário, ViaCEP e listagem. */
 
+import { dataCivilClinica, formatarDataCivil } from '../shared/datas';
 import type { Cliente } from './types';
 import {
   aplicarMascara,
@@ -33,7 +34,7 @@ export function renderizarClientes(clientes: Cliente[]): void {
   if (clientes.length === 0) {
     const linha = document.createElement('tr');
     const celula = document.createElement('td');
-    celula.colSpan = 4;
+    celula.colSpan = 7;
     celula.className = 'text-center text-muted fst-italic py-4';
     celula.textContent = 'Nenhum cliente cadastrado.';
     linha.append(celula);
@@ -45,6 +46,9 @@ export function renderizarClientes(clientes: Cliente[]): void {
     const linha = document.createElement('tr');
     linha.append(
       criarCelula(cliente.nome),
+      criarCelula(cliente.cpf, 'text-nowrap small'),
+      criarCelula(cliente.rg ?? '—', 'small'),
+      criarCelula(formatarDataCivil(cliente.dataNascimento), 'text-nowrap small'),
       criarCelula(`${cliente.cidade} - ${cliente.uf}`),
       criarCelula(String(cliente.pets?.length ?? 0), 'text-center'),
     );
@@ -61,6 +65,8 @@ export function iniciarClientes(opcoes: { aoSalvar: () => void }): void {
   const botaoSalvar = obrigatorio<HTMLButtonElement>('#btnSalvarCliente');
 
   const cpf = obrigatorio<HTMLInputElement>('#cCpf');
+  const rg = obrigatorio<HTMLInputElement>('#cRg');
+  const nascimento = obrigatorio<HTMLInputElement>('#cNascimento');
   const telefone = obrigatorio<HTMLInputElement>('#cTel');
   const cep = obrigatorio<HTMLInputElement>('#cCep');
 
@@ -107,6 +113,12 @@ export function iniciarClientes(opcoes: { aoSalvar: () => void }): void {
     const resultados = [
       exigir(nome, nome.value.trim().length >= 2, 'Informe o nome completo do cliente.'),
       exigir(cpf, cpfValido(cpf.value), 'CPF inválido. Confira os números digitados.'),
+      exigir(rg, rg.value.trim().length > 0, 'Informe o RG do cliente.'),
+      exigir(
+        nascimento,
+        nascimento.value !== '' && nascimento.value <= dataCivilClinica(new Date()),
+        'Informe uma data de nascimento válida (não pode ser futura).'
+      ),
       exigir(telefone, telefoneValido(telefone.value), 'Informe um telefone com DDD (10 ou 11 dígitos).'),
       exigir(cep, cepValido(cep.value), 'Informe um CEP com 8 dígitos.'),
       exigir(logradouro, logradouro.value.trim() !== '', 'Informe o logradouro.'),
@@ -124,6 +136,8 @@ export function iniciarClientes(opcoes: { aoSalvar: () => void }): void {
       await window.api.criarCliente({
         nome: nome.value.trim(),
         cpf: cpf.value,
+        rg: rg.value.trim(),
+        dataNascimento: nascimento.value,
         telefone: telefone.value,
         cep: cep.value,
         logradouro: logradouro.value.trim(),

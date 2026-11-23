@@ -1,3 +1,4 @@
+import { ESTOQUE_ALERTA_PADRAO } from '../../shared/constants';
 import { dataCivilClinica } from '../../shared/datas';
 import { ErroAplicacao } from '../../shared/errors';
 import type {
@@ -66,6 +67,7 @@ function paraProduto(produto: ProdutoPersistido): Produto {
     nome: produto.nome,
     categoria: produto.categoria,
     estoqueMinimo: produto.estoqueMinimo,
+    alertaEstoque: produto.alertaEstoque,
     precoBrl: produto.precoBrl.toNumber(),
     ativo: produto.ativo,
     inativadoEm: dataOpcional(produto.inativadoEm),
@@ -98,6 +100,8 @@ export class EstoqueService {
       nome: dados.nome.trim(),
       categoria: dados.categoria.trim(),
       estoqueMinimo: dados.estoqueMinimo,
+      // Cliente antigo pode não enviar a flag; o padrão do domínio é alerta ligado.
+      alertaEstoque: dados.alertaEstoque ?? ESTOQUE_ALERTA_PADRAO,
       precoBrl: dados.precoBrl,
     });
     return paraProduto(produto);
@@ -112,7 +116,10 @@ export class EstoqueService {
     if (!anterior.ativo) {
       throw new ErroAplicacao('Não é possível editar um produto inativado.');
     }
-    const produto = await this.repo.atualizarProduto(dados);
+    const produto = await this.repo.atualizarProduto({
+      ...dados,
+      alertaEstoque: dados.alertaEstoque ?? ESTOQUE_ALERTA_PADRAO,
+    });
     return paraProduto(produto);
   }
 

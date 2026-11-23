@@ -28,6 +28,7 @@ const selecaoConsulta = {
   diagnostico: true,
   exameClinico: true,
   conduta: true,
+  prescricao: true,
   pesoAferido: true,
   temperaturaC: true,
 } satisfies Prisma.ConsultaSelect;
@@ -93,6 +94,7 @@ export interface DadosEscritaProntuario {
   exameClinico: string;
   diagnostico: string;
   conduta: string;
+  prescricao: string;
   pesoAferido: number | null;
   temperaturaC: number | null;
 }
@@ -285,6 +287,7 @@ export class ConsultaRepository implements ConsultaRepositorio {
         exameClinico: dados.exameClinico,
         diagnostico: dados.diagnostico,
         conduta: dados.conduta,
+        prescricao: dados.prescricao,
         pesoAferido: dados.pesoAferido,
         temperaturaC: dados.temperaturaC,
       },

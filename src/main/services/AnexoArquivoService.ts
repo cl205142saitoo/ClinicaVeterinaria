@@ -11,6 +11,7 @@ import {
 import { ErroAplicacao } from '../../shared/errors';
 import type { ArquivoAnexoSelecionado } from '../../shared/types';
 import { ehObjeto } from '../../shared/validators';
+import { carregarEnv } from '../config/carregarEnv';
 
 type MimeAceito = (typeof ANEXO_MIMES_ACEITOS)[number];
 type FormatoAssinatura = 'jpg' | 'png' | 'pdf';
@@ -102,7 +103,12 @@ export class AnexoArquivoService {
   private readonly pendentes = new Map<string, MetadadosInternos>();
 
   private get raiz(): string {
-    return path.join(app.getPath('userData'), 'anexos');
+    // Override opcional do seed/instalação; o padrão continua sendo userData/anexos.
+    carregarEnv(['PHD_ANEXOS_DIR']);
+    const override = process.env.PHD_ANEXOS_DIR?.trim() ?? '';
+    return override === ''
+      ? path.join(app.getPath('userData'), 'anexos')
+      : path.resolve(override);
   }
 
   private get staging(): string {

@@ -9,7 +9,15 @@ import {
   VACINA_REACAO_MAXIMO,
 } from '../../shared/constants';
 import { dataCivilClinica } from '../../shared/datas';
-import type { DadosAtualizacaoVacina, DadosRegistroVacina, Pet, RegistroVacina, VeterinarioResumo } from '../types';
+import type {
+  AlertaVacina,
+  DadosAtualizacaoVacina,
+  DadosRegistroVacina,
+  Pet,
+  RegistroVacina,
+  ResultadoEnvioAvisos,
+  VeterinarioResumo,
+} from '../types';
 import {
   criarBadge,
   criarBotaoAcao,
@@ -30,6 +38,7 @@ import {
 import type { ContextoApp } from './contexto';
 
 const COLUNAS_HISTORICO = 11;
+const COLUNAS_ALERTAS = 7;
 const FORMATO_DATA_CIVIL = /^\d{4}-\d{2}-\d{2}$/;
 
 const ROTULOS_STATUS: Readonly<Record<string, string>> = {
@@ -48,6 +57,8 @@ export class VacinaController {
   private idEdicao: number | null = null;
   private sequenciaCarregamento = 0;
   private eventosLigados = false;
+  private alertasCarregados = false;
+  private alertasSequencia = 0;
 
   constructor(private readonly contexto: ContextoApp) {}
 
@@ -58,6 +69,7 @@ export class VacinaController {
     }
     this.aplicarPermissoes();
     this.renderizarHistorico([]);
+    this.renderizarAlertas([]);
   }
 
   /** Preenche o seletor de pets da carteira preservando a seleção atual. */
@@ -89,6 +101,7 @@ export class VacinaController {
     this.aplicarPermissoes();
     if (!this.contexto.auth.temAcessoClinico()) return;
 
+    void this.carregarAlertas();
     await this.garantirVeterinarios();
 
     const select = obrigatorio<HTMLSelectElement>('#vcPet');
@@ -153,6 +166,8 @@ export class VacinaController {
     this.idEdicao = null;
     this.petsVisiveis = new Map();
     this.registrosVisiveis = new Map();
+    this.alertasCarregados = false;
+    this.alertasSequencia += 1;
 
     const petSelect = obrigatorio<HTMLSelectElement>('#vcPet');
     petSelect.replaceChildren();
@@ -173,6 +188,9 @@ export class VacinaController {
     obrigatorio<HTMLTableSectionElement>('#tbVacinas').setAttribute('aria-busy', 'false');
     this.limparFormulario();
     this.renderizarHistorico([]);
+    this.renderizarAlertas([]);
+    setCarregando(obrigatorio<HTMLButtonElement>('#btnEnviarAvisosVacina'), false);
+    this.definirStatusAvisos('Selecione “Enviar avisos por e-mail” para notificar os tutores sobre doses vencidas ou próximas.');
     obrigatorio<HTMLElement>('#vcAvisoAtendente').hidden = true;
     obrigatorio<HTMLElement>('#vcAreaClinica').hidden = true;
   }
@@ -259,6 +277,134 @@ export class VacinaController {
       }
       linha.append(celulaAcoes);
       corpo.append(linha);
+    }
+  }
+
+  private definirStatusAvisos(texto: string, erro = false): void {
+    const status = obrigatorio<HTMLElement>('#vcStatusAvisos');
+    status.textContent = texto;
+    status.classList.toggle('text-danger', erro);
+    status.classList.toggle('text-muted', !erro);
+  }
+
+  private rotuloDias(quantidade: number): string {
+    return `${quantidade} ${quantidade === 1 ? 'dia' : 'dias'}`;
+  }
+
+  private prazoAlerta(alerta: AlertaVacina): string {
+    const dias = alerta.diasParaProximaDose;
+    if (dias < 0) return `${this.rotuloDias(Math.abs(dias))} em atraso`;
+    if (dias === 0) return 'Vence hoje';
+    return `${this.rotuloDias(dias)} para vencer`;
+  }
+
+  private renderizarAlertas(alertas: AlertaVacina[]): void {
+    const corpo = obrigatorio<HTMLTableSectionElement>('#tbAlertasVacinas');
+    const resumo = obrigatorio<HTMLElement>('#vcResumoAlertas');
+    corpo.replaceChildren();
+
+    const vencidas = alertas.filter((alerta) => alerta.nivel === 'VENCIDA').length;
+    resumo.hidden = alertas.length === 0;
+    resumo.textContent =
+      alertas.length === 0
+        ? ''
+        : `${alertas.length} ${alertas.length === 1 ? 'alerta' : 'alertas'} · ${vencidas} vencidas · ${
+            alertas.length - vencidas
+          } próximas`;
+
+    if (alertas.length === 0) {
+      corpo.append(linhaMensagem('Nenhum alerta de próxima dose no momento.', COLUNAS_ALERTAS));
+      return;
+    }
+
+    for (const alerta of alertas) {
+      const linha = document.createElement('tr');
+      const tutor = criarCelula('', 'small text-break');
+      tutor.textContent = textoOuTraco(alerta.tutorNome);
+      if (alerta.tutorEmail) {
+        const email = document.createElement('div');
+        email.className = 'text-muted small text-break';
+        email.textContent = alerta.tutorEmail;
+        tutor.append(email);
+      }
+      linha.append(
+        criarCelula(textoOuTraco(alerta.petNome), 'small text-break'),
+        tutor,
+        criarCelula(`${textoOuTraco(alerta.vacina)} / ${textoOuTraco(alerta.dose)}`, 'small text-break'),
+        criarCelula(formatarDataCivil(alerta.proximaDose), 'small text-nowrap')
+      );
+
+      const situacao = document.createElement('td');
+      situacao.append(
+        criarBadge(
+          alerta.nivel === 'VENCIDA' ? 'VENCIDA' : 'PROXIMA',
+          alerta.nivel === 'VENCIDA' ? 'text-bg-danger' : 'text-bg-warning'
+        )
+      );
+      linha.append(
+        situacao,
+        criarCelula(this.prazoAlerta(alerta), 'small text-nowrap'),
+        criarCelula(
+          alerta.ultimoAvisoEm === null ? '—' : formatarDataHora(alerta.ultimoAvisoEm),
+          'small text-nowrap'
+        )
+      );
+      corpo.append(linha);
+    }
+  }
+
+  /** Atualiza os alertas ao entrar na aba e após registrar, editar ou estornar vacinas. */
+  async carregarAlertas(): Promise<void> {
+    if (!this.contexto.auth.temAcessoClinico()) return;
+    const sequencia = this.alertasSequencia + 1;
+    this.alertasSequencia = sequencia;
+    const corpo = obrigatorio<HTMLTableSectionElement>('#tbAlertasVacinas');
+    corpo.setAttribute('aria-busy', 'true');
+    corpo.replaceChildren(linhaMensagem('Carregando alertas de vacinação…', COLUNAS_ALERTAS));
+
+    try {
+      const alertas = await window.api.vacinasAlertas();
+      if (sequencia !== this.alertasSequencia) return;
+      this.alertasCarregados = true;
+      this.renderizarAlertas(alertas);
+    } catch (erro) {
+      if (sequencia !== this.alertasSequencia) return;
+      corpo.replaceChildren(
+        linhaMensagem(
+          'Não foi possível carregar os alertas de vacinação.',
+          COLUNAS_ALERTAS,
+          'text-center text-danger py-4'
+        )
+      );
+      obrigatorio<HTMLElement>('#vcResumoAlertas').hidden = true;
+      mostrarToast(mensagemErro(erro), 'erro');
+    } finally {
+      if (sequencia === this.alertasSequencia) corpo.setAttribute('aria-busy', 'false');
+    }
+  }
+
+  private async enviarAvisos(): Promise<void> {
+    const botao = obrigatorio<HTMLButtonElement>('#btnEnviarAvisosVacina');
+    this.definirStatusAvisos('Enviando avisos por e-mail…');
+    setCarregando(botao, true, 'Enviando…');
+    try {
+      const resultado: ResultadoEnvioAvisos = await window.api.vacinasEnviarAvisos();
+      const resumo =
+        `Destinatários: ${resultado.destinatarios} · Enviados: ${resultado.enviados} · ` +
+        `Ignorados: ${resultado.ignorados} · Falhas: ${resultado.falhas}.` +
+        (resultado.mensagens.length > 0 ? ` ${resultado.mensagens.join(' ')}` : '');
+      this.definirStatusAvisos(resumo, resultado.falhas > 0);
+      const tipo = resultado.falhas > 0 ? 'erro' : resultado.enviados > 0 ? 'sucesso' : 'info';
+      mostrarToast(
+        `Avisos processados: ${resultado.enviados} enviado(s), ${resultado.ignorados} ignorado(s), ${resultado.falhas} falha(s).`,
+        tipo
+      );
+      await this.carregarAlertas();
+    } catch (erro) {
+      this.definirStatusAvisos('Não foi possível enviar os avisos. Tente novamente mais tarde.', true);
+      mostrarToast(mensagemErro(erro), 'erro');
+    } finally {
+      setCarregando(botao, false);
     }
   }
 
@@ -565,6 +711,13 @@ export class VacinaController {
     obrigatorio<HTMLSelectElement>('#vcPet').addEventListener('change', () => {
       this.limparFormulario();
       void this.carregar();
+    });
+
+    obrigatorio<HTMLButtonElement>('#abaVacinas-tab').addEventListener('shown.bs.tab', () => {
+      if (!this.alertasCarregados) void this.carregarAlertas();
+    });
+    obrigatorio<HTMLButtonElement>('#btnEnviarAvisosVacina').addEventListener('click', () => {
+      void this.enviarAvisos();
     });
 
     obrigatorio<HTMLFormElement>('#formVacina').addEventListener('submit', (evento) => {

@@ -1,12 +1,14 @@
 import { contextBridge } from 'electron';
 import { IPC_CHANNELS } from '../shared/ipc-channels';
 import type {
+  AlertaVacina,
   AnexoClinico,
   Api,
   ArquivoAnexoSelecionado,
   Cliente,
   ConsultaAgenda,
   ConsultaProntuario,
+  CotacaoDolar,
   DadosAtualizacaoAnexo,
   DadosAtualizacaoCliente,
   DadosAtualizacaoConsulta,
@@ -19,6 +21,7 @@ import type {
   DadosConsulta,
   DadosInativacao,
   DadosLote,
+  DadosNovoUsuario,
   DadosPet,
   DadosProduto,
   DadosProntuario,
@@ -28,11 +31,15 @@ import type {
   Endereco,
   Feriado,
   FiltroAgenda,
+  FiltroRelatorio,
   Lote,
   MunicipioIbge,
   Pet,
   Produto,
   RegistroVacina,
+  RelatorioDados,
+  ResultadoEnvioAvisos,
+  ResultadoExportacaoCsv,
   ResumoDashboard,
   Usuario,
   VeterinarioResumo,
@@ -89,6 +96,7 @@ const api: Api = {
   atualizarPet: (dados: DadosAtualizacaoPet) => invocar<Pet>(IPC_CHANNELS.PETS_ATUALIZAR, dados),
   inativarPet: (dados: DadosInativacao) => invocar<Pet>(IPC_CHANNELS.PETS_INATIVAR, dados),
   listarUsuarios: () => invocar<Usuario[]>(IPC_CHANNELS.USUARIOS_LISTAR),
+  criarUsuario: (dados: DadosNovoUsuario) => invocar<Usuario>(IPC_CHANNELS.USUARIOS_CRIAR, dados),
   atualizarUsuario: (dados: DadosAtualizacaoUsuario) =>
     invocar<Usuario>(IPC_CHANNELS.USUARIOS_ATUALIZAR, dados),
   inativarUsuario: (dados: DadosInativacao) =>
@@ -115,6 +123,14 @@ const api: Api = {
     invocar<MunicipioIbge | null>(IPC_CHANNELS.API_IBGE_MUNICIPIO, nome, uf),
   listarFeriados: (ano: number) => invocar<Feriado[]>(IPC_CHANNELS.API_FERIADOS_ANO, ano),
   resumoDashboard: () => invocar<ResumoDashboard>(IPC_CHANNELS.API_RESUMO_DASHBOARD),
+  vacinasAlertas: () => invocar<AlertaVacina[]>(IPC_CHANNELS.VACINAS_ALERTAS),
+  vacinasEnviarAvisos: () =>
+    invocar<ResultadoEnvioAvisos>(IPC_CHANNELS.VACINAS_ENVIAR_AVISOS),
+  cotacaoDolar: () => invocar<CotacaoDolar>(IPC_CHANNELS.API_COTACAO_DOLAR),
+  relatorioGerar: (filtro: FiltroRelatorio) =>
+    invocar<RelatorioDados>(IPC_CHANNELS.RELATORIOS_GERAR, filtro),
+  relatorioExportarCsv: (filtro: FiltroRelatorio) =>
+    invocar<ResultadoExportacaoCsv | null>(IPC_CHANNELS.RELATORIOS_EXPORTAR_CSV, filtro),
 };
 
 contextBridge.exposeInMainWorld('api', api);

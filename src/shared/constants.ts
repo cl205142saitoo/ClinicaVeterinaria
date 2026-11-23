@@ -23,6 +23,11 @@ export const DURACAO_PADRAO_CONSULTA_MINUTOS = 60;
 /** Teto simples de registros devolvidos pela agenda em uma listagem. */
 export const LIMITE_LISTAGEM_CONSULTAS = 200;
 
+/** Limites dos dados cadastrais exigidos pela especificação do sistema. */
+export const CLIENTE_RG_MAXIMO = 30;
+export const CLIENTE_NASCIMENTO_ANO_MINIMO = 1900;
+export const PET_IDADE_MAXIMA_ANOS = 100;
+
 /** Limites dos campos textuais do prontuário (persistidos em `@db.Text`). */
 export const PRONTUARIO_TEXTO_MINIMO = 3;
 export const PRONTUARIO_TEXTO_MAXIMO = 2000;
@@ -74,6 +79,21 @@ export const LIMITE_LISTAGEM_ANEXOS = 200;
 
 /** Validade do token de staging: arquivos não confirmados são removidos depois disso. */
 export const ANEXO_STAGING_TTL_MINUTOS = 30;
+
+/** Alerta de quantidade mínima ligado por padrão para produtos novos. */
+export const ESTOQUE_ALERTA_PADRAO = true;
+
+/** Dias de antecedência para avisar tutores sobre a próxima dose informada. */
+export const VACINA_ALERTA_DIAS = 30;
+
+/** Maior intervalo aceito pelos filtros de relatório (em meses). */
+export const RELATORIO_PERIODO_MAXIMO_MESES = 24;
+
+/** Tempo de cache da cotação do dólar consultada na API externa. */
+export const COTACAO_DOLAR_CACHE_MINUTOS = 60;
+
+/** Prefixo do assunto dos e-mails automáticos da clínica. */
+export const SMTP_ASSUNTO_PREFIXO = '[PetHealthPD]';
 
 /** Categorias clínicas aceitas; ordem estável para exibição no formulário. */
 export const ANEXO_CATEGORIAS = [

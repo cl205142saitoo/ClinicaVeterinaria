@@ -2,12 +2,108 @@
 
 Sistema de gestão para clínica veterinária (Electron + Prisma).
 
+## Navegação por abas e cadastro de veterinário
+
+A interface deixou de ser uma página única: `#appPrincipal` agora contém
+`#navAbas` (Bootstrap `nav-tabs`) com oito painéis — Clientes e pets, Agenda,
+Prontuário, Vacinas, Estoque, Anexos, Integrações e Usuários. Todos os IDs
+originais dos formulários e tabelas foram preservados; os controladores
+continuam encontrando os elementos por seletor direto.
+
+- A aba Usuários (`#abaUsuarios-item`) só aparece para ADMIN. `AuthController.aplicarPermissoes()`
+  controla o `<li>` da nav separadamente dos botões `.danger`/`.somente-admin`
+  para não esconder ações de tabela por engano.
+- `focarAppAutenticado()` ignora os botões da nav e foca o primeiro campo do
+  painel ativo, mantendo o comportamento original de acessibilidade.
+- Modais e toasts permanecem fora de `.tab-content`.
+- O aviso de feriados da Agenda (`#inAvisoFeriadosAgenda`) continua sendo
+  atualizado pelo `IntegracaoController` mesmo com a aba Integrações inativa.
+
+**Correção de aninhamento (bug encontrado após a primeira conversão):** os
+painéis Prontuário a Usuários tinham ficado como **filhos de `#abaAgenda`**
+porque o `</div>` de fechamento da Agenda havia sido colocado no fim do
+`<main>`. Como o Bootstrap esconde apenas filhos diretos de `.tab-content`,
+esses painéis herdavam `display: block` dentro da Agenda oculta e nunca
+apareciam — o usuário via só Clientes/Pets e Consultas. O fechamento foi movido
+para logo após o `</section>` da Agenda e um `</div>` órfão foi removido.
+Validação no DOM do Electron: todos os 8 painéis têm `parentElement.id ===
+"conteudoAbas"`; ao clicar em cada aba, exatamente um painel fica com
+`display: block` e nenhum erro de console é emitido.
+
+**Cadastro de veterinário:** o cadastro público (`AUTH_REGISTRAR`) continua
+criando apenas ATENDENTE por segurança. Foi adicionado o canal ADMIN
+`USUARIOS_CRIAR` (`usuarios:criar`), com `DadosNovoUsuario`, validador
+`ehDadosNovoUsuario`, `UsuarioService.criar()` (hash bcrypt + e-mail único) e o
+formulário `#formCriarUsuario` na aba Usuários. O perfil é escolhido entre
+VETERINARIO e ATENDENTE, mas **o role é validado no backend**; CRMV é
+preenchido apenas para veterinários. O veterinário criado aparece imediatamente
+no select da Agenda (`ConsultaRepository.listarVeterinarios` filtra
+`role: 'VETERINARIO', ativo: true`). Fluxo testado: criar vet → listar vet →
+agendar consulta → limpar registros de teste.
+
+## Complemento de requisitos — dados cadastrais, idade e prescrição
+
+Adaptação do schema aos requisitos do projeto escola, mantendo as 8 tabelas e
+todas as FKs existentes:
+
+| Requisito | Onde ficou | Como foi implementado |
+| --- | --- | --- |
+| Cliente com nome, CPF, RG e data de nascimento | `Cliente.rg`, `Cliente.dataNascimento` | `VARCHAR(30)` e `DATE`; obrigatórios no formulário e nos validadores IPC, opcionais no banco para não bloquear a migração de bases com linhas antigas |
+| Cada cliente com mais de um pet; pet com espécie, raça, idade e peso | `Pet.clienteId` (FK), `Pet.especie`, `Pet.raca`, `Pet.idade`, `Pet.peso` | `idade` é `INTEGER NOT NULL` com CHECK de 0 a 100; o relacionamento `Cliente 1 → N Pet` já existia |
+| Agendar consultas e guardar diagnóstico e o que foi receitado | `Consulta.dataHora`, `Consulta.diagnostico`, `Consulta.prescricao` | `prescricao` é `TEXT NULL`, gravada pelo prontuário e exibida como coluna própria no histórico |
+| Estoque de vacinas e remédios sem faltar | `Produto` + `Lote` (já existentes) | `estoqueMinimo` por produto e alertas visuais de validade/quantidade na tela de estoque |
+
+Arquivos alterados: `prisma/schema.prisma`, nova migração
+`20261123000000_dados_cadastrais`, contratos em `src/shared/types.ts`,
+validadores em `src/shared/validators.ts`, repositórios/services de cliente,
+pet e prontuário, formulários em `src/renderer/renderer.html` e controladores
+do renderer. Validações executadas: `prisma validate`, `prisma generate`,
+`tsc --noEmit`, `npm run build`, `prisma migrate status` e um teste de
+escrita/leitura (criação de cliente, pet, consulta e prontuário com prescrição,
+seguida de limpeza dos registros de teste) — todas OK.
+
+### Banco usado na validação
+
+As três migrações foram aplicadas no MySQL **8.0.32** em
+`143.106.241.4:3306`, schema `cl205345`, usando a credencial fornecida pelo
+usuário. O schema já continha 20 tabelas de outros exercícios, então foi feito
+o **baseline** do Prisma: o SQL das migrações antigas foi executado com
+`prisma db execute` e marcado com `prisma migrate resolve --applied`; a migração
+`20261123000000_dados_cadastrais` foi aplicada normalmente com
+`npm run db:deploy`. O resultado foi verificado: 8 tabelas do PetHealthPD, 24
+FKs, 20 CHECKs, 3 migrações concluídas e `Database schema is up to date!`.
+
+> **Atenção:** as tabelas do PetHealthPD são `Usuario`, `Cliente`, `Pet`,
+> `Consulta`, `Produto`, `Lote`, `AnexoClinico` e `RegistroVacina` (iniciais em
+> maiúsculas). O servidor é case-sensitive (`lower_case_table_names=0`), então
+> elas **não** se confundem com `cliente`, `animal`, `veterinario` etc. das
+> outras tabelas do mesmo schema. Não apague as tabelas em maiúsculas.
+
+## Correção do preload (login/cadastro)
+
+O `BrowserWindow` usa `webPreferences.sandbox: true`. No Electron 45, o preload
+em sandbox **não pode fazer `require()` de módulos locais**: o `dist/main/preload.js`
+gerado pelo `tsc` tentava carregar `../shared/ipc-channels` e falhava com
+`module not found`. Consequência: `window.api` não era exposto e nem login nem
+cadastro funcionavam (a tela abria, mas toda ação IPC falhava).
+
+Correção em `scripts/copy-assets.js`: o preload agora também é empacotado com
+esbuild (`bundle: true`, `format: 'cjs'`, `platform: 'node'`, `external:
+['electron']`), resolvendo as importações locais em tempo de build. O arquivo
+final só contém `require("electron")`. Após `npm run build`, o console do
+Electron não registra mais `Unable to load preload script`.
+
+> Para testar, **rode `npm start` na raiz do projeto**. Abrir
+> `dist/renderer/renderer.html` direto no navegador não funciona: o `window.api`
+> só existe dentro do Electron.
+
 ## Status da migração para MySQL — Etapa 4 + complementos das Etapas 5 a 9 + Etapa 10
 
-> **A migração foi preparada/regenerada e validada offline, mas NÃO foi aplicada
-> a nenhum banco de dados.** Não havia MySQL, `DATABASE_URL`, `.env` ou cliente
-> `mysql` neste ambiente. O arquivo `prisma/dev.db` permanece vazio (0 bytes) e
-> intacto. Nenhuma migração foi aplicada até aqui.
+> **Histórico:** esta seção registra a preparação offline das migrações. Após a
+> credencial MySQL ser fornecida, as três migrações foram aplicadas com sucesso
+> (ver seção "Banco usado na validação" no início deste arquivo). O arquivo
+> `prisma/dev.db` permanece vazio (0 bytes) e intacto: ele é residual da versão
+> SQLite e não é usado pelo provider MySQL.
 >
 > **Complemento da Etapa 5:** o modelo `Consulta` passou a persistir duração e
 > auditoria de cancelamento/conclusão, com índices compostos para a agenda. Como
@@ -47,6 +143,8 @@ Artefatos preparados:
 
 - `prisma/schema.prisma` — provider `mysql`, 8 modelos, tipos nativos, integridade e auditoria.
 - `prisma/migrations/20261119163348_init_mysql/migration.sql` — migração inicial versionada (19 CHECKs manuais).
+- `prisma/migrations/20261120120000_crud_logico/migration.sql` — exclusão lógica auditável.
+- `prisma/migrations/20261123000000_dados_cadastrais/migration.sql` — RG, nascimento, idade e prescrição (mais 1 CHECK manual: `Pet_idade_valida_chk`).
 - `.env.example` — modelo de configuração (sem segredo real).
 - `src/shared/` — contratos `Api`, canais IPC, constantes, validadores e erros em pt-BR.
 - `src/main/repositories/` — projeções explícitas (`ClientePet`, `Consulta`, `Usuario`, `Vacina`, `Estoque`, `Anexo`).
@@ -211,9 +309,12 @@ cliente mudaria regra de negócio (ex.: familiares compartilhando contato) e
 deve ser validado com `clinica-veterinaria` antes de qualquer alteração.
 
 **CHECK constraints:** o Prisma Migrate não gera nem gerencia `CHECK`. Estão
-acrescentados manualmente ao SQL inicial (19 no total):
+acrescentados manualmente ao SQL (19 na migração inicial + 1 na migração de
+dados cadastrais):
 
 - `Pet_peso_positivo_chk` (`peso > 0`);
+- `Pet_idade_valida_chk` (`idade` entre 0 e 100, na migração
+  `20261123000000_dados_cadastrais`);
 - `Produto_preco_nao_negativo_chk` e `Produto_estoque_minimo_nao_negativo_chk`;
 - `Lote_quantidade_nao_negativa_chk`;
 - `Cliente_lgpd_coerente_chk` (aceite x metadados de consentimento);
@@ -235,7 +336,11 @@ acrescentados manualmente ao SQL inicial (19 no total):
 - `AnexoClinico_nome_original_valido_chk` (`TRIM(nomeOriginal)` não vazio);
 - `AnexoClinico_nome_arquivo_valido_chk` (UUID v4 + extensão curta);
 - `AnexoClinico_inativacao_coerente_chk` (inativo exige data e motivo, e ativo
-  exige os três campos de inativação nulos).
+  exige data e motivo nulos). **Ajuste MySQL 8.0.16+:** a condição
+  `inativadoPorId IS NULL` foi removida deste CHECK porque a coluna participa
+  da FK com `ON DELETE SET NULL` e o MySQL rejeita CHECKs sobre colunas usadas
+  por ações referenciais; a integridade do responsável continua garantida pela
+  FK. Total conferido no banco: 20 CHECKs.
 
 O cabeçalho do `migration.sql` deixa isso explícito. Ao gerar migrações futuras,
 confirme que a seção de CHECKs foi preservada. Isso pode aparecer como *drift*
@@ -527,15 +632,20 @@ nacionais + API própria local** para as quatro situações de API; e
 
 `prisma/schema.prisma` mantém 8 tabelas (`Usuario`, `Cliente`, `Pet`,
 `Consulta`, `Produto`, `Lote`, `AnexoClinico`, `RegistroVacina`) com 24 FKs
-reais. A Etapa 10 acrescentou apenas colunas de auditoria da exclusão lógica
+reais. A Etapa 10 acrescentou colunas de auditoria da exclusão lógica
 (`ativo`, `inativadoPorId`, `inativadoEm`, `motivoInativacao` e equivalentes
-para baixa/estorno), uma nova migração versionada e índices em `ativo`.
+para baixa/estorno) e índices em `ativo`; o complemento de requisitos acrescentou
+`Cliente.rg`, `Cliente.dataNascimento`, `Pet.idade` e `Consulta.prescricao`.
 
 - Migração inicial: `prisma/migrations/20261119163348_init_mysql/migration.sql`.
 - Migração da Etapa 10:
   `prisma/migrations/20261120120000_crud_logico/migration.sql`.
-- **Aplicar na ordem** com `npm run db:deploy` quando o MySQL real estiver
-  configurado. Nenhuma migração foi aplicada neste ambiente.
+- Migração do complemento:
+  `prisma/migrations/20261123000000_dados_cadastrais/migration.sql`.
+- **Aplicadas em ordem** no schema `cl205345`: as duas primeiras via baseline
+  (`prisma db execute` + `prisma migrate resolve --applied`) e a terceira com
+  `npm run db:deploy`. `prisma migrate status` confirma
+  `Database schema is up to date!`.
 
 ### 2. CRUD completo
 
@@ -796,8 +906,11 @@ nas cinco correções aprovadas e não foram alterados nesta rodada.
 
 ## Pendências (fora do escopo deste complemento)
 
-1. **Aplicar** as duas migrações em MySQL real com `npm run db:deploy` (ou
-   `npx prisma migrate deploy`) e rodar `npm run seed:admin`.
+1. ~~**Aplicar** as migrações em MySQL real~~ **Concluído:** as três migrações
+   foram aplicadas no schema `cl205345` e `prisma migrate status` está limpo.
+   Falta apenas rodar `npm run seed:admin` (com `PHD_ADMIN_*` no `.env`) para
+   criar o primeiro administrador — não feito porque exige uma senha definida
+   pelo usuário.
 2. **Rastreabilidade:** propagar o `Usuario` da `SessaoService` até o service
    para preencher `criadoPorId` (hoje gravamos `null` para não alterar contratos
    IPC nesta etapa).

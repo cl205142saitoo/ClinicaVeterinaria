@@ -1,5 +1,6 @@
 /** Domínio de pets: formulário, vínculo com tutor e listagem. */
 
+import { PET_IDADE_MAXIMA_ANOS } from '../shared/constants';
 import type { Cliente, Pet } from './types';
 import {
   criarBotaoExcluir,
@@ -59,7 +60,7 @@ export function renderizarPets(pets: Pet[]): void {
     const linha = document.createElement('tr');
     linha.append(
       criarCelula(pet.nome),
-      criarCelula(`${pet.especie} / ${pet.raca}`),
+      criarCelula(`${pet.especie} / ${pet.raca} — ${pet.idade} ${pet.idade === 1 ? 'ano' : 'anos'}`),
       criarCelula(pet.cliente?.nome ?? '—'),
     );
     const acao = document.createElement('td');
@@ -79,6 +80,7 @@ export function iniciarPets(opcoes: { aoSalvar: () => void }): void {
     const nome = obrigatorio<HTMLInputElement>('#pNome');
     const especie = obrigatorio<HTMLInputElement>('#pEspecie');
     const raca = obrigatorio<HTMLInputElement>('#pRaca');
+    const idade = obrigatorio<HTMLInputElement>('#pIdade');
     const peso = obrigatorio<HTMLInputElement>('#pPeso');
     limparValidacao(formulario);
 
@@ -86,6 +88,13 @@ export function iniciarPets(opcoes: { aoSalvar: () => void }): void {
       exigir(cliente, cliente.value !== '', 'Selecione o tutor do pet.'),
       exigir(nome, nome.value.trim().length >= 2, 'Informe o nome do pet.'),
       exigir(especie, especie.value.trim() !== '', 'Informe a espécie.'),
+      exigir(
+        idade,
+        /^\d+$/.test(idade.value.trim()) &&
+          Number(idade.value) >= 0 &&
+          Number(idade.value) <= PET_IDADE_MAXIMA_ANOS,
+        `Informe a idade em anos (de 0 a ${PET_IDADE_MAXIMA_ANOS}).`
+      ),
       exigir(peso, pesoValido(peso.value), 'Informe um peso em kg maior que zero.'),
     ];
     if (!resultados.every(Boolean)) {
@@ -100,6 +109,7 @@ export function iniciarPets(opcoes: { aoSalvar: () => void }): void {
         nome: nome.value.trim(),
         especie: especie.value.trim(),
         raca: raca.value.trim(),
+        idade: Number(idade.value),
         peso: Number(peso.value.replace(',', '.')),
       });
       formulario.reset();

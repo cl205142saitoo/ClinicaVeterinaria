@@ -1,5 +1,6 @@
 /** Domínio de clientes: formulário, ViaCEP, listagem, edição e inativação. */
 
+import { dataCivilClinica, formatarDataCivil } from '../../shared/datas';
 import type { Cliente, DadosCliente } from '../types';
 import {
   aplicarMascara,
@@ -25,7 +26,7 @@ import {
 } from '../ui';
 import type { ContextoApp } from './contexto';
 
-const COLUNAS = 4;
+const COLUNAS = 7;
 
 export class ClienteController {
   private clientesVisiveis = new Map<number, Cliente>();
@@ -76,6 +77,9 @@ export class ClienteController {
       const linha = document.createElement('tr');
       linha.append(
         criarCelula(cliente.nome),
+        criarCelula(cliente.cpf, 'text-nowrap small'),
+        criarCelula(cliente.rg ?? '—', 'small'),
+        criarCelula(formatarDataCivil(cliente.dataNascimento), 'text-nowrap small'),
         criarCelula(`${cliente.cidade} - ${cliente.uf}`),
         criarCelula(String(cliente.pets?.length ?? 0), 'text-center')
       );
@@ -123,6 +127,8 @@ export class ClienteController {
     this.idEdicao = cliente.id;
     this.definirValor('#cNome', cliente.nome);
     this.definirValor('#cCpf', cliente.cpf);
+    this.definirValor('#cRg', cliente.rg ?? '');
+    this.definirValor('#cNascimento', cliente.dataNascimento ?? '');
     this.definirValor('#cTel', cliente.telefone);
     this.definirValor('#cCep', cliente.cep);
     this.definirValor('#cRua', cliente.logradouro);
@@ -193,6 +199,8 @@ export class ClienteController {
     const formulario = obrigatorio<HTMLFormElement>('#formCliente');
     const nome = obrigatorio<HTMLInputElement>('#cNome');
     const cpf = obrigatorio<HTMLInputElement>('#cCpf');
+    const rg = obrigatorio<HTMLInputElement>('#cRg');
+    const nascimento = obrigatorio<HTMLInputElement>('#cNascimento');
     const telefone = obrigatorio<HTMLInputElement>('#cTel');
     const cep = obrigatorio<HTMLInputElement>('#cCep');
     const logradouro = obrigatorio<HTMLInputElement>('#cRua');
@@ -205,6 +213,12 @@ export class ClienteController {
     const resultados = [
       exigir(nome, nome.value.trim().length >= 2, 'Informe o nome completo do cliente.'),
       exigir(cpf, cpfValido(cpf.value), 'CPF inválido. Confira os números digitados.'),
+      exigir(rg, rg.value.trim().length > 0, 'Informe o RG do cliente.'),
+      exigir(
+        nascimento,
+        nascimento.value !== '' && nascimento.value <= dataCivilClinica(new Date()),
+        'Informe uma data de nascimento válida (não pode ser futura).'
+      ),
       exigir(telefone, telefoneValido(telefone.value), 'Informe um telefone com DDD (10 ou 11 dígitos).'),
       exigir(cep, cepValido(cep.value), 'Informe um CEP com 8 dígitos.'),
       exigir(logradouro, logradouro.value.trim() !== '', 'Informe o logradouro.'),
@@ -220,6 +234,8 @@ export class ClienteController {
     const dados: DadosCliente = {
       nome: nome.value.trim(),
       cpf: cpf.value,
+      rg: rg.value.trim(),
+      dataNascimento: nascimento.value,
       telefone: telefone.value,
       cep: cep.value,
       logradouro: logradouro.value.trim(),

@@ -61,6 +61,27 @@ export class AuthController {
     document.querySelectorAll<HTMLElement>('.danger, .somente-admin').forEach((elemento) => {
       elemento.hidden = !visivel;
     });
+    // A aba de administração é controlada separadamente: nenhuma classe de
+    // permissão é usada nela para não conflitar com os botões `.danger` das
+    // tabelas (que também são escondidos para não-admin).
+    obrigatorio<HTMLElement>('#abaUsuarios-item').hidden = !visivel;
+    if (!visivel && obrigatorio<HTMLElement>('#abaUsuarios').classList.contains('active')) {
+      obrigatorio<HTMLElement>('#abaClientes').classList.add('active', 'show');
+      obrigatorio<HTMLElement>('#abaUsuarios').classList.remove('active', 'show');
+      obrigatorio<HTMLElement>('#abaClientes-tab').classList.add('active');
+      obrigatorio<HTMLElement>('#abaUsuarios-tab').classList.remove('active');
+    }
+
+    // Relatórios contêm dados clínicos agregados: disponíveis só para quem tem
+    // acesso clínico (o backend continua sendo a autoridade final).
+    const acessoRelatorios = this.temAcessoClinico();
+    obrigatorio<HTMLElement>('#abaRelatorios-item').hidden = !acessoRelatorios;
+    if (!acessoRelatorios && obrigatorio<HTMLElement>('#abaRelatorios').classList.contains('active')) {
+      obrigatorio<HTMLElement>('#abaClientes').classList.add('active', 'show');
+      obrigatorio<HTMLElement>('#abaRelatorios').classList.remove('active', 'show');
+      obrigatorio<HTMLElement>('#abaClientes-tab').classList.add('active');
+      obrigatorio<HTMLElement>('#abaRelatorios-tab').classList.remove('active');
+    }
   }
 
   /** Exibe a aplicação autenticada e move o foco para o primeiro controle útil. */
@@ -77,10 +98,15 @@ export class AuthController {
   private focarAppAutenticado(): void {
     const app = obrigatorio<HTMLElement>('#appPrincipal');
     const controles = app.querySelectorAll<HTMLElement>(
-      'input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled])'
+      '#navAbas button, input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled])'
     );
-    const primeiroVisivel = Array.from(controles).find((controle) => controle.offsetParent !== null);
-    (primeiroVisivel ?? obrigatorio<HTMLButtonElement>('#btnSair')).focus();
+    const primeiroVisivel = Array.from(controles).find((controle) => {
+      // Ignora os botões de navegação: queremos o primeiro campo do painel ativo.
+      if (controle.closest('#navAbas')) return false;
+      // Em painéis inativos o offsetParent é null; isso preserva o foco útil.
+      return controle.offsetParent !== null;
+    });
+    (primeiroVisivel ?? obrigatorio<HTMLButtonElement>('#abaClientes-tab')).focus();
   }
 
   private async entrar(

@@ -1,0 +1,1175 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PetHealthPD — Clínica Veterinária</title>
+  <link rel="stylesheet" href="./vendor/bootstrap.min.css" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body class="bg-light">
+  <noscript>
+    <div class="alert alert-warning m-3" role="alert">É necessário habilitar JavaScript para utilizar o PetHealthPD.</div>
+  </noscript>
+
+  <div class="container-fluid py-3">
+    <!-- TELA DE LOGIN / PRIMEIRO ACESSO -->
+    <section id="telaLogin" class="row justify-content-center" aria-labelledby="tituloLogin">
+      <div class="col-12 col-md-10 col-lg-7 col-xl-5">
+        <div class="card shadow-sm">
+          <div class="card-body p-4">
+            <h1 id="tituloLogin" class="h4 card-title mb-1">Acesso ao PetHealthPD</h1>
+            <p class="text-muted small mb-4">Gestão de clientes, pets e prontuários da clínica.</p>
+
+            <form id="formLogin" novalidate>
+              <div class="mb-3">
+                <label for="lEmail" class="form-label">E-mail</label>
+                <input id="lEmail" type="email" class="form-control" autocomplete="username" aria-describedby="lEmailFeedback" required />
+                <div id="lEmailFeedback" class="invalid-feedback"></div>
+              </div>
+              <div class="mb-3">
+                <label for="lSenha" class="form-label">Senha</label>
+                <input id="lSenha" type="password" class="form-control" autocomplete="current-password" aria-describedby="lSenhaFeedback" required />
+                <div id="lSenhaFeedback" class="invalid-feedback"></div>
+              </div>
+              <button id="btnLogin" type="submit" class="btn btn-primary w-100">Entrar</button>
+            </form>
+
+            <hr class="my-4" />
+
+            <h2 class="h5 card-title mb-3">Primeiro acesso — criar conta</h2>
+            <div class="alert alert-info py-2 small" role="note">
+              Contas criadas aqui recebem o perfil de <strong>Atendente</strong>. Perfis com mais permissões são definidos por um administrador.
+            </div>
+            <form id="formRegistro" novalidate>
+              <div class="mb-3">
+                <label for="rNome" class="form-label">Nome completo</label>
+                <input id="rNome" type="text" class="form-control" autocomplete="name" aria-describedby="rNomeFeedback" required />
+                <div id="rNomeFeedback" class="invalid-feedback"></div>
+              </div>
+              <div class="mb-3">
+                <label for="rEmail" class="form-label">E-mail</label>
+                <input id="rEmail" type="email" class="form-control" autocomplete="email" aria-describedby="rEmailFeedback" required />
+                <div id="rEmailFeedback" class="invalid-feedback"></div>
+              </div>
+              <div class="mb-3">
+                <label for="rSenha" class="form-label">Senha</label>
+                <input id="rSenha" type="password" class="form-control" autocomplete="new-password" aria-describedby="rSenhaFeedback" minlength="6" required />
+                <div id="rSenhaFeedback" class="invalid-feedback"></div>
+              </div>
+              <button id="btnRegistrar" type="submit" class="btn btn-success w-100">Cadastrar usuário</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- BARRA DO USUÁRIO AUTENTICADO -->
+    <header id="barraUsuario" class="barra-usuario mb-3" hidden>
+      <span id="infoUsuario" class="fw-semibold"></span>
+      <button id="btnSair" type="button" class="btn btn-sm btn-light">Sair</button>
+    </header>
+
+    <!-- APLICAÇÃO PRINCIPAL -->
+    <main id="appPrincipal" hidden>
+      <h1 class="h4 mb-3">Gestão de clientes e pets</h1>
+
+      <div class="row g-3">
+        <div class="col-12 col-lg-6">
+          <div class="card shadow-sm h-100">
+            <div class="card-header bg-transparent border-0 pb-0">
+              <h2 id="tituloFormCliente" class="h5 mb-0">Novo cliente <span class="fs-6 fw-normal text-muted">(com ViaCEP)</span></h2>
+            </div>
+            <div class="card-body">
+              <form id="formCliente" novalidate>
+                <div class="mb-3">
+                  <label for="cNome" class="form-label">Nome completo</label>
+                  <input id="cNome" type="text" class="form-control" autocomplete="name" aria-describedby="cNomeFeedback" required />
+                  <div id="cNomeFeedback" class="invalid-feedback"></div>
+                </div>
+                <div class="row g-3">
+                  <div class="col-12 col-md-6 mb-3">
+                    <label for="cCpf" class="form-label">CPF</label>
+                    <input id="cCpf" type="text" class="form-control" inputmode="numeric" maxlength="14" placeholder="000.000.000-00" aria-describedby="cCpfFeedback" required />
+                    <div id="cCpfFeedback" class="invalid-feedback"></div>
+                  </div>
+                  <div class="col-12 col-md-6 mb-3">
+                    <label for="cTel" class="form-label">Telefone</label>
+                    <input id="cTel" type="text" class="form-control" inputmode="tel" maxlength="15" placeholder="(00) 00000-0000" aria-describedby="cTelFeedback" required />
+                    <div id="cTelFeedback" class="invalid-feedback"></div>
+                  </div>
+                </div>
+                <div class="mb-3">
+                  <label for="cCep" class="form-label">CEP</label>
+                  <div class="input-group has-validation">
+                    <input id="cCep" type="text" class="form-control" inputmode="numeric" maxlength="9" placeholder="00000-000" aria-describedby="cCepFeedback" required />
+                    <button id="btnBuscarCep" type="button" class="btn btn-outline-primary">Buscar CEP</button>
+                    <div id="cCepFeedback" class="invalid-feedback"></div>
+                  </div>
+                </div>
+                <div class="mb-3">
+                  <label for="cRua" class="form-label">Logradouro</label>
+                  <input id="cRua" type="text" class="form-control" autocomplete="street-address" aria-describedby="cRuaFeedback" required />
+                  <div id="cRuaFeedback" class="invalid-feedback"></div>
+                </div>
+                <div class="row g-3">
+                  <div class="col-12 col-md-6 mb-3">
+                    <label for="cBairro" class="form-label">Bairro</label>
+                    <input id="cBairro" type="text" class="form-control" aria-describedby="cBairroFeedback" />
+                    <div id="cBairroFeedback" class="invalid-feedback"></div>
+                  </div>
+                  <div class="col-12 col-md-4 mb-3">
+                    <label for="cCidade" class="form-label">Cidade</label>
+                    <input id="cCidade" type="text" class="form-control" aria-describedby="cCidadeFeedback" required />
+                    <div id="cCidadeFeedback" class="invalid-feedback"></div>
+                  </div>
+                  <div class="col-12 col-md-2 mb-3">
+                    <label for="cUf" class="form-label">UF</label>
+                    <input id="cUf" type="text" class="form-control" maxlength="2" placeholder="SP" aria-describedby="cUfFeedback" required />
+                    <div id="cUfFeedback" class="invalid-feedback"></div>
+                  </div>
+                </div>
+                <div class="form-check mb-3">
+                  <input id="cLgpd" type="checkbox" class="form-check-input" aria-describedby="cLgpdFeedback" required />
+                  <label for="cLgpd" class="form-check-label">Aceito os termos da LGPD</label>
+                  <div id="cLgpdFeedback" class="invalid-feedback"></div>
+                </div>
+                <button id="btnSalvarCliente" type="submit" class="btn btn-primary w-100">Cadastrar cliente</button>
+                <button id="btnCancelarEdicaoCliente" type="button" class="btn btn-outline-secondary w-100 mt-2" hidden>Cancelar edição</button>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-12 col-lg-6">
+          <div class="card shadow-sm h-100">
+            <div class="card-header bg-transparent border-0 pb-0">
+              <h2 id="tituloFormPet" class="h5 mb-0">Novo pet</h2>
+            </div>
+            <div class="card-body">
+              <form id="formPet" novalidate>
+                <div class="mb-3">
+                  <label for="pCliente" class="form-label">Tutor</label>
+                  <select id="pCliente" class="form-select" aria-describedby="pClienteFeedback" required></select>
+                  <div id="pClienteFeedback" class="invalid-feedback"></div>
+                </div>
+                <div class="mb-3">
+                  <label for="pNome" class="form-label">Nome do pet</label>
+                  <input id="pNome" type="text" class="form-control" aria-describedby="pNomeFeedback" required />
+                  <div id="pNomeFeedback" class="invalid-feedback"></div>
+                </div>
+                <div class="row g-3">
+                  <div class="col-12 col-md-6 mb-3">
+                    <label for="pEspecie" class="form-label">Espécie</label>
+                    <input id="pEspecie" type="text" class="form-control" placeholder="Canino, Felino…" aria-describedby="pEspecieFeedback" required />
+                    <div id="pEspecieFeedback" class="invalid-feedback"></div>
+                  </div>
+                  <div class="col-12 col-md-6 mb-3">
+                    <label for="pRaca" class="form-label">Raça</label>
+                    <input id="pRaca" type="text" class="form-control" placeholder="Opcional" aria-describedby="pRacaFeedback" />
+                    <div id="pRacaFeedback" class="invalid-feedback"></div>
+                  </div>
+                </div>
+                <div class="mb-3">
+                  <label for="pPeso" class="form-label">Peso (kg)</label>
+                  <input id="pPeso" type="number" class="form-control" step="0.1" min="0.1" inputmode="decimal" placeholder="0,0" aria-describedby="pPesoFeedback" required />
+                  <div id="pPesoFeedback" class="invalid-feedback"></div>
+                </div>
+                <button id="btnSalvarPet" type="submit" class="btn btn-primary w-100">Cadastrar pet</button>
+                <button id="btnCancelarEdicaoPet" type="button" class="btn btn-outline-secondary w-100 mt-2" hidden>Cancelar edição</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row g-3 mt-1">
+        <div class="col-12 col-lg-6">
+          <div class="card shadow-sm">
+            <div class="card-header bg-transparent border-0 pb-0">
+              <h2 class="h5 mb-0">Clientes cadastrados</h2>
+            </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="table table-striped table-hover align-middle mb-0">
+                  <thead>
+                    <tr>
+                      <th scope="col">Nome</th>
+                      <th scope="col">Cidade/UF</th>
+                      <th scope="col" class="text-center">Pets</th>
+                      <th scope="col">Ação</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbClientes"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-12 col-lg-6">
+          <div class="card shadow-sm">
+            <div class="card-header bg-transparent border-0 pb-0">
+              <h2 class="h5 mb-0">Pets cadastrados</h2>
+            </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="table table-striped table-hover align-middle mb-0">
+                  <thead>
+                    <tr>
+                      <th scope="col">Pet</th>
+                      <th scope="col">Espécie/Raça</th>
+                      <th scope="col">Tutor</th>
+                      <th scope="col">Ação</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbPets"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AGENDA DE CONSULTAS -->
+      <section class="row g-3 mt-1" aria-labelledby="tituloAgenda">
+        <div class="col-12">
+          <div class="card shadow-sm">
+            <div class="card-header bg-transparent border-0 pb-0">
+              <h2 id="tituloAgenda" class="h5 mb-0">Agenda de consultas</h2>
+            </div>
+            <div class="card-body">
+              <div id="inAvisoFeriadosAgenda" class="alert alert-warning py-2 small" role="status" aria-live="polite" hidden>
+                <span id="inAvisoFeriadosTexto"></span>
+              </div>
+              <form id="formFiltrosAgenda" class="row g-3 align-items-end mb-4" novalidate>
+                <div class="col-12 col-md-5">
+                  <label for="aDe" class="form-label">De</label>
+                  <input id="aDe" type="date" class="form-control" aria-describedby="aDeFeedback" />
+                  <div id="aDeFeedback" class="invalid-feedback"></div>
+                </div>
+                <div class="col-12 col-md-5">
+                  <label for="aAte" class="form-label">Até</label>
+                  <input id="aAte" type="date" class="form-control" aria-describedby="aAteFeedback" />
+                  <div id="aAteFeedback" class="invalid-feedback"></div>
+                </div>
+                <div class="col-12 col-md-2 d-flex gap-2">
+                  <button id="btnFiltrarAgenda" type="submit" class="btn btn-primary flex-fill">Filtrar</button>
+                  <button id="btnLimparFiltrosAgenda" type="button" class="btn btn-outline-secondary">Limpar</button>
+                </div>
+              </form>
+
+              <div class="row g-3">
+                <div class="col-12 col-xl-5">
+                  <h3 class="h6">Nova consulta</h3>
+                  <form id="formAgenda" novalidate>
+                    <div class="mb-3">
+                      <label for="aPet" class="form-label">Pet</label>
+                      <select id="aPet" class="form-select" aria-describedby="aPetFeedback" required></select>
+                      <div id="aPetFeedback" class="invalid-feedback"></div>
+                    </div>
+                    <div class="mb-3">
+                      <label for="aVeterinario" class="form-label">Veterinário responsável</label>
+                      <select id="aVeterinario" class="form-select" aria-describedby="aVeterinarioFeedback aVeterinarioAjuda" required></select>
+                      <div id="aVeterinarioFeedback" class="invalid-feedback"></div>
+                      <div id="aVeterinarioAjuda" class="form-text">Veterinários só podem agendar consultas para si mesmos.</div>
+                    </div>
+                    <div class="mb-3">
+                      <label for="aDataHora" class="form-label">Data e horário</label>
+                      <input id="aDataHora" type="datetime-local" class="form-control" aria-describedby="aDataHoraFeedback" required />
+                      <div id="aDataHoraFeedback" class="invalid-feedback"></div>
+                    </div>
+                    <div class="alert alert-info py-2 small" role="note">
+                      Cada consulta ocupa <strong>60 minutos</strong> na agenda do veterinário e do pet.
+                    </div>
+                    <div class="mb-3">
+                      <label for="aMotivo" class="form-label">Motivo da consulta</label>
+                      <textarea id="aMotivo" class="form-control" rows="3" maxlength="500" aria-describedby="aMotivoFeedback" required></textarea>
+                      <div id="aMotivoFeedback" class="invalid-feedback"></div>
+                    </div>
+                    <button id="btnSalvarAgenda" type="submit" class="btn btn-primary w-100">Agendar consulta</button>
+                  </form>
+                </div>
+
+                <div class="col-12 col-xl-7">
+                  <h3 class="h6">Consultas do período</h3>
+                  <div class="table-responsive">
+                    <table class="table table-striped table-hover align-middle mb-0">
+                      <thead>
+                        <tr>
+                          <th scope="col">Data/hora</th>
+                          <th scope="col">Pet</th>
+                          <th scope="col">Tutor</th>
+                          <th scope="col">Veterinário</th>
+                          <th scope="col">Motivo</th>
+                          <th scope="col">Status</th>
+                          <th scope="col">Ações</th>
+                        </tr>
+                      </thead>
+                      <tbody id="tbAgenda" aria-busy="false"></tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PRONTUÁRIO CLÍNICO DO PET -->
+      <section class="row g-3 mt-1" aria-labelledby="tituloProntuario">
+        <div class="col-12">
+          <div class="card shadow-sm">
+            <div class="card-header bg-transparent border-0 pb-0">
+              <h2 id="tituloProntuario" class="h5 mb-0">Prontuário do pet</h2>
+            </div>
+            <div class="card-body">
+              <div id="prAvisoAtendente" class="alert alert-info mb-0" role="note" hidden>
+                Seu perfil de <strong>Atendente</strong> não tem acesso ao conteúdo clínico do prontuário.
+                Somente o veterinário responsável ou um administrador pode consultar e registrar exame clínico,
+                diagnóstico e conduta. Para informações clínicas, solicite ao veterinário responsável.
+              </div>
+
+              <div id="prAreaClinica" hidden>
+                <div class="row g-3 align-items-end mb-4">
+                  <div class="col-12 col-md-6 col-xl-4">
+                    <label for="prPet" class="form-label">Pet</label>
+                    <select id="prPet" class="form-select" aria-describedby="prPetFeedback prPetAjuda">
+                      <option value="">Selecione um pet…</option>
+                    </select>
+                    <div id="prPetFeedback" class="invalid-feedback"></div>
+                    <div id="prPetAjuda" class="form-text">Escolha um pet para ver o histórico e registrar prontuários.</div>
+                  </div>
+                </div>
+
+                <div class="row g-3">
+                  <div class="col-12 col-xl-7">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                      <h3 class="h6 mb-0">Histórico clínico</h3>
+                      <span id="prResumo" class="badge text-bg-light border" hidden></span>
+                    </div>
+                    <div class="table-responsive">
+                      <table class="table table-striped table-hover align-middle mb-0">
+                        <thead>
+                          <tr>
+                            <th scope="col">Data/hora</th>
+                            <th scope="col">Motivo</th>
+                            <th scope="col">Veterinário</th>
+                            <th scope="col">Diagnóstico</th>
+                            <th scope="col">Peso / Temp.</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Ações</th>
+                          </tr>
+                        </thead>
+                        <tbody id="tbProntuario" aria-busy="false"></tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <div class="col-12 col-xl-5">
+                    <h3 id="prFormTitulo" class="h6">Registrar prontuário</h3>
+                    <div class="alert alert-warning py-2 small" role="note">
+                      Salvar o prontuário <strong>não conclui</strong> a consulta automaticamente.
+                      Use <strong>Concluir consulta</strong> no histórico quando o atendimento terminar.
+                    </div>
+                    <form id="formProntuario" novalidate>
+                      <input id="prConsultaId" type="hidden" />
+                      <div class="mb-3">
+                        <label for="prExameClinico" class="form-label">Exame clínico</label>
+                        <textarea id="prExameClinico" class="form-control" rows="3" minlength="3" maxlength="2000" aria-describedby="prExameClinicoFeedback" required></textarea>
+                        <div id="prExameClinicoFeedback" class="invalid-feedback"></div>
+                      </div>
+                      <div class="mb-3">
+                        <label for="prDiagnostico" class="form-label">Diagnóstico</label>
+                        <textarea id="prDiagnostico" class="form-control" rows="3" minlength="3" maxlength="2000" aria-describedby="prDiagnosticoFeedback" required></textarea>
+                        <div id="prDiagnosticoFeedback" class="invalid-feedback"></div>
+                      </div>
+                      <div class="mb-3">
+                        <label for="prConduta" class="form-label">Conduta</label>
+                        <textarea id="prConduta" class="form-control" rows="3" minlength="3" maxlength="2000" aria-describedby="prCondutaFeedback" required></textarea>
+                        <div id="prCondutaFeedback" class="invalid-feedback"></div>
+                      </div>
+                      <div class="row g-3">
+                        <div class="col-12 col-md-6 mb-3">
+                          <label for="prPeso" class="form-label">Peso aferido (kg)</label>
+                          <input id="prPeso" type="number" class="form-control" step="0.01" min="0.01" inputmode="decimal" placeholder="Opcional" aria-describedby="prPesoFeedback prPesoAjuda" />
+                          <div id="prPesoFeedback" class="invalid-feedback"></div>
+                          <div id="prPesoAjuda" class="form-text">Deixe em branco se não tiver sido aferido.</div>
+                        </div>
+                        <div class="col-12 col-md-6 mb-3">
+                          <label for="prTemperatura" class="form-label">Temperatura (°C)</label>
+                          <input id="prTemperatura" type="number" class="form-control" step="0.1" min="30" max="45" inputmode="decimal" placeholder="Opcional" aria-describedby="prTemperaturaFeedback prTemperaturaAjuda" />
+                          <div id="prTemperaturaFeedback" class="invalid-feedback"></div>
+                          <div id="prTemperaturaAjuda" class="form-text">Faixa aceita: 30 °C a 45 °C.</div>
+                        </div>
+                      </div>
+                      <button id="btnSalvarProntuario" type="submit" class="btn btn-primary w-100">Salvar prontuário</button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- CARTEIRA DE VACINAÇÃO -->
+      <section class="row g-3 mt-1" aria-labelledby="tituloVacinas">
+        <div class="col-12">
+          <div class="card shadow-sm">
+            <div class="card-header bg-transparent border-0 pb-0">
+              <h2 id="tituloVacinas" class="h5 mb-0">Carteira de vacinação</h2>
+            </div>
+            <div class="card-body">
+              <div id="vcAvisoAtendente" class="alert alert-info mb-0" role="note" hidden>
+                Seu perfil de <strong>Atendente</strong> não tem acesso à carteira de vacinação.
+                Somente o veterinário responsável ou um administrador pode consultar e registrar vacinações.
+                Para informações clínicas, solicite ao veterinário responsável.
+              </div>
+
+              <div id="vcAreaClinica" hidden>
+                <div class="row g-3 align-items-end mb-3">
+                  <div class="col-12 col-md-6 col-xl-4">
+                    <label for="vcPet" class="form-label">Pet</label>
+                    <select id="vcPet" class="form-select" aria-describedby="vcPetFeedback vcPetAjuda">
+                      <option value="">Selecione um pet…</option>
+                    </select>
+                    <div id="vcPetFeedback" class="invalid-feedback"></div>
+                    <div id="vcPetAjuda" class="form-text">Escolha um pet para consultar o histórico e registrar vacinações.</div>
+                  </div>
+                </div>
+
+                <div id="vcAvisoCalendario" class="alert alert-warning py-2 small" role="note">Este registro é informativo: o sistema não calcula calendário vacinal, não define obrigatoriedade e não emite alerta de atraso. A próxima dose é preenchida apenas se o veterinário informar. Prazos e exigências — como antirrábica e campanhas municipais — variam por município/estado e devem ser confirmados com o veterinário responsável e com a vigilância sanitária local.</div>
+
+                <div class="row g-3 mt-1">
+                  <div class="col-12 col-lg-7">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                      <h3 class="h6 mb-0">Histórico de vacinação</h3>
+                      <span id="vcResumo" class="badge text-bg-light border" hidden></span>
+                    </div>
+                    <div class="table-responsive">
+                      <table class="table table-striped table-hover align-middle mb-0">
+                        <thead>
+                          <tr>
+                            <th scope="col">Data da aplicação</th>
+                            <th scope="col">Vacina / Fabricante</th>
+                            <th scope="col">Código do lote</th>
+                            <th scope="col">Validade do lote</th>
+                            <th scope="col">Sequência da dose</th>
+                            <th scope="col">Próxima dose (informada)</th>
+                            <th scope="col">Reação adversa</th>
+                            <th scope="col">Aplicada por</th>
+                            <th scope="col">Observações</th>
+                            <th scope="col">Registrado em</th>
+                          </tr>
+                        </thead>
+                        <tbody id="tbVacinas" aria-busy="false"></tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <div class="col-12 col-lg-5">
+                    <h3 id="vcFormTitulo" class="h6">Registrar vacinação</h3>
+                    <form id="formVacina" novalidate>
+                      <div class="mb-3">
+                        <label for="vcVacina" class="form-label">Vacina</label>
+                        <input id="vcVacina" type="text" class="form-control" maxlength="120" aria-describedby="vcVacinaFeedback" required />
+                        <div id="vcVacinaFeedback" class="invalid-feedback"></div>
+                      </div>
+                      <div class="mb-3">
+                        <label for="vcFabricante" class="form-label">Fabricante</label>
+                        <input id="vcFabricante" type="text" class="form-control" maxlength="120" aria-describedby="vcFabricanteFeedback" required />
+                        <div id="vcFabricanteFeedback" class="invalid-feedback"></div>
+                      </div>
+                      <div class="mb-3">
+                        <label for="vcLote" class="form-label">Código do lote</label>
+                        <input id="vcLote" type="text" class="form-control" maxlength="64" aria-describedby="vcLoteFeedback" required />
+                        <div id="vcLoteFeedback" class="invalid-feedback"></div>
+                      </div>
+                      <div class="row g-3">
+                        <div class="col-12 col-md-6 mb-3">
+                          <label for="vcValidade" class="form-label">Validade do lote</label>
+                          <input id="vcValidade" type="date" class="form-control" aria-describedby="vcValidadeFeedback" required />
+                          <div id="vcValidadeFeedback" class="invalid-feedback"></div>
+                        </div>
+                        <div class="col-12 col-md-6 mb-3">
+                          <label for="vcAplicadaEm" class="form-label">Data e hora da aplicação</label>
+                          <input id="vcAplicadaEm" type="datetime-local" class="form-control" aria-describedby="vcAplicadaEmFeedback" required />
+                          <div id="vcAplicadaEmFeedback" class="invalid-feedback"></div>
+                        </div>
+                      </div>
+                      <div class="mb-3">
+                        <label for="vcDose" class="form-label">Sequência da dose</label>
+                        <input id="vcDose" type="text" class="form-control" maxlength="60" placeholder="1ª dose, reforço, dose única…" aria-describedby="vcDoseFeedback" required />
+                        <div id="vcDoseFeedback" class="invalid-feedback"></div>
+                      </div>
+                      <div class="mb-3">
+                        <label for="vcProximaDose" class="form-label">Próxima dose (informada pelo veterinário)</label>
+                        <input id="vcProximaDose" type="date" class="form-control" aria-describedby="vcProximaDoseFeedback vcProximaDoseAjuda" />
+                        <div id="vcProximaDoseFeedback" class="invalid-feedback"></div>
+                        <div id="vcProximaDoseAjuda" class="form-text">Opcional — informe somente se o veterinário tiver definido; o sistema não calcula.</div>
+                      </div>
+                      <div class="mb-3">
+                        <label for="vcReacao" class="form-label">Descrição da reação adversa</label>
+                        <textarea id="vcReacao" class="form-control" rows="2" maxlength="500" placeholder="Ex.: não observada. Se observada, descreva o que foi visto." aria-describedby="vcReacaoFeedback"></textarea>
+                        <div id="vcReacaoFeedback" class="invalid-feedback"></div>
+                      </div>
+                      <div class="mb-3">
+                        <label for="vcObservacoes" class="form-label">Observações</label>
+                        <textarea id="vcObservacoes" class="form-control" rows="3" maxlength="2000" aria-describedby="vcObservacoesFeedback"></textarea>
+                        <div id="vcObservacoesFeedback" class="invalid-feedback"></div>
+                      </div>
+                      <div class="row g-3">
+                        <div id="vcGrupoVeterinario" class="col-12 col-md-6 mb-3">
+                          <label for="vcVeterinario" class="form-label">Aplicada por (veterinário)</label>
+                          <select id="vcVeterinario" class="form-select" aria-describedby="vcVeterinarioFeedback">
+                            <option value="">Selecione o veterinário…</option>
+                          </select>
+                          <div id="vcVeterinarioFeedback" class="invalid-feedback"></div>
+                        </div>
+                        <div class="col-12 col-md-6 mb-3">
+                          <label for="vcConsulta" class="form-label">Consulta vinculada (opcional)</label>
+                          <select id="vcConsulta" class="form-select" aria-describedby="vcConsultaFeedback">
+                            <option value="">Nenhuma</option>
+                          </select>
+                          <div id="vcConsultaFeedback" class="invalid-feedback"></div>
+                        </div>
+                      </div>
+                      <button id="btnSalvarVacina" type="submit" class="btn btn-primary w-100">Registrar vacinação</button>
+                      <button id="btnCancelarEdicaoVacina" type="button" class="btn btn-outline-secondary w-100 mt-2" hidden>Cancelar edição</button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ESTOQUE E LOTES -->
+      <section class="row g-3 mt-1" aria-labelledby="tituloEstoque">
+        <div class="col-12">
+          <div class="card shadow-sm">
+            <div class="card-header bg-transparent border-0 pb-0">
+              <h2 id="tituloEstoque" class="h5 mb-0">Estoque e lotes</h2>
+            </div>
+            <div class="card-body">
+              <div id="esAvisoLeitura" class="alert alert-info mb-3" role="note" hidden>
+                Seu perfil pode consultar o estoque. Somente um administrador cadastra produtos e lotes.
+              </div>
+
+              <div id="esAreaEdicao" hidden>
+                <div class="row g-3">
+                  <div class="col-12 col-lg-6">
+                    <div class="card h-100">
+                      <div class="card-header bg-transparent border-0 pb-0">
+                        <h3 id="tituloFormProduto" class="h6 mb-0">Novo produto</h3>
+                      </div>
+                      <div class="card-body">
+                        <form id="formProduto" novalidate>
+                          <div class="mb-3">
+                            <label for="esNome" class="form-label">Nome do produto</label>
+                            <input id="esNome" type="text" class="form-control" maxlength="120" aria-describedby="esNomeFeedback" required />
+                            <div id="esNomeFeedback" class="invalid-feedback"></div>
+                          </div>
+                          <div class="mb-3">
+                            <label for="esCategoria" class="form-label">Categoria</label>
+                            <input id="esCategoria" type="text" class="form-control" maxlength="80" aria-describedby="esCategoriaFeedback" required />
+                            <div id="esCategoriaFeedback" class="invalid-feedback"></div>
+                          </div>
+                          <div class="row g-3">
+                            <div class="col-12 col-sm-6 mb-3">
+                              <label for="esEstoqueMinimo" class="form-label">Estoque mínimo (un.)</label>
+                              <input id="esEstoqueMinimo" type="number" class="form-control" min="0" step="1" aria-describedby="esEstoqueMinimoFeedback" required />
+                              <div id="esEstoqueMinimoFeedback" class="invalid-feedback"></div>
+                            </div>
+                            <div class="col-12 col-sm-6 mb-3">
+                              <label for="esPreco" class="form-label">Preço (R$)</label>
+                              <input id="esPreco" type="number" class="form-control" min="0" step="0.01" aria-describedby="esPrecoFeedback esPrecoAjuda" required />
+                              <div id="esPrecoFeedback" class="invalid-feedback"></div>
+                              <div id="esPrecoAjuda" class="form-text">Até duas casas decimais; vírgula ou ponto.</div>
+                            </div>
+                          </div>
+                          <button id="btnSalvarProduto" type="submit" class="btn btn-primary w-100">Salvar produto</button>
+                          <button id="btnCancelarEdicaoProduto" type="button" class="btn btn-outline-secondary w-100 mt-2" hidden>Cancelar edição</button>
+                        </form>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="col-12 col-lg-6">
+                    <div class="card h-100">
+                      <div class="card-header bg-transparent border-0 pb-0">
+                        <h3 id="tituloFormLote" class="h6 mb-0">Novo lote</h3>
+                      </div>
+                      <div class="card-body">
+                        <form id="formLote" novalidate>
+                          <div class="mb-3">
+                            <label for="esLoteProduto" class="form-label">Produto</label>
+                            <select id="esLoteProduto" class="form-select" aria-describedby="esLoteProdutoFeedback" required>
+                              <option value="">Selecione um produto…</option>
+                            </select>
+                            <div id="esLoteProdutoFeedback" class="invalid-feedback"></div>
+                          </div>
+                          <div class="mb-3">
+                            <label for="esLoteCodigo" class="form-label">Código do lote</label>
+                            <input id="esLoteCodigo" type="text" class="form-control" maxlength="64" aria-describedby="esLoteCodigoFeedback" required />
+                            <div id="esLoteCodigoFeedback" class="invalid-feedback"></div>
+                          </div>
+                          <div class="row g-3">
+                            <div class="col-12 col-sm-6 mb-3">
+                              <label for="esLoteValidade" class="form-label">Validade</label>
+                              <input id="esLoteValidade" type="date" class="form-control" aria-describedby="esLoteValidadeFeedback esLoteValidadeAjuda" required />
+                              <div id="esLoteValidadeFeedback" class="invalid-feedback"></div>
+                              <div id="esLoteValidadeAjuda" class="form-text">Lotes com até 90 dias para vencer são destacados.</div>
+                            </div>
+                            <div class="col-12 col-sm-6 mb-3">
+                              <label for="esLoteQuantidade" class="form-label">Quantidade (un.)</label>
+                              <input id="esLoteQuantidade" type="number" class="form-control" min="1" step="1" aria-describedby="esLoteQuantidadeFeedback" required />
+                              <div id="esLoteQuantidadeFeedback" class="invalid-feedback"></div>
+                            </div>
+                          </div>
+                          <button id="btnSalvarLote" type="submit" class="btn btn-success w-100">Salvar lote</button>
+                          <button id="btnCancelarEdicaoLote" type="button" class="btn btn-outline-secondary w-100 mt-2" hidden>Cancelar edição</button>
+                        </form>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <hr class="my-4" />
+              </div>
+
+              <div class="row g-3 mt-1">
+                <div class="col-12 col-xl-6">
+                  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                    <h3 class="h6 mb-0">Produtos cadastrados</h3>
+                    <span id="esResumoProdutos" class="badge text-bg-light border" hidden></span>
+                  </div>
+                  <div class="table-responsive">
+                    <table class="table table-striped table-hover align-middle mb-0">
+                      <thead>
+                        <tr>
+                          <th scope="col">Produto</th>
+                          <th scope="col">Categoria</th>
+                          <th scope="col">Preço</th>
+                          <th scope="col">Estoque mínimo</th>
+                          <th scope="col">Lotes</th>
+                          <th scope="col">Situação</th>
+                          <th scope="col">Ações</th>
+                        </tr>
+                      </thead>
+                      <tbody id="tbProdutos" aria-busy="false"></tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div class="col-12 col-xl-6">
+                  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                    <h3 class="h6 mb-0">Lotes cadastrados</h3>
+                    <span id="esResumoLotes" class="badge text-bg-light border" hidden></span>
+                  </div>
+                  <div class="table-responsive">
+                    <table class="table table-striped table-hover align-middle mb-0">
+                      <thead>
+                        <tr>
+                          <th scope="col">Código</th>
+                          <th scope="col">Produto</th>
+                          <th scope="col">Validade</th>
+                          <th scope="col">Quantidade</th>
+                          <th scope="col">Situação</th>
+                          <th scope="col">Ações</th>
+                        </tr>
+                      </thead>
+                      <tbody id="tbLotes" aria-busy="false"></tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ANEXOS CLÍNICOS -->
+      <section class="row g-3 mt-1" aria-labelledby="tituloAnexos">
+        <div class="col-12">
+          <div class="card shadow-sm">
+            <div class="card-header bg-transparent border-0 pb-0">
+              <h2 id="tituloAnexos" class="h5 mb-0">Anexos clínicos</h2>
+            </div>
+            <div class="card-body">
+              <div id="axAvisoAtendente" class="alert alert-info mb-3" role="note" hidden>Anexos clínicos são restritos ao veterinário responsável e ao administrador.</div>
+              <div id="axAvisoSensibilidade" class="alert alert-warning mb-3" role="note">Anexos clínicos são dados sensíveis. O acesso é permitido somente ao veterinário responsável e ao administrador. Inclusões e inativações ficam registradas para auditoria. Não compartilhe estes arquivos fora da clínica.</div>
+
+              <div id="axAreaClinica" hidden>
+                <div class="mb-3">
+                  <label for="axPet" class="form-label">Pet</label>
+                  <select id="axPet" class="form-select" aria-describedby="axPetFeedback axPetAjuda">
+                    <option value="">Selecione um pet…</option>
+                  </select>
+                  <div id="axPetFeedback" class="invalid-feedback"></div>
+                  <div id="axPetAjuda" class="form-text">Escolha o pet para consultar o histórico e registrar novos anexos.</div>
+                </div>
+
+                <div class="row g-3 mt-1">
+                  <div class="col-12 col-xl-7">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                      <h3 class="h6 mb-0">Anexos do pet</h3>
+                      <span id="axResumo" class="badge text-bg-light border" hidden></span>
+                    </div>
+                    <div class="table-responsive">
+                      <table class="table table-striped table-hover align-middle mb-0">
+                        <thead>
+                          <tr>
+                            <th scope="col">Data do documento</th>
+                            <th scope="col">Descrição</th>
+                            <th scope="col">Categoria</th>
+                            <th scope="col">Arquivo</th>
+                            <th scope="col">Tamanho</th>
+                            <th scope="col">Responsável</th>
+                            <th scope="col">Registrado em</th>
+                            <th scope="col">Situação</th>
+                            <th scope="col">Ações</th>
+                          </tr>
+                        </thead>
+                        <tbody id="tbAnexos" aria-busy="false"></tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <div class="col-12 col-xl-5">
+                    <h3 class="h6">Registrar anexo</h3>
+                    <form id="formAnexo" novalidate>
+                      <div id="axGrupoResponsavel" class="mb-3">
+                        <label for="axResponsavel" class="form-label">Responsável técnico (veterinário)</label>
+                        <select id="axResponsavel" class="form-select" aria-describedby="axResponsavelFeedback">
+                          <option value="">Selecione o veterinário…</option>
+                        </select>
+                        <div id="axResponsavelFeedback" class="invalid-feedback"></div>
+                      </div>
+
+                      <div class="mb-3">
+                        <label for="axDescricao" class="form-label">Descrição do documento</label>
+                        <textarea id="axDescricao" class="form-control" rows="2" maxlength="200" aria-describedby="axDescricaoFeedback" required></textarea>
+                        <div id="axDescricaoFeedback" class="invalid-feedback"></div>
+                      </div>
+
+                      <div class="row g-3">
+                        <div class="col-12 col-sm-6 mb-3">
+                          <label for="axCategoria" class="form-label">Categoria</label>
+                          <select id="axCategoria" class="form-select" aria-describedby="axCategoriaFeedback" required>
+                            <option value="">Selecione a categoria…</option>
+                            <option value="EXAME_LABORATORIAL">Exame laboratorial</option>
+                            <option value="IMAGEM">Imagem</option>
+                            <option value="DOCUMENTO">Documento</option>
+                            <option value="PRESCRICAO">Prescrição</option>
+                            <option value="OUTRO">Outro</option>
+                          </select>
+                          <div id="axCategoriaFeedback" class="invalid-feedback"></div>
+                        </div>
+                        <div class="col-12 col-sm-6 mb-3">
+                          <label for="axDataDocumento" class="form-label">Data do documento</label>
+                          <input id="axDataDocumento" type="date" class="form-control" aria-describedby="axDataDocumentoFeedback" required />
+                          <div id="axDataDocumentoFeedback" class="invalid-feedback"></div>
+                        </div>
+                      </div>
+
+                      <div class="mb-3">
+                        <label for="axConsulta" class="form-label">Consulta vinculada (opcional)</label>
+                        <select id="axConsulta" class="form-select" aria-describedby="axConsultaFeedback axConsultaAjuda">
+                          <option value="">Nenhuma</option>
+                        </select>
+                        <div id="axConsultaFeedback" class="invalid-feedback"></div>
+                        <div id="axConsultaAjuda" class="form-text">Opcional: vincule o arquivo a um atendimento já registrado.</div>
+                      </div>
+
+                      <div class="mb-3">
+                        <label for="btnEscolherArquivo" class="form-label">Arquivo</label>
+                        <button id="btnEscolherArquivo" type="button" class="btn btn-outline-primary" aria-describedby="axArquivoInfo axArquivoFeedback">Escolher arquivo…</button>
+                        <div id="axArquivoFeedback" class="invalid-feedback"></div>
+                        <div id="axArquivoInfo" class="form-text mt-2" role="status" aria-live="polite">Nenhum arquivo selecionado.</div>
+                      </div>
+
+                      <button id="btnSalvarAnexo" type="submit" class="btn btn-primary w-100">Registrar anexo</button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- INTEGRAÇÕES (IBGE, feriados nacionais e resumo da API local) -->
+      <section class="row g-3 mt-1" aria-labelledby="tituloIntegracoes">
+        <div class="col-12">
+          <div class="card shadow-sm">
+            <div class="card-header bg-transparent border-0 pb-0">
+              <h2 id="tituloIntegracoes" class="h5 mb-0">Integrações</h2>
+            </div>
+            <div class="card-body">
+              <div class="alert alert-info py-2 small" role="note">
+                Estas consultas usam serviços externos e a API local. Se ficarem indisponíveis,
+                os dados já cadastrados no sistema continuam acessíveis normalmente.
+              </div>
+
+              <div class="row g-3">
+                <div class="col-12 col-lg-4">
+                  <h3 class="h6">Município (IBGE)</h3>
+                  <form id="formIntegracaoMunicipio" novalidate>
+                    <div class="mb-3">
+                      <label for="inCliente" class="form-label">Cliente cadastrado</label>
+                      <select id="inCliente" class="form-select" aria-describedby="inClienteFeedback inStatusMunicipio"></select>
+                      <div id="inClienteFeedback" class="invalid-feedback"></div>
+                    </div>
+                    <button id="btnBuscarMunicipio" type="button" class="btn btn-outline-primary w-100">Buscar código IBGE</button>
+                    <div class="mt-3">
+                      <span class="form-label d-block mb-1">Resultado</span>
+                      <output id="inMunicipioResultado" class="form-control-plaintext small fw-semibold" aria-live="polite">—</output>
+                      <p id="inStatusMunicipio" class="small text-muted mb-0" role="status" aria-live="polite">
+                        Selecione um cliente cadastrado para consultar o código IBGE.
+                      </p>
+                    </div>
+                  </form>
+                </div>
+
+                <div class="col-12 col-lg-4">
+                  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                    <h3 class="h6 mb-0">Feriados nacionais</h3>
+                    <button id="btnRecarregarFeriados" type="button" class="btn btn-sm btn-outline-primary">Atualizar</button>
+                  </div>
+                  <p id="inStatusFeriados" class="small text-muted" role="status" aria-live="polite">
+                    Selecione “Atualizar” para consultar os feriados do ano.
+                  </p>
+                  <ul id="inListaFeriados" class="list-group small" aria-label="Feriados nacionais do ano">
+                    <li class="list-group-item text-muted fst-italic">Nenhum feriado disponível.</li>
+                  </ul>
+                </div>
+
+                <div class="col-12 col-lg-4">
+                  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                    <h3 class="h6 mb-0">Resumo do sistema</h3>
+                    <button id="btnRecarregarResumo" type="button" class="btn btn-sm btn-outline-primary">Atualizar</button>
+                  </div>
+                  <p id="inStatusResumo" class="small text-muted" role="status" aria-live="polite">
+                    Selecione “Atualizar” para consultar o resumo do sistema.
+                  </p>
+                  <dl class="row mb-0 small">
+                    <dt class="col-8">Clientes ativos</dt><dd id="inResumoClientes" class="col-4 text-end">—</dd>
+                    <dt class="col-8">Pets ativos</dt><dd id="inResumoPets" class="col-4 text-end">—</dd>
+                    <dt class="col-8">Consultas hoje</dt><dd id="inResumoConsultasHoje" class="col-4 text-end">—</dd>
+                    <dt class="col-8">Consultas agendadas</dt><dd id="inResumoAgendadas" class="col-4 text-end">—</dd>
+                    <dt class="col-8">Vacinas registradas hoje</dt><dd id="inResumoVacinasHoje" class="col-4 text-end">—</dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ADMINISTRAÇÃO DE USUÁRIOS (somente ADMIN) -->
+      <section id="secUsuarios" class="row g-3 mt-1 somente-admin" aria-labelledby="tituloUsuarios" hidden>
+        <div class="col-12">
+          <div class="card shadow-sm">
+            <div class="card-header bg-transparent border-0 pb-0">
+              <h2 id="tituloUsuarios" class="h5 mb-0">Administração de usuários</h2>
+            </div>
+            <div class="card-body">
+              <div class="row g-3">
+                <div class="col-12 col-xl-4">
+                  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                    <h3 id="uFormTitulo" class="h6 mb-0">Editar usuário</h3>
+                    <button id="btnNovoUsuario" type="button" class="btn btn-sm btn-outline-secondary">Limpar</button>
+                  </div>
+                  <form id="formUsuario" novalidate>
+                    <input id="uId" type="hidden" />
+                    <div class="mb-3">
+                      <label for="uNome" class="form-label">Nome completo</label>
+                      <input id="uNome" type="text" class="form-control" autocomplete="name" aria-describedby="uNomeFeedback" required />
+                      <div id="uNomeFeedback" class="invalid-feedback"></div>
+                    </div>
+                    <div class="mb-3">
+                      <label for="uEmail" class="form-label">E-mail</label>
+                      <input id="uEmail" type="email" class="form-control" autocomplete="email" aria-describedby="uEmailFeedback" required />
+                      <div id="uEmailFeedback" class="invalid-feedback"></div>
+                    </div>
+                    <div class="row g-3">
+                      <div class="col-12 col-sm-6 mb-3">
+                        <label for="uCrmv" class="form-label">CRMV</label>
+                        <input id="uCrmv" type="text" class="form-control" maxlength="30" aria-describedby="uCrmvFeedback" />
+                        <div id="uCrmvFeedback" class="invalid-feedback"></div>
+                      </div>
+                      <div class="col-12 col-sm-6 mb-3">
+                        <label for="uRg" class="form-label">RG</label>
+                        <input id="uRg" type="text" class="form-control" maxlength="30" aria-describedby="uRgFeedback" />
+                        <div id="uRgFeedback" class="invalid-feedback"></div>
+                      </div>
+                    </div>
+                    <div class="mb-3">
+                      <label for="uRole" class="form-label">Perfil de acesso</label>
+                      <select id="uRole" class="form-select" aria-describedby="uRoleFeedback" required>
+                        <option value="ADMIN">Administrador</option>
+                        <option value="VETERINARIO">Veterinário</option>
+                        <option value="ATENDENTE">Atendente</option>
+                      </select>
+                      <div id="uRoleFeedback" class="invalid-feedback"></div>
+                    </div>
+                    <div class="form-check mb-3">
+                      <input id="uAtivo" type="checkbox" class="form-check-input" aria-describedby="uAtivoFeedback" />
+                      <label for="uAtivo" class="form-check-label">Usuário ativo</label>
+                      <div id="uAtivoFeedback" class="invalid-feedback"></div>
+                    </div>
+                    <button id="btnSalvarUsuario" type="submit" class="btn btn-primary w-100">Salvar alterações</button>
+                  </form>
+                </div>
+
+                <div class="col-12 col-xl-8">
+                  <h3 class="h6">Usuários cadastrados</h3>
+                  <div class="table-responsive">
+                    <table class="table table-striped table-hover align-middle mb-0">
+                      <thead>
+                        <tr>
+                          <th scope="col">Nome</th>
+                          <th scope="col">E-mail</th>
+                          <th scope="col">Perfil</th>
+                          <th scope="col">Situação</th>
+                          <th scope="col">Criado em</th>
+                          <th scope="col">Ações</th>
+                        </tr>
+                      </thead>
+                      <tbody id="tbUsuarios" aria-busy="false"></tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- FEEDBACK (toasts) -->
+  <div id="toastContainer" class="toast-container position-fixed bottom-0 end-0 p-3" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- CONFIRMAÇÃO DE EXCLUSÃO -->
+  <div class="modal fade" id="modalConfirmacao" tabindex="-1" aria-labelledby="modalConfirmacaoTitulo" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title h5" id="modalConfirmacaoTitulo">Confirmar exclusão</h2>
+        </div>
+        <div class="modal-body">
+          <p id="modalConfirmacaoDescricao" class="mb-0"></p>
+        </div>
+        <div class="modal-footer">
+          <button id="btnCancelarExclusao" type="button" class="btn btn-outline-secondary">Cancelar</button>
+          <button id="btnConfirmarExclusao" type="button" class="btn btn-danger">Excluir</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CANCELAMENTO DE CONSULTA (motivo obrigatório e auditado) -->
+  <div class="modal fade" id="modalCancelarConsulta" tabindex="-1" aria-labelledby="modalCancelarConsultaTitulo" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <form id="formCancelarConsulta" novalidate>
+          <div class="modal-header">
+            <h2 class="modal-title h5" id="modalCancelarConsultaTitulo">Cancelar consulta</h2>
+          </div>
+          <div class="modal-body">
+            <p class="small text-muted">
+              O cancelamento é auditado: o motivo informado, a data e o responsável ficam registrados.
+            </p>
+            <label for="txtMotivoCancelamento" class="form-label">Motivo do cancelamento</label>
+            <textarea id="txtMotivoCancelamento" class="form-control" rows="3" minlength="3" maxlength="500" aria-describedby="txtMotivoCancelamentoFeedback" required></textarea>
+            <div id="txtMotivoCancelamentoFeedback" class="invalid-feedback"></div>
+          </div>
+          <div class="modal-footer">
+            <button id="btnFecharCancelamento" type="button" class="btn btn-outline-secondary">Voltar</button>
+            <button id="btnConfirmarCancelamento" type="button" class="btn btn-danger">Confirmar cancelamento</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONFIRMAÇÃO SIMPLES DE CONCLUSÃO -->
+  <div class="modal fade" id="modalConfirmarConsulta" tabindex="-1" aria-labelledby="modalConfirmarConsultaTitulo" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title h5" id="modalConfirmarConsultaTitulo">Confirmar conclusão</h2>
+        </div>
+        <div class="modal-body">
+          <p id="modalConfirmarConsultaDescricao" class="mb-0"></p>
+        </div>
+        <div class="modal-footer">
+          <button id="btnFecharConfirmacaoConsulta" type="button" class="btn btn-outline-secondary">Voltar</button>
+          <button id="btnConfirmarConclusao" type="button" class="btn btn-success">Concluir consulta</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONFIRMAÇÃO DE CONCLUSÃO A PARTIR DO PRONTUÁRIO -->
+  <div class="modal fade" id="modalConcluirProntuario" tabindex="-1" aria-labelledby="modalConcluirProntuarioTitulo" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title h5" id="modalConcluirProntuarioTitulo">Confirmar conclusão</h2>
+        </div>
+        <div class="modal-body">
+          <p id="modalConcluirProntuarioDescricao" class="mb-0"></p>
+        </div>
+        <div class="modal-footer">
+          <button id="btnFecharConclusaoProntuario" type="button" class="btn btn-outline-secondary">Voltar</button>
+          <button id="btnConfirmarConclusaoProntuario" type="button" class="btn btn-success">Concluir consulta</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INATIVAÇÃO DE ANEXO CLÍNICO (motivo obrigatório e auditado) -->
+  <div class="modal fade" id="modalInativarAnexo" tabindex="-1" aria-labelledby="modalInativarAnexoTitulo" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <form id="formInativarAnexo" novalidate>
+          <div class="modal-header">
+            <h2 class="modal-title h5" id="modalInativarAnexoTitulo">Inativar anexo</h2>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+          </div>
+          <div class="modal-body">
+            <p class="small text-muted">
+              O arquivo será mantido para auditoria, mas deixará de aparecer na lista de anexos ativos.
+              Informe o motivo da inativação; ele fica registrado no histórico.
+            </p>
+            <label for="axMotivoInativacao" class="form-label">Motivo da inativação</label>
+            <textarea id="axMotivoInativacao" class="form-control" rows="3" maxlength="500" aria-describedby="axMotivoFeedback" required></textarea>
+            <div id="axMotivoFeedback" class="invalid-feedback"></div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button id="btnConfirmarInativacao" type="button" class="btn btn-danger">Inativar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOTIVO OBRIGATÓRIO (inativar, estornar, baixar, cancelar, excluir) -->
+  <div class="modal fade" id="modalMotivo" tabindex="-1" aria-labelledby="modalMotivoTitulo" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <form id="formMotivo" novalidate>
+          <div class="modal-header">
+            <h2 class="modal-title h5" id="modalMotivoTitulo">Informe o motivo</h2>
+            <button id="btnFecharMotivo" type="button" class="btn-close" aria-label="Fechar"></button>
+          </div>
+          <div class="modal-body">
+            <p id="modalMotivoDescricao" class="small text-muted"></p>
+            <label for="txtMotivo" class="form-label">Motivo</label>
+            <textarea id="txtMotivo" class="form-control" rows="3" minlength="3" maxlength="500" aria-describedby="txtMotivoFeedback" required></textarea>
+            <div id="txtMotivoFeedback" class="invalid-feedback"></div>
+            <p class="small text-muted mt-2 mb-0" role="status">O motivo fica registrado para auditoria.</p>
+          </div>
+          <div class="modal-footer">
+            <button id="btnConfirmarMotivo" type="button" class="btn btn-primary">Confirmar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- REAGENDAMENTO DE CONSULTA -->
+  <div class="modal fade" id="modalReagendarConsulta" tabindex="-1" aria-labelledby="modalReagendarConsultaTitulo" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <form id="formReagendarConsulta" novalidate>
+          <div class="modal-header">
+            <h2 class="modal-title h5" id="modalReagendarConsultaTitulo">Reagendar consulta</h2>
+            <button id="btnFecharReagendamento" type="button" class="btn-close" aria-label="Fechar"></button>
+          </div>
+          <div class="modal-body">
+            <input id="reConsultaId" type="hidden" />
+            <div class="alert alert-info py-2 small" role="note">
+              <span id="rePetInfo"></span>
+            </div>
+            <div class="row g-3">
+              <div class="col-12 col-md-6 mb-3">
+                <label for="reDataHora" class="form-label">Nova data e horário</label>
+                <input id="reDataHora" type="datetime-local" class="form-control" aria-describedby="reDataHoraFeedback" required />
+                <div id="reDataHoraFeedback" class="invalid-feedback"></div>
+              </div>
+              <div class="col-12 col-md-6 mb-3">
+                <label for="reVeterinario" class="form-label">Veterinário responsável</label>
+                <select id="reVeterinario" class="form-select" aria-describedby="reVeterinarioFeedback" required></select>
+                <div id="reVeterinarioFeedback" class="invalid-feedback"></div>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label for="reMotivo" class="form-label">Motivo da consulta</label>
+              <textarea id="reMotivo" class="form-control" rows="3" minlength="3" maxlength="500" aria-describedby="reMotivoFeedback" required></textarea>
+              <div id="reMotivoFeedback" class="invalid-feedback"></div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button id="btnSalvarReagendamento" type="submit" class="btn btn-primary">Salvar reagendamento</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- EDIÇÃO DE METADADOS DE ANEXO -->
+  <div class="modal fade" id="modalEditarAnexo" tabindex="-1" aria-labelledby="modalEditarAnexoTitulo" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <form id="formEditarAnexo" novalidate>
+          <div class="modal-header">
+            <h2 class="modal-title h5" id="modalEditarAnexoTitulo">Editar metadados do anexo</h2>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+          </div>
+          <div class="modal-body">
+            <input id="edAnexoId" type="hidden" />
+            <div class="mb-3">
+              <label for="edAnexoDescricao" class="form-label">Descrição do documento</label>
+              <textarea id="edAnexoDescricao" class="form-control" rows="3" minlength="3" maxlength="200" aria-describedby="edAnexoDescricaoFeedback" required></textarea>
+              <div id="edAnexoDescricaoFeedback" class="invalid-feedback"></div>
+            </div>
+            <div class="row g-3">
+              <div class="col-12 col-sm-6 mb-3">
+                <label for="edAnexoCategoria" class="form-label">Categoria</label>
+                <select id="edAnexoCategoria" class="form-select" aria-describedby="edAnexoCategoriaFeedback" required>
+                  <option value="">Selecione a categoria…</option>
+                  <option value="EXAME_LABORATORIAL">Exame laboratorial</option>
+                  <option value="IMAGEM">Imagem</option>
+                  <option value="DOCUMENTO">Documento</option>
+                  <option value="PRESCRICAO">Prescrição</option>
+                  <option value="OUTRO">Outro</option>
+                </select>
+                <div id="edAnexoCategoriaFeedback" class="invalid-feedback"></div>
+              </div>
+              <div class="col-12 col-sm-6 mb-3">
+                <label for="edAnexoDataDocumento" class="form-label">Data do documento</label>
+                <input id="edAnexoDataDocumento" type="date" class="form-control" aria-describedby="edAnexoDataDocumentoFeedback" required />
+                <div id="edAnexoDataDocumentoFeedback" class="invalid-feedback"></div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button id="btnSalvarEdicaoAnexo" type="button" class="btn btn-primary">Salvar alterações</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="./vendor/bootstrap.bundle.min.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>

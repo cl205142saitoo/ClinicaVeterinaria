@@ -1,0 +1,104 @@
+import { ErroAplicacao } from '../../shared/errors';
+import type { DadosAtualizacaoUsuario, DadosInativacao, Role, Usuario } from '../../shared/types';
+import { ehRole, exigir } from '../../shared/validators';
+import { UsuarioRepository } from '../repositories/UsuarioRepository';
+import { PolicyService } from './PolicyService';
+import { SessaoService } from './SessaoService';
+
+interface RegistroSeguro {
+  id: number;
+  nome: string;
+  email: string;
+  crmv: string | null;
+  rg: string | null;
+  role: string;
+  ativo: boolean;
+  criadoEm: Date;
+  inativadoEm?: Date | null;
+  motivoInativacao?: string | null;
+}
+
+/** Nenhuma projeção de usuário traz `senhaHash` para o renderer. */
+function paraDto(registro: RegistroSeguro): Usuario {
+  const role: Role = exigir(registro.role, ehRole, 'Perfil de acesso inválido. Procure o administrador.');
+  return {
+    id: registro.id,
+    nome: registro.nome,
+    email: registro.email,
+    crmv: registro.crmv,
+    rg: registro.rg,
+    role,
+    ativo: registro.ativo,
+    criadoEm: registro.criadoEm,
+    inativadoEm: registro.inativadoEm == null ? null : registro.inativadoEm.toISOString(),
+    motivoInativacao: registro.motivoInativacao ?? null,
+  };
+}
+
+export class UsuarioService {
+  constructor(
+    private readonly repo: UsuarioRepository = new UsuarioRepository(),
+    private readonly policy: PolicyService = new PolicyService(new SessaoService())
+  ) {}
+
+  listar(): Promise<Usuario[]> {
+    return this.repo.listarTodos().then((registros) => registros.map(paraDto));
+  }
+
+  async atualizar(dados: DadosAtualizacaoUsuario, responsavel: Usuario): Promise<Usuario> {
+    this.policy.exigirAdmin(responsavel);
+    const registroAlvo = await this.repo.buscarPorId(dados.id);
+    if (registroAlvo === null) {
+      throw new ErroAplicacao('Usuário não encontrado.');
+    }
+    const alvo = paraDto(registroAlvo);
+    await this.protegerUltimoAdmin(alvo, dados.role, dados.ativo);
+
+    const email = dados.email.trim().toLowerCase();
+    const conflito = await this.repo.buscarPorEmail(email);
+    if (conflito !== null && conflito.id !== dados.id) {
+      throw new ErroAplicacao('Já existe outro usuário com este e-mail.');
+    }
+
+    await this.repo.atualizar({ ...dados, email });
+    const atualizado = await this.repo.buscarPorId(dados.id);
+    if (atualizado === null) {
+      throw new ErroAplicacao('Usuário não encontrado após a atualização.');
+    }
+    return paraDto(atualizado);
+  }
+
+  async inativar(dados: DadosInativacao, responsavel: Usuario): Promise<Usuario> {
+    this.policy.exigirAdmin(responsavel);
+    const registroAlvo = await this.repo.buscarPorId(dados.id);
+    if (registroAlvo === null) {
+      throw new ErroAplicacao('Usuário não encontrado.');
+    }
+    const alvo = paraDto(registroAlvo);
+    if (!alvo.ativo) {
+      throw new ErroAplicacao('Este usuário já está inativado.');
+    }
+    await this.protegerUltimoAdmin(alvo, alvo.role, false);
+
+    await this.repo.inativar(dados.id, dados.motivo, responsavel.id, new Date());
+    const atualizado = await this.repo.buscarPorId(dados.id);
+    if (atualizado === null) {
+      throw new ErroAplicacao('Usuário não encontrado após a inativação.');
+    }
+    return paraDto(atualizado);
+  }
+
+  /** Rebaixar ou desativar o único ADMIN ativo deixaria a clínica sem gestão. */
+  private async protegerUltimoAdmin(
+    alvo: Usuario,
+    roleDestino: Role,
+    ativoDestino: boolean
+  ): Promise<void> {
+    const eraAdminAtivo = alvo.role === 'ADMIN' && alvo.ativo;
+    const perdeAdmin = roleDestino !== 'ADMIN' || !ativoDestino;
+    if (!eraAdminAtivo || !perdeAdmin) return;
+    if ((await this.repo.contarAdminsAtivos()) <= 1) {
+      throw new ErroAplicacao('Não é possível rebaixar ou inativar o último administrador ativo.');
+    }
+  }
+}

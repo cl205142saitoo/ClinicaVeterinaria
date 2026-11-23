@@ -1,0 +1,34 @@
+/* Tema do PetHealthPD: identidade clínica sobre o Bootstrap 5. */
+:root {
+  --bs-primary: #0b6b5e;
+  --bs-primary-rgb: 11, 107, 94;
+  --bs-success: #2f855a;
+  --bs-success-rgb: 47, 133, 90;
+  --bs-body-bg: #f4f7f6;
+  --bs-body-color: #1f2d2b;
+  --bs-secondary-color: #5c6663;
+  --phd-cor-foco: #0a58ca;
+}
+
+/* Foco visível reforçado para navegação por teclado.
+   Especificidade igual à do Bootstrap (0,2,0); este arquivo é carregado depois. */
+.btn:focus-visible,
+.form-control:focus-visible,
+.form-select:focus-visible,
+.form-check-input:focus-visible,
+a:focus-visible {
+  outline: 3px solid var(--phd-cor-foco);
+  outline-offset: 2px;
+}
+
+/* Layout da barra do usuário (não coberto por utilitários do Bootstrap). */
+.barra-usuario {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.65rem 1rem;
+  border-radius: 0.5rem;
+  background: #123b36;
+  color: #fff;
+}

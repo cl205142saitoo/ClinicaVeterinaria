@@ -18,6 +18,8 @@ import {
   focarPrimeiroInvalido,
   formatarDataCivil,
   formatarDataHora,
+  formatarMoeda,
+  formatarPercentual,
   linhaMensagem,
   limparValidacao,
   mensagemErro,
@@ -34,8 +36,10 @@ const COLUNAS_CLIENTES = 2;
 const COLUNAS_SERVICOS = 3;
 const COLUNAS_ESTOQUE = 5;
 const COLUNAS_VACINAS = 6;
+const COLUNAS_FINANCEIRO = 4;
 const GRAFICOS: readonly string[] = ['#relGraficoClientes', '#relGraficoConsultas', '#relGraficoStatus'];
 const TABELAS: readonly string[] = [
+  '#tbRelatorioFinanceiro',
   '#tbRelatorioClientes',
   '#tbRelatorioServicos',
   '#tbRelatorioAlertasEstoque',
@@ -213,6 +217,7 @@ export class RelatorioController {
 
   private renderizar(dados: RelatorioDados): void {
     this.renderizarKpis(dados);
+    this.renderizarSerieFinanceira(dados.serie);
     this.renderizarSerie('#relGraficoClientes', dados.serie, 'clientesNovos', 'Clientes novos por mês');
     this.renderizarSerie('#relGraficoConsultas', dados.serie, 'consultas', 'Consultas por mês');
     this.renderizarStatus(dados.statusConsultas);
@@ -233,6 +238,7 @@ export class RelatorioController {
     for (const seletor of GRAFICOS) {
       this.renderizarMensagemGrafico(seletor, 'Gere um relatório para visualizar este gráfico.');
     }
+    this.renderizarTabela('#tbRelatorioFinanceiro', COLUNAS_FINANCEIRO, [], 'Nenhum dado carregado.');
     this.renderizarTabela('#tbRelatorioClientes', COLUNAS_CLIENTES, [], 'Nenhum dado carregado.');
     this.renderizarTabela('#tbRelatorioServicos', COLUNAS_SERVICOS, [], 'Nenhum dado carregado.');
     this.renderizarTabela('#tbRelatorioAlertasEstoque', COLUNAS_ESTOQUE, [], 'Nenhum dado carregado.');
@@ -254,14 +260,15 @@ export class RelatorioController {
       { rotulo: 'Vacinas no período', valor: this.formatarNumero(k.vacinasPeriodo) },
       { rotulo: 'Alertas de vacina', valor: this.formatarNumero(k.alertasVacina) },
       { rotulo: 'Alertas de estoque', valor: this.formatarNumero(k.alertasEstoque) },
+      { rotulo: 'Faturamento', valor: formatarMoeda(k.faturamento) },
+      { rotulo: 'Despesas', valor: formatarMoeda(k.despesas) },
+      { rotulo: 'Saldo', valor: formatarMoeda(k.saldo) },
       {
-        rotulo: 'Faturamento',
-        valor: 'Fase 2',
-        ajuda: 'Disponível com o módulo financeiro.',
+        rotulo: 'Inadimplência',
+        valor: formatarPercentual(k.inadimplencia),
+        ajuda: 'Receitas vencidas em aberto.',
       },
-      { rotulo: 'Despesas', valor: 'Fase 2', ajuda: 'Disponível com o módulo financeiro.' },
-      { rotulo: 'Saldo', valor: 'Fase 2', ajuda: 'Disponível com o módulo financeiro.' },
-      { rotulo: 'Ticket médio', valor: 'Fase 2', ajuda: 'Disponível com o módulo financeiro.' },
+      { rotulo: 'Ticket médio', valor: formatarMoeda(k.ticketMedio) },
     ];
 
     for (const cartao of cartoes) {
@@ -289,6 +296,31 @@ export class RelatorioController {
       container.append(coluna);
     }
     container.setAttribute('aria-busy', 'false');
+  }
+
+  /** Série financeira do mesmo período dos demais gráficos e KPIs. */
+  private renderizarSerieFinanceira(serie: SerieMensal[]): void {
+    const linhas = serie.map((ponto) => {
+      const linha = document.createElement('tr');
+      const partes = ponto.mes.split('-');
+      const rotuloMes = partes.length === 2 ? `${partes[1]}/${partes[0]}` : ponto.mes;
+      linha.append(
+        criarCelula(rotuloMes, 'small text-nowrap'),
+        criarCelula(formatarMoeda(ponto.faturamento), 'small text-end text-nowrap'),
+        criarCelula(formatarMoeda(ponto.despesas), 'small text-end text-nowrap'),
+        criarCelula(
+          formatarMoeda(ponto.faturamento - ponto.despesas),
+          'small text-end text-nowrap fw-semibold'
+        )
+      );
+      return linha;
+    });
+    this.renderizarTabela(
+      '#tbRelatorioFinanceiro',
+      COLUNAS_FINANCEIRO,
+      linhas,
+      'Nenhum dado mensal no período selecionado.'
+    );
   }
 
   private svgElemento(tag: 'svg' | 'line' | 'rect' | 'text'): SVGElement {

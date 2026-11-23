@@ -17,6 +17,7 @@ import type {
   LotePersistido,
   ProdutoPersistido,
 } from '../repositories/EstoqueRepository';
+import { descreverAlteracaoPreco, HistoricoPrecoService } from './HistoricoPrecoService';
 
 const PERFIS_LEITURA: readonly Role[] = ['ADMIN', 'VETERINARIO', 'ATENDENTE'];
 
@@ -79,6 +80,7 @@ function paraProduto(produto: ProdutoPersistido): Produto {
 export class EstoqueService {
   constructor(
     private readonly repo: EstoqueRepositorio,
+    private readonly historicoPreco: HistoricoPrecoService,
     private readonly agora: () => Date = () => new Date()
   ) {}
 
@@ -116,10 +118,28 @@ export class EstoqueService {
     if (!anterior.ativo) {
       throw new ErroAplicacao('Não é possível editar um produto inativado.');
     }
+    const precoAnterior = anterior.precoBrl.toNumber();
     const produto = await this.repo.atualizarProduto({
       ...dados,
       alertaEstoque: dados.alertaEstoque ?? ESTOQUE_ALERTA_PADRAO,
     });
+
+    if (precoAnterior !== dados.precoBrl) {
+      await this.historicoPreco.registrar({
+        origem: 'PRODUTO',
+        origemId: dados.id,
+        anterior: precoAnterior,
+        novo: dados.precoBrl,
+        responsavelId: usuario.id,
+        motivo: descreverAlteracaoPreco(
+          'PRODUTO',
+          `"${anterior.nome}" (ID ${anterior.id})`,
+          precoAnterior,
+          dados.precoBrl
+        ),
+        criadoEm: this.agora(),
+      });
+    }
     return paraProduto(produto);
   }
 

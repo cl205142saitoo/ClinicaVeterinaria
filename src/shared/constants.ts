@@ -106,3 +106,26 @@ export const ANEXO_CATEGORIAS = [
 
 /** MIMEs aceitos; a assinatura binária é conferida no processo principal. */
 export const ANEXO_MIMES_ACEITOS = ['application/pdf', 'image/jpeg', 'image/png'] as const;
+
+/* ---------------- Fase 2: preços, orçamentos e financeiro ---------------- */
+
+/** Situações possíveis de um orçamento. */
+export const ORCAMENTO_STATUS = ['PENDENTE', 'APROVADO', 'REPROVADO', 'CANCELADO'] as const;
+
+/** Situações possíveis de uma movimentação financeira. */
+export const MOVIMENTACAO_STATUS = ['PENDENTE', 'PAGO', 'CANCELADO'] as const;
+
+/** Tipos de movimentação financeira. */
+export const MOVIMENTACAO_TIPOS = ['RECEITA', 'DESPESA'] as const;
+
+/** Tipos de item de orçamento. */
+export const PRECO_ITEM_TIPOS = ['PRODUTO', 'SERVICO'] as const;
+
+/** Origens auditáveis do histórico de preço. */
+export const ORIGEM_HISTORICO_PRECO = ['PRODUTO', 'TABELA_PRECO'] as const;
+
+/** Quantidade máxima por item de orçamento. */
+export const ITEM_QUANTIDADE_MAXIMA = 100_000;
+
+/** Tamanho máximo do campo de forma de pagamento. */
+export const FORMA_PAGAMENTO_MAXIMA = 40;

@@ -1,10 +1,22 @@
 /** Contratos de dados usados por main, preload e renderer. */
 
-import type { ANEXO_CATEGORIAS } from './constants';
+import type {
+  ANEXO_CATEGORIAS,
+  MOVIMENTACAO_STATUS,
+  MOVIMENTACAO_TIPOS,
+  ORCAMENTO_STATUS,
+  ORIGEM_HISTORICO_PRECO,
+  PRECO_ITEM_TIPOS,
+} from './constants';
 
 export type Role = 'ADMIN' | 'VETERINARIO' | 'ATENDENTE';
 
 export type CategoriaAnexo = (typeof ANEXO_CATEGORIAS)[number];
+export type OrcamentoStatus = (typeof ORCAMENTO_STATUS)[number];
+export type MovimentacaoStatus = (typeof MOVIMENTACAO_STATUS)[number];
+export type MovimentacaoTipo = (typeof MOVIMENTACAO_TIPOS)[number];
+export type ItemOrcamentoTipo = (typeof PRECO_ITEM_TIPOS)[number];
+export type OrigemHistoricoPreco = (typeof ORIGEM_HISTORICO_PRECO)[number];
 
 export interface Endereco {
   logradouro: string;
@@ -445,8 +457,10 @@ export interface SerieMensal {
   clientesNovos: number;
   consultas: number;
   vacinas: number;
-  /** Preenchido pela Fase 2; 0 antes do módulo financeiro. */
+  /** Receitas pagas no mês. */
   faturamento: number;
+  /** Despesas pagas no mês. */
+  despesas: number;
 }
 
 export interface ContadorGrupo {
@@ -476,14 +490,16 @@ export interface RelatorioDados {
     vacinasPeriodo: number;
     alertasVacina: number;
     alertasEstoque: number;
-    /** 0 até a Fase 2. */
+    /** Receitas pagas no período. */
     faturamento: number;
-    /** 0 até a Fase 2. */
+    /** Despesas pagas no período. */
     despesas: number;
-    /** 0 até a Fase 2. */
+    /** Receitas pagas menos despesas pagas. */
     saldo: number;
-    /** 0 até a Fase 2. */
+    /** Receitas pagas divididas pelas consultas concluídas. */
     ticketMedio: number;
+    /** Receitas vencidas e pendentes sobre o total de receitas vencidas. */
+    inadimplencia: number;
   };
   serie: SerieMensal[];
   statusConsultas: ContadorGrupo[];
@@ -497,6 +513,157 @@ export interface RelatorioDados {
 export interface ResultadoExportacaoCsv {
   caminho: string;
   linhas: number;
+}
+
+/* ---------------- Fase 2: preços, orçamentos e financeiro ---------------- */
+
+export interface TabelaPreco {
+  id: number;
+  codigo: string;
+  descricao: string;
+  categoria: string;
+  /** BRL convertido de Prisma.Decimal para number. */
+  preco: number;
+  ativo?: boolean;
+  inativadoEm?: string | null;
+  motivoInativacao?: string | null;
+}
+
+export interface DadosTabelaPreco {
+  codigo: string;
+  descricao: string;
+  categoria: string;
+  preco: number;
+}
+
+export interface DadosAtualizacaoTabelaPreco extends DadosTabelaPreco {
+  id: number;
+}
+
+export interface HistoricoPreco {
+  id: number;
+  origem: OrigemHistoricoPreco;
+  origemId: number;
+  anterior: number;
+  novo: number;
+  responsavelId: number;
+  responsavelNome: string;
+  motivo: string;
+  criadoEm: string;
+}
+
+export interface ItemOrcamento {
+  id: number;
+  orcamentoId: number;
+  tipo: ItemOrcamentoTipo;
+  produtoId: number | null;
+  tabelaPrecoId: number | null;
+  descricao: string;
+  quantidade: number;
+  precoUnitario: number;
+  subtotal: number;
+}
+
+export interface DadosItemOrcamento {
+  tipo: ItemOrcamentoTipo;
+  produtoId: number | null;
+  tabelaPrecoId: number | null;
+  descricao: string;
+  quantidade: number;
+  precoUnitario: number;
+}
+
+export interface Orcamento {
+  id: number;
+  numero: string;
+  clienteId: number;
+  clienteNome: string;
+  petId: number | null;
+  petNome: string | null;
+  status: OrcamentoStatus;
+  /** Data civil YYYY-MM-DD. */
+  validade: string;
+  desconto: number;
+  observacoes: string | null;
+  /** Soma dos itens menos o desconto. */
+  total: number;
+  itens: ItemOrcamento[];
+  canceladoEm?: string | null;
+  motivoCancelamento?: string | null;
+  criadoEm: string;
+}
+
+export interface DadosOrcamento {
+  clienteId: number;
+  petId: number | null;
+  /** Data civil YYYY-MM-DD. */
+  validade: string;
+  desconto: number;
+  observacoes: string | null;
+  itens: DadosItemOrcamento[];
+}
+
+export interface DadosAtualizacaoOrcamento extends DadosOrcamento {
+  id: number;
+}
+
+export interface DadosStatusOrcamento {
+  id: number;
+  status: Exclude<OrcamentoStatus, 'CANCELADO'>;
+}
+
+export interface MovimentacaoFinanceira {
+  id: number;
+  tipo: MovimentacaoTipo;
+  categoria: string;
+  descricao: string;
+  valor: number;
+  /** Data civil YYYY-MM-DD. */
+  vencimento: string;
+  /** Data civil YYYY-MM-DD. */
+  pagamento: string | null;
+  status: MovimentacaoStatus;
+  formaPagamento: string | null;
+  orcamentoId: number | null;
+  orcamentoNumero: string | null;
+  baixadoEm?: string | null;
+  canceladoEm?: string | null;
+  motivoCancelamento?: string | null;
+  criadoEm: string;
+}
+
+export interface DadosMovimentacao {
+  tipo: MovimentacaoTipo;
+  categoria: string;
+  descricao: string;
+  valor: number;
+  /** Data civil YYYY-MM-DD. */
+  vencimento: string;
+  /** Data civil YYYY-MM-DD. */
+  pagamento: string | null;
+  status: MovimentacaoStatus;
+  formaPagamento: string | null;
+  orcamentoId: number | null;
+}
+
+export interface DadosAtualizacaoMovimentacao extends DadosMovimentacao {
+  id: number;
+}
+
+export interface DadosBaixaMovimentacao {
+  id: number;
+  /** Data civil YYYY-MM-DD. */
+  pagamento: string;
+  formaPagamento: string | null;
+}
+
+export interface ResumoFinanceiro {
+  receitasPagas: number;
+  despesasPagas: number;
+  saldo: number;
+  receitasPendentes: number;
+  despesasPendentes: number;
+  inadimplencia: number;
 }
 
 /** Superfície exposta pelo preload. Os nomes dos métodos são imutáveis. */
@@ -555,4 +722,20 @@ export interface Api {
   cotacaoDolar(): Promise<CotacaoDolar>;
   relatorioGerar(filtro: FiltroRelatorio): Promise<RelatorioDados>;
   relatorioExportarCsv(filtro: FiltroRelatorio): Promise<ResultadoExportacaoCsv | null>;
+  tabelaPrecoListar(): Promise<TabelaPreco[]>;
+  tabelaPrecoCriar(dados: DadosTabelaPreco): Promise<TabelaPreco>;
+  tabelaPrecoAtualizar(dados: DadosAtualizacaoTabelaPreco): Promise<TabelaPreco>;
+  tabelaPrecoInativar(dados: DadosInativacao): Promise<TabelaPreco>;
+  historicoPrecoListar(origem?: OrigemHistoricoPreco, origemId?: number): Promise<HistoricoPreco[]>;
+  orcamentosListar(): Promise<Orcamento[]>;
+  orcamentoCriar(dados: DadosOrcamento): Promise<Orcamento>;
+  orcamentoAtualizar(dados: DadosAtualizacaoOrcamento): Promise<Orcamento>;
+  orcamentoDefinirStatus(dados: DadosStatusOrcamento): Promise<Orcamento>;
+  orcamentoCancelar(dados: DadosInativacao): Promise<Orcamento>;
+  movimentacoesListar(): Promise<MovimentacaoFinanceira[]>;
+  movimentacaoCriar(dados: DadosMovimentacao): Promise<MovimentacaoFinanceira>;
+  movimentacaoAtualizar(dados: DadosAtualizacaoMovimentacao): Promise<MovimentacaoFinanceira>;
+  movimentacaoBaixar(dados: DadosBaixaMovimentacao): Promise<MovimentacaoFinanceira>;
+  movimentacaoCancelar(dados: DadosInativacao): Promise<MovimentacaoFinanceira>;
+  resumoFinanceiro(): Promise<ResumoFinanceiro>;
 }

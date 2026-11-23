@@ -14,11 +14,19 @@ import { ConsultaRepository } from './repositories/ConsultaRepository';
 import { ConsultaService } from './services/ConsultaService';
 import { CotacaoService } from './services/CotacaoService';
 import { EstoqueRepository } from './repositories/EstoqueRepository';
+import { HistoricoPrecoRepository } from './repositories/HistoricoPrecoRepository';
+import { MovimentacaoFinanceiraRepository } from './repositories/MovimentacaoFinanceiraRepository';
+import { OrcamentoRepository } from './repositories/OrcamentoRepository';
+import { TabelaPrecoRepository } from './repositories/TabelaPrecoRepository';
 import { EstoqueService } from './services/EstoqueService';
+import { HistoricoPrecoService } from './services/HistoricoPrecoService';
 import { IntegracoesService } from './services/IntegracoesService';
+import { MovimentacaoFinanceiraService } from './services/MovimentacaoFinanceiraService';
+import { OrcamentoService } from './services/OrcamentoService';
 import { PolicyService } from './services/PolicyService';
 import { RelatorioService } from './services/RelatorioService';
 import { SessaoService } from './services/SessaoService';
+import { TabelaPrecoService } from './services/TabelaPrecoService';
 import { UsuarioRepository } from './repositories/UsuarioRepository';
 import { UsuarioService } from './services/UsuarioService';
 import { VacinaRepository } from './repositories/VacinaRepository';
@@ -45,7 +53,19 @@ class MainApp {
   private alertaVacinaService = new AlertaVacinaService(new AlertaVacinaRepository());
   private anexoService = new AnexoService(new AnexoRepository());
   private arquivoService = new AnexoArquivoService();
-  private estoqueService = new EstoqueService(new EstoqueRepository());
+  private historicoPrecoService = new HistoricoPrecoService(new HistoricoPrecoRepository());
+  private estoqueService = new EstoqueService(
+    new EstoqueRepository(),
+    this.historicoPrecoService
+  );
+  private tabelaPrecoService = new TabelaPrecoService(
+    new TabelaPrecoRepository(),
+    this.historicoPrecoService
+  );
+  private orcamentoService = new OrcamentoService(new OrcamentoRepository());
+  private financeiroService = new MovimentacaoFinanceiraService(
+    new MovimentacaoFinanceiraRepository()
+  );
   private sessaoService = new SessaoService();
   private policyService = new PolicyService(this.sessaoService);
   private usuarioService = new UsuarioService(new UsuarioRepository(), this.policyService);
@@ -77,6 +97,10 @@ class MainApp {
         alertaVacinaService: this.alertaVacinaService,
         cotacaoService: this.cotacaoService,
         relatorioService: this.relatorioService,
+        tabelaPrecoService: this.tabelaPrecoService,
+        historicoPrecoService: this.historicoPrecoService,
+        orcamentoService: this.orcamentoService,
+        financeiroService: this.financeiroService,
       });
       this.criarJanela();
     });

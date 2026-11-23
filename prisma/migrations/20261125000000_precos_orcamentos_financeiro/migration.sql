@@ -1,0 +1,117 @@
+-- PetHealthPD — Fase 2: tabela de preços, orçamentos e financeiro.
+-- Apenas cria tabelas/índices/CHECKs novos; nenhum objeto existente é alterado.
+
+CREATE TABLE `TabelaPreco` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `codigo` VARCHAR(40) NOT NULL,
+  `descricao` VARCHAR(160) NOT NULL,
+  `categoria` VARCHAR(80) NOT NULL,
+  `preco` DECIMAL(10, 2) NOT NULL,
+  `ativo` BOOLEAN NOT NULL DEFAULT TRUE,
+  `inativadoPorId` INT NULL,
+  `inativadoEm` DATETIME(6) NULL,
+  `motivoInativacao` VARCHAR(500) NULL,
+  `criadoEm` DATETIME(6) NOT NULL,
+  `atualizadoEm` DATETIME(6) NOT NULL,
+  UNIQUE INDEX `TabelaPreco_codigo_key` (`codigo`),
+  INDEX `TabelaPreco_ativo_idx` (`ativo`),
+  INDEX `TabelaPreco_categoria_idx` (`categoria`),
+  PRIMARY KEY (`id`),
+  CONSTRAINT `TabelaPreco_inativadoPorId_fkey` FOREIGN KEY (`inativadoPorId`) REFERENCES `Usuario`(`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `chk_tabelapreco_preco` CHECK (`preco` >= 0)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE `HistoricoPreco` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `origem` VARCHAR(20) NOT NULL,
+  `origemId` INT NOT NULL,
+  `anterior` DECIMAL(10, 2) NOT NULL,
+  `novo` DECIMAL(10, 2) NOT NULL,
+  `responsavelId` INT NOT NULL,
+  `motivo` VARCHAR(255) NOT NULL,
+  `criadoEm` DATETIME(6) NOT NULL,
+  INDEX `HistoricoPreco_origem_id_criadoEm_idx` (`origem`, `origemId`, `criadoEm`),
+  PRIMARY KEY (`id`),
+  CONSTRAINT `HistoricoPreco_responsavelId_fkey` FOREIGN KEY (`responsavelId`) REFERENCES `Usuario`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT `chk_historicopreco_origem` CHECK (`origem` IN ('PRODUTO', 'TABELA_PRECO')),
+  CONSTRAINT `chk_historicopreco_valores` CHECK (`anterior` >= 0 AND `novo` >= 0)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE `Orcamento` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `numero` VARCHAR(30) NOT NULL,
+  `clienteId` INT NOT NULL,
+  `petId` INT NULL,
+  `status` VARCHAR(30) NOT NULL DEFAULT 'PENDENTE',
+  `validade` DATE NOT NULL,
+  `desconto` DECIMAL(10, 2) NOT NULL DEFAULT 0,
+  `observacoes` TEXT NULL,
+  `criadoPorId` INT NOT NULL,
+  `canceladoPorId` INT NULL,
+  `canceladoEm` DATETIME(6) NULL,
+  `motivoCancelamento` VARCHAR(500) NULL,
+  `criadoEm` DATETIME(6) NOT NULL,
+  `atualizadoEm` DATETIME(6) NOT NULL,
+  UNIQUE INDEX `Orcamento_numero_key` (`numero`),
+  INDEX `Orcamento_status_idx` (`status`),
+  INDEX `Orcamento_clienteId_criadoEm_idx` (`clienteId`, `criadoEm`),
+  PRIMARY KEY (`id`),
+  CONSTRAINT `Orcamento_clienteId_fkey` FOREIGN KEY (`clienteId`) REFERENCES `Cliente`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT `Orcamento_petId_fkey` FOREIGN KEY (`petId`) REFERENCES `Pet`(`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `Orcamento_criadoPorId_fkey` FOREIGN KEY (`criadoPorId`) REFERENCES `Usuario`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT `Orcamento_canceladoPorId_fkey` FOREIGN KEY (`canceladoPorId`) REFERENCES `Usuario`(`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `chk_orcamento_status` CHECK (`status` IN ('PENDENTE', 'APROVADO', 'REPROVADO', 'CANCELADO')),
+  CONSTRAINT `chk_orcamento_desconto` CHECK (`desconto` >= 0)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE `OrcamentoItem` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `orcamentoId` INT NOT NULL,
+  `tipo` VARCHAR(20) NOT NULL,
+  `produtoId` INT NULL,
+  `tabelaPrecoId` INT NULL,
+  `descricao` VARCHAR(200) NOT NULL,
+  `quantidade` INT NOT NULL,
+  `precoUnitario` DECIMAL(10, 2) NOT NULL,
+  `subtotal` DECIMAL(10, 2) NOT NULL,
+  `criadoEm` DATETIME(6) NOT NULL,
+  INDEX `OrcamentoItem_orcamentoId_idx` (`orcamentoId`),
+  PRIMARY KEY (`id`),
+  CONSTRAINT `OrcamentoItem_orcamentoId_fkey` FOREIGN KEY (`orcamentoId`) REFERENCES `Orcamento`(`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `OrcamentoItem_produtoId_fkey` FOREIGN KEY (`produtoId`) REFERENCES `Produto`(`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `OrcamentoItem_tabelaPrecoId_fkey` FOREIGN KEY (`tabelaPrecoId`) REFERENCES `TabelaPreco`(`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `chk_orcamentoitem_tipo` CHECK (`tipo` IN ('PRODUTO', 'SERVICO')),
+  CONSTRAINT `chk_orcamentoitem_quantidade` CHECK (`quantidade` > 0),
+  CONSTRAINT `chk_orcamentoitem_valores` CHECK (`precoUnitario` >= 0 AND `subtotal` >= 0)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE `MovimentacaoFinanceira` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `tipo` VARCHAR(20) NOT NULL,
+  `categoria` VARCHAR(80) NOT NULL,
+  `descricao` VARCHAR(200) NOT NULL,
+  `valor` DECIMAL(10, 2) NOT NULL,
+  `vencimento` DATE NOT NULL,
+  `pagamento` DATE NULL,
+  `status` VARCHAR(30) NOT NULL DEFAULT 'PENDENTE',
+  `formaPagamento` VARCHAR(40) NULL,
+  `orcamentoId` INT NULL,
+  `criadoPorId` INT NOT NULL,
+  `baixadoPorId` INT NULL,
+  `baixadoEm` DATETIME(6) NULL,
+  `canceladoPorId` INT NULL,
+  `canceladoEm` DATETIME(6) NULL,
+  `motivoCancelamento` VARCHAR(500) NULL,
+  `criadoEm` DATETIME(6) NOT NULL,
+  `atualizadoEm` DATETIME(6) NOT NULL,
+  INDEX `MovimentacaoFinanceira_tipo_status_vencimento_idx` (`tipo`, `status`, `vencimento`),
+  INDEX `MovimentacaoFinanceira_orcamentoId_idx` (`orcamentoId`),
+  PRIMARY KEY (`id`),
+  CONSTRAINT `MovimentacaoFinanceira_orcamentoId_fkey` FOREIGN KEY (`orcamentoId`) REFERENCES `Orcamento`(`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `MovimentacaoFinanceira_criadoPorId_fkey` FOREIGN KEY (`criadoPorId`) REFERENCES `Usuario`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT `MovimentacaoFinanceira_baixadoPorId_fkey` FOREIGN KEY (`baixadoPorId`) REFERENCES `Usuario`(`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `MovimentacaoFinanceira_canceladoPorId_fkey` FOREIGN KEY (`canceladoPorId`) REFERENCES `Usuario`(`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `chk_movimentacao_tipo` CHECK (`tipo` IN ('RECEITA', 'DESPESA')),
+  CONSTRAINT `chk_movimentacao_status` CHECK (`status` IN ('PENDENTE', 'PAGO', 'CANCELADO')),
+  CONSTRAINT `chk_movimentacao_valor` CHECK (`valor` > 0)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;

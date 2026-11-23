@@ -59,6 +59,13 @@ model Usuario {
   produtosInativados  Produto[]        @relation("InativadorProdutos")
   lotesBaixados       Lote[]           @relation("BaixadorLotes")
   vacinasEstornadas   RegistroVacina[] @relation("EstornadorVacinas")
+  tabelasPrecoInativadas TabelaPreco[] @relation("InativadorTabelasPreco")
+  historicoPrecos     HistoricoPreco[] @relation("ResponsavelHistoricoPreco")
+  orcamentosCriados   Orcamento[]      @relation("CriadorOrcamentos")
+  orcamentosCancelados Orcamento[]     @relation("CanceladorOrcamentos")
+  movimentacoesCriadas MovimentacaoFinanceira[] @relation("CriadorMovimentacoes")
+  movimentacoesBaixadas MovimentacaoFinanceira[] @relation("BaixadorMovimentacoes")
+  movimentacoesCanceladas MovimentacaoFinanceira[] @relation("CanceladorMovimentacoes")
 }
 
 model Cliente {
@@ -89,6 +96,7 @@ model Cliente {
   criadoPor       Usuario?  @relation("CriadorCliente", fields: [criadoPorId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
   pets Pet[]
+  orcamentos Orcamento[]
 
   @@index([ativo])
 }
@@ -115,6 +123,7 @@ model Pet {
   consultas      Consulta[]
   anexosClinicos AnexoClinico[]
   vacinas        RegistroVacina[]
+  orcamentos     Orcamento[]
 
   @@index([clienteId])
   @@index([ativo])
@@ -171,6 +180,7 @@ model Produto {
   inativadoEm     DateTime? @db.DateTime(6)
   motivoInativacao String?  @db.VarChar(500)
   lotes         Lote[]
+  itensOrcamento OrcamentoItem[]
 
   @@index([ativo])
   @@index([alertaEstoque])
@@ -279,4 +289,116 @@ model CotacaoDolar {
   valor          Decimal  @db.Decimal(10, 4)
   fonte          String   @db.VarChar(80)
   consultadoEm   DateTime @db.DateTime(6)
+}
+
+/* ---------------- Fase 2: preços, orçamentos e financeiro ---------------- */
+
+/// Tabela de preços de serviços (vacinas, consultas, exames etc.).
+model TabelaPreco {
+  id               Int       @id @default(autoincrement())
+  codigo           String    @unique @db.VarChar(40)
+  descricao        String    @db.VarChar(160)
+  categoria        String    @db.VarChar(80)
+  preco            Decimal   @db.Decimal(10, 2)
+  ativo            Boolean   @default(true)
+  inativadoPorId   Int?
+  inativadoPor     Usuario?  @relation("InativadorTabelasPreco", fields: [inativadoPorId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  inativadoEm      DateTime? @db.DateTime(6)
+  motivoInativacao String?   @db.VarChar(500)
+  itens            OrcamentoItem[]
+  criadoEm         DateTime  @default(now()) @db.DateTime(6)
+  atualizadoEm     DateTime  @updatedAt @db.DateTime(6)
+
+  @@index([ativo])
+  @@index([categoria])
+}
+
+/// Auditoria de alterações de preço, tanto de produtos quanto da tabela de serviços.
+model HistoricoPreco {
+  id            Int      @id @default(autoincrement())
+  origem        String   @db.VarChar(20)
+  origemId      Int
+  anterior      Decimal  @db.Decimal(10, 2)
+  novo          Decimal  @db.Decimal(10, 2)
+  responsavelId Int
+  responsavel   Usuario  @relation("ResponsavelHistoricoPreco", fields: [responsavelId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  motivo        String   @db.VarChar(255)
+  criadoEm      DateTime @default(now()) @db.DateTime(6)
+
+  @@index([origem, origemId, criadoEm])
+}
+
+/// Orçamento: proposta comercial com itens, desconto e situação.
+model Orcamento {
+  id                 Int                      @id @default(autoincrement())
+  numero             String                   @unique @db.VarChar(30)
+  clienteId          Int
+  cliente            Cliente                  @relation(fields: [clienteId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  petId              Int?
+  pet                Pet?                     @relation(fields: [petId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  status             String                   @default("PENDENTE") @db.VarChar(30)
+  validade           DateTime                 @db.Date
+  desconto           Decimal                  @default(0) @db.Decimal(10, 2)
+  observacoes        String?                  @db.Text
+  criadoPorId        Int
+  criadoPor          Usuario                  @relation("CriadorOrcamentos", fields: [criadoPorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  canceladoPorId     Int?
+  canceladoPor       Usuario?                 @relation("CanceladorOrcamentos", fields: [canceladoPorId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  canceladoEm        DateTime?                @db.DateTime(6)
+  motivoCancelamento String?                  @db.VarChar(500)
+  itens              OrcamentoItem[]
+  movimentacoes      MovimentacaoFinanceira[]
+  criadoEm           DateTime                 @default(now()) @db.DateTime(6)
+  atualizadoEm       DateTime                 @updatedAt @db.DateTime(6)
+
+  @@index([status])
+  @@index([clienteId, criadoEm])
+}
+
+/// Item de orçamento: produto do estoque ou serviço da tabela de preços.
+model OrcamentoItem {
+  id            Int          @id @default(autoincrement())
+  orcamentoId   Int
+  orcamento     Orcamento    @relation(fields: [orcamentoId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  tipo          String       @db.VarChar(20)
+  produtoId     Int?
+  produto       Produto?     @relation(fields: [produtoId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  tabelaPrecoId Int?
+  tabelaPreco   TabelaPreco? @relation(fields: [tabelaPrecoId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  descricao     String       @db.VarChar(200)
+  quantidade    Int
+  precoUnitario Decimal      @db.Decimal(10, 2)
+  subtotal      Decimal      @db.Decimal(10, 2)
+  criadoEm      DateTime     @default(now()) @db.DateTime(6)
+
+  @@index([orcamentoId])
+}
+
+/// Receitas e despesas, opcionalmente vinculadas a um orçamento.
+model MovimentacaoFinanceira {
+  id                 Int        @id @default(autoincrement())
+  tipo               String     @db.VarChar(20)
+  categoria          String     @db.VarChar(80)
+  descricao          String     @db.VarChar(200)
+  valor              Decimal    @db.Decimal(10, 2)
+  vencimento         DateTime   @db.Date
+  pagamento          DateTime?  @db.Date
+  status             String     @default("PENDENTE") @db.VarChar(30)
+  formaPagamento     String?    @db.VarChar(40)
+  orcamentoId        Int?
+  orcamento          Orcamento? @relation(fields: [orcamentoId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  criadoPorId        Int
+  criadoPor          Usuario    @relation("CriadorMovimentacoes", fields: [criadoPorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  baixadoPorId       Int?
+  baixadoPor         Usuario?   @relation("BaixadorMovimentacoes", fields: [baixadoPorId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  baixadoEm          DateTime?  @db.DateTime(6)
+  canceladoPorId     Int?
+  canceladoPor       Usuario?   @relation("CanceladorMovimentacoes", fields: [canceladoPorId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  canceladoEm        DateTime?  @db.DateTime(6)
+  motivoCancelamento String?    @db.VarChar(500)
+  criadoEm           DateTime   @default(now()) @db.DateTime(6)
+  atualizadoEm       DateTime   @updatedAt @db.DateTime(6)
+
+  @@index([tipo, status, vencimento])
+  @@index([orcamentoId])
 }

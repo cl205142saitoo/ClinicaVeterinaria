@@ -55,6 +55,22 @@ export const IPC_CHANNELS = {
   API_COTACAO_DOLAR: 'api:cotacaoDolar',
   RELATORIOS_GERAR: 'relatorios:gerar',
   RELATORIOS_EXPORTAR_CSV: 'relatorios:exportarCsv',
+  PRECOS_TABELA_LISTAR: 'precos:tabelaListar',
+  PRECOS_TABELA_CRIAR: 'precos:tabelaCriar',
+  PRECOS_TABELA_ATUALIZAR: 'precos:tabelaAtualizar',
+  PRECOS_TABELA_INATIVAR: 'precos:tabelaInativar',
+  PRECOS_HISTORICO_LISTAR: 'precos:historicoListar',
+  ORCAMENTOS_LISTAR: 'orcamentos:listar',
+  ORCAMENTOS_CRIAR: 'orcamentos:criar',
+  ORCAMENTOS_ATUALIZAR: 'orcamentos:atualizar',
+  ORCAMENTOS_DEFINIR_STATUS: 'orcamentos:definirStatus',
+  ORCAMENTOS_CANCELAR: 'orcamentos:cancelar',
+  FINANCEIRO_LISTAR: 'financeiro:listar',
+  FINANCEIRO_CRIAR: 'financeiro:criar',
+  FINANCEIRO_ATUALIZAR: 'financeiro:atualizar',
+  FINANCEIRO_BAIXAR: 'financeiro:baixar',
+  FINANCEIRO_CANCELAR: 'financeiro:cancelar',
+  FINANCEIRO_RESUMO: 'financeiro:resumo',
 } as const;
 
 export type IpcChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS];

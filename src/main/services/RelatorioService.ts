@@ -18,6 +18,9 @@ import type {
 import { ehDataCivil, ehObjeto } from '../../shared/validators';
 import { Database } from '../database/PrismaClient';
 import type { AlertaVacinaService } from './AlertaVacinaService';
+import { calcularInadimplencia } from './MovimentacaoFinanceiraService';
+import type { ResumoMovimentacao } from '../repositories/MovimentacaoFinanceiraRepository';
+import { arredondar2 } from './valoresFase2';
 
 const formatadorHoraClinica = new Intl.DateTimeFormat('pt-BR', {
   timeZone: FUSO_CLINICA,
@@ -36,10 +39,11 @@ const ROTULOS_KPI: Record<keyof RelatorioDados['kpis'], string> = {
   vacinasPeriodo: 'Vacinas aplicadas',
   alertasVacina: 'Alertas de vacina',
   alertasEstoque: 'Alertas de estoque',
-  faturamento: 'Faturamento (Fase 2)',
-  despesas: 'Despesas (Fase 2)',
-  saldo: 'Saldo (Fase 2)',
-  ticketMedio: 'Ticket médio (Fase 2)',
+  faturamento: 'Faturamento (receitas pagas)',
+  despesas: 'Despesas pagas',
+  saldo: 'Saldo',
+  ticketMedio: 'Ticket médio',
+  inadimplencia: 'Inadimplência (razão 0 a 1)',
 };
 
 export function ehFiltroRelatorio(valor: unknown): valor is FiltroRelatorio {
@@ -87,6 +91,11 @@ function inicioUtc(dataCivil: string): Date {
 
 function fimUtcExclusivo(dataCivil: string): Date {
   return new Date(inicioUtc(dataCivil).getTime() + 86_400_000);
+}
+
+/** Limites de colunas `@db.Date`, gravadas como meia-noite UTC. */
+function dataCivilBanco(valor: string): Date {
+  return new Date(`${valor}T00:00:00.000Z`);
 }
 
 function chaveMes(data: Date): string {
@@ -149,47 +158,93 @@ export class RelatorioService {
     const fim = fimUtcExclusivo(periodo.ate);
     const hoje = dataCivilClinica(this.agora());
 
-    const [clientesAtivos, petsAtivos, clientes, consultas, vacinas, produtos, veterinarios] =
-      await Promise.all([
-        this.prisma.cliente.count({ where: { ativo: true } }),
-        this.prisma.pet.count({ where: { ativo: true } }),
-        this.prisma.cliente.findMany({
-          where: { criadoEm: { gte: inicio, lt: fim } },
-          select: { criadoEm: true, cidade: true },
-        }),
-        this.prisma.consulta.findMany({
-          where: { dataHora: { gte: inicio, lt: fim } },
-          select: { dataHora: true, status: true, veterinarioId: true },
-        }),
-        this.prisma.registroVacina.findMany({
-          where: {
-            aplicadaEm: { gte: inicio, lt: fim },
-            estornado: false,
-            ...(veterinarioId === undefined ? {} : { veterinarioId }),
+    const inicioCivil = dataCivilBanco(periodo.de);
+    const fimCivil = dataCivilBanco(periodo.ate);
+    const [
+      clientesAtivos,
+      petsAtivos,
+      clientes,
+      consultas,
+      vacinas,
+      produtos,
+      veterinarios,
+      movimentacoesPagas,
+      movimentacoesVencidas,
+    ] = await Promise.all([
+      this.prisma.cliente.count({ where: { ativo: true } }),
+      this.prisma.pet.count({ where: { ativo: true } }),
+      this.prisma.cliente.findMany({
+        where: { criadoEm: { gte: inicio, lt: fim } },
+        select: { criadoEm: true, cidade: true },
+      }),
+      this.prisma.consulta.findMany({
+        where: { dataHora: { gte: inicio, lt: fim } },
+        select: { dataHora: true, status: true, veterinarioId: true },
+      }),
+      this.prisma.registroVacina.findMany({
+        where: {
+          aplicadaEm: { gte: inicio, lt: fim },
+          estornado: false,
+          ...(veterinarioId === undefined ? {} : { veterinarioId }),
+        },
+        select: { aplicadaEm: true, vacina: true },
+      }),
+      this.prisma.produto.findMany({
+        where: { ativo: true },
+        select: {
+          id: true,
+          nome: true,
+          estoqueMinimo: true,
+          alertaEstoque: true,
+          lotes: {
+            where: { ativo: true },
+            select: { quantidade: true, validade: true },
           },
-          select: { aplicadaEm: true, vacina: true },
-        }),
-        this.prisma.produto.findMany({
-          where: { ativo: true },
-          select: {
-            id: true,
-            nome: true,
-            estoqueMinimo: true,
-            alertaEstoque: true,
-            lotes: {
-              where: { ativo: true },
-              select: { quantidade: true, validade: true },
-            },
-          },
-          orderBy: { nome: 'asc' },
-        }),
-        this.prisma.usuario.findMany({
-          where: { role: 'VETERINARIO' },
-          select: { id: true, nome: true },
-        }),
-      ]);
+        },
+        orderBy: { nome: 'asc' },
+      }),
+      this.prisma.usuario.findMany({
+        where: { role: 'VETERINARIO' },
+        select: { id: true, nome: true },
+      }),
+      this.prisma.movimentacaoFinanceira.findMany({
+        where: {
+          status: 'PAGO',
+          pagamento: { gte: inicioCivil, lte: fimCivil },
+        },
+        select: { tipo: true, valor: true, pagamento: true },
+      }),
+      this.prisma.movimentacaoFinanceira.findMany({
+        where: {
+          tipo: 'RECEITA',
+          vencimento: { gte: inicioCivil, lte: fimCivil },
+          status: { not: 'CANCELADO' },
+        },
+        select: { tipo: true, status: true, valor: true, vencimento: true },
+      }),
+    ]);
 
-    const serie = this.montarSerie(periodo, clientes, consultas, vacinas);
+    const pagas = movimentacoesPagas.map((movimentacao) => ({
+      tipo: movimentacao.tipo,
+      valor: movimentacao.valor.toNumber(),
+      pagamento: movimentacao.pagamento,
+    }));
+    const faturamento = arredondar2(
+      pagas.filter((movimentacao) => movimentacao.tipo === 'RECEITA')
+        .reduce((total, movimentacao) => total + movimentacao.valor, 0)
+    );
+    const despesas = arredondar2(
+      pagas.filter((movimentacao) => movimentacao.tipo === 'DESPESA')
+        .reduce((total, movimentacao) => total + movimentacao.valor, 0)
+    );
+    const receitasVencidas: ResumoMovimentacao[] = movimentacoesVencidas.map((movimentacao) => ({
+      tipo: movimentacao.tipo,
+      status: movimentacao.status,
+      valor: movimentacao.valor.toNumber(),
+      vencimento: movimentacao.vencimento.toISOString().slice(0, 10),
+    }));
+
+    const serie = this.montarSerie(periodo, clientes, consultas, vacinas, pagas);
     const nomesVeterinarios = new Map(veterinarios.map((veterinario) => [veterinario.id, veterinario.nome]));
     const alertasEstoque = this.montarAlertasEstoque(produtos, hoje);
     const concluidas = consultas.filter((consulta) => consulta.status === 'CONCLUIDA').length;
@@ -208,10 +263,11 @@ export class RelatorioService {
         vacinasPeriodo: vacinas.length,
         alertasVacina: alertasVacinas.length,
         alertasEstoque: alertasEstoque.length,
-        faturamento: 0,
-        despesas: 0,
-        saldo: 0,
-        ticketMedio: 0,
+        faturamento,
+        despesas,
+        saldo: arredondar2(faturamento - despesas),
+        ticketMedio: concluidas > 0 ? arredondar2(faturamento / concluidas) : 0,
+        inadimplencia: calcularInadimplencia(receitasVencidas, hoje),
       },
       serie,
       statusConsultas: contarRotulos(consultas.map((consulta) => consulta.status)),
@@ -274,11 +330,21 @@ export class RelatorioService {
     periodo: FiltroRelatorio,
     clientes: Array<{ criadoEm: Date }>,
     consultas: Array<{ dataHora: Date }>,
-    vacinas: Array<{ aplicadaEm: Date }>
+    vacinas: Array<{ aplicadaEm: Date }>,
+    pagas: Array<{ tipo: string; valor: number; pagamento: Date | null }>
   ): SerieMensal[] {
-    const contagem = new Map<string, { clientesNovos: number; consultas: number; vacinas: number }>();
+    const contagem = new Map<
+      string,
+      { clientesNovos: number; consultas: number; vacinas: number; faturamento: number; despesas: number }
+    >();
     for (const mes of mesesDoPeriodo(periodo.de, periodo.ate)) {
-      contagem.set(mes, { clientesNovos: 0, consultas: 0, vacinas: 0 });
+      contagem.set(mes, {
+        clientesNovos: 0,
+        consultas: 0,
+        vacinas: 0,
+        faturamento: 0,
+        despesas: 0,
+      });
     }
     for (const cliente of clientes) {
       const entrada = contagem.get(chaveMes(cliente.criadoEm));
@@ -292,10 +358,18 @@ export class RelatorioService {
       const entrada = contagem.get(chaveMes(vacina.aplicadaEm));
       if (entrada) entrada.vacinas += 1;
     }
+    for (const movimentacao of pagas) {
+      if (movimentacao.pagamento === null) continue;
+      const entrada = contagem.get(movimentacao.pagamento.toISOString().slice(0, 7));
+      if (!entrada) continue;
+      if (movimentacao.tipo === 'RECEITA') entrada.faturamento += movimentacao.valor;
+      if (movimentacao.tipo === 'DESPESA') entrada.despesas += movimentacao.valor;
+    }
     return [...contagem.entries()].map(([mes, valores]) => ({
       mes,
       ...valores,
-      faturamento: 0,
+      faturamento: arredondar2(valores.faturamento),
+      despesas: arredondar2(valores.despesas),
     }));
   }
 
@@ -360,9 +434,32 @@ export class RelatorioService {
       linhas.push([rotulo, dados.kpis[chave]]);
     }
 
-    linhas.push([], ['Série mensal'], ['Mês', 'Clientes novos', 'Consultas', 'Vacinas', 'Faturamento']);
+    linhas.push(
+      [],
+      ['Financeiro'],
+      ['Indicador', 'Valor'],
+      ['Faturamento (receitas pagas)', dados.kpis.faturamento],
+      ['Despesas pagas', dados.kpis.despesas],
+      ['Saldo', dados.kpis.saldo],
+      ['Ticket médio', dados.kpis.ticketMedio],
+      ['Inadimplência', `${(dados.kpis.inadimplencia * 100).toFixed(2)}%`]
+    );
+
+    linhas.push(
+      [],
+      ['Série mensal'],
+      ['Mês', 'Clientes novos', 'Consultas', 'Vacinas', 'Faturamento', 'Despesas', 'Saldo']
+    );
     for (const mes of dados.serie) {
-      linhas.push([mes.mes, mes.clientesNovos, mes.consultas, mes.vacinas, mes.faturamento]);
+      linhas.push([
+        mes.mes,
+        mes.clientesNovos,
+        mes.consultas,
+        mes.vacinas,
+        mes.faturamento,
+        mes.despesas,
+        arredondar2(mes.faturamento - mes.despesas),
+      ]);
     }
 
     const secoes: Array<[string, ContadorGrupo[]]> = [

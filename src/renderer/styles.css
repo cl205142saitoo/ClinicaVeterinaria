@@ -62,6 +62,24 @@ a:focus-visible {
   height: 0.5rem;
 }
 
+/* Módulos de preços, orçamentos e financeiro: densidade uniforme das tabelas. */
+.tabela-fase2 th,
+.tabela-fase2 td {
+  vertical-align: middle;
+}
+.tabela-fase2 td small {
+  white-space: normal;
+}
+.valor-monetario {
+  font-variant-numeric: tabular-nums;
+}
+.resumo-fase2 .card-body {
+  min-height: 6.5rem;
+}
+.resumo-fase2 .card {
+  border-color: rgba(11, 107, 94, 0.18);
+}
+
 /* Na impressão, apenas o painel de relatórios é exibido. */
 @media print {
   @page {

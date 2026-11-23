@@ -96,6 +96,15 @@
         <li class="nav-item" role="presentation">
           <button class="nav-link" id="abaIntegracoes-tab" data-bs-toggle="tab" data-bs-target="#abaIntegracoes" type="button" role="tab" aria-controls="abaIntegracoes" aria-selected="false">Integrações</button>
         </li>
+        <li class="nav-item" role="presentation" id="abaPrecos-item">
+          <button class="nav-link" id="abaPrecos-tab" data-bs-toggle="tab" data-bs-target="#abaPrecos" type="button" role="tab" aria-controls="abaPrecos" aria-selected="false">Preços</button>
+        </li>
+        <li class="nav-item" role="presentation" id="abaOrcamentos-item">
+          <button class="nav-link" id="abaOrcamentos-tab" data-bs-toggle="tab" data-bs-target="#abaOrcamentos" type="button" role="tab" aria-controls="abaOrcamentos" aria-selected="false">Orçamentos</button>
+        </li>
+        <li class="nav-item" role="presentation" id="abaFinanceiro-item">
+          <button class="nav-link" id="abaFinanceiro-tab" data-bs-toggle="tab" data-bs-target="#abaFinanceiro" type="button" role="tab" aria-controls="abaFinanceiro" aria-selected="false">Financeiro</button>
+        </li>
         <li class="nav-item" role="presentation" id="abaRelatorios-item" hidden>
           <button class="nav-link" id="abaRelatorios-tab" data-bs-toggle="tab" data-bs-target="#abaRelatorios" type="button" role="tab" aria-controls="abaRelatorios" aria-selected="false">Relatórios</button>
         </li>
@@ -1008,6 +1017,379 @@
       </section>
       </div>
 
+      <div class="tab-pane fade" id="abaPrecos" role="tabpanel" aria-labelledby="abaPrecos-tab" tabindex="0">
+      <!-- TABELAS DE PREÇO E HISTÓRICO AUDITÁVEL -->
+      <section class="row g-3 mt-1" aria-labelledby="tituloPrecos">
+        <div class="col-12">
+          <div class="card shadow-sm">
+            <div class="card-header bg-transparent border-0 pb-0">
+              <h2 id="tituloPrecos" class="h5 mb-0">Tabelas de preço</h2>
+            </div>
+            <div class="card-body">
+              <div id="tpAvisoLeitura" class="alert alert-info mb-3" role="note" hidden>
+                Seu perfil pode consultar preços. Somente um administrador cadastra, edita ou inativa tabelas.
+              </div>
+
+              <div id="tpAreaEdicao" hidden>
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                  <h3 id="tpTituloForm" class="h6 mb-0">Nova tabela de preço</h3>
+                </div>
+                <form id="formTabelaPreco" class="row g-3 align-items-end mb-4" novalidate>
+                  <div class="col-12 col-md-3 mb-3">
+                    <label for="tpCodigo" class="form-label">Código</label>
+                    <input id="tpCodigo" type="text" class="form-control" maxlength="40" aria-describedby="tpCodigoFeedback" required />
+                    <div id="tpCodigoFeedback" class="invalid-feedback"></div>
+                  </div>
+                  <div class="col-12 col-md-4 mb-3">
+                    <label for="tpDescricao" class="form-label">Descrição</label>
+                    <input id="tpDescricao" type="text" class="form-control" maxlength="160" aria-describedby="tpDescricaoFeedback" required />
+                    <div id="tpDescricaoFeedback" class="invalid-feedback"></div>
+                  </div>
+                  <div class="col-12 col-md-2 mb-3">
+                    <label for="tpCategoria" class="form-label">Categoria</label>
+                    <input id="tpCategoria" type="text" class="form-control" maxlength="80" aria-describedby="tpCategoriaFeedback" required />
+                    <div id="tpCategoriaFeedback" class="invalid-feedback"></div>
+                  </div>
+                  <div class="col-12 col-md-3 mb-3">
+                    <label for="tpPreco" class="form-label">Preço (R$)</label>
+                    <input id="tpPreco" type="text" class="form-control" inputmode="decimal" placeholder="0,00" aria-describedby="tpPrecoFeedback tpPrecoAjuda" required />
+                    <div id="tpPrecoFeedback" class="invalid-feedback"></div>
+                    <div id="tpPrecoAjuda" class="form-text">Use vírgula para os centavos; até duas casas decimais.</div>
+                  </div>
+                  <div class="col-12 d-flex flex-wrap gap-2">
+                    <button id="btnSalvarTabela" type="submit" class="btn btn-primary">Salvar tabela</button>
+                    <button id="btnCancelarTabela" type="button" class="btn btn-outline-secondary" hidden>Cancelar edição</button>
+                  </div>
+                </form>
+              </div>
+
+              <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                <h3 class="h6 mb-0">Tabelas cadastradas</h3>
+                <span id="tpResumo" class="badge text-bg-light border" hidden></span>
+              </div>
+              <div class="table-responsive mb-4">
+                <table class="table table-striped table-hover align-middle mb-0 tabela-fase2">
+                  <thead>
+                    <tr>
+                      <th scope="col">Código</th>
+                      <th scope="col">Descrição</th>
+                      <th scope="col">Categoria</th>
+                      <th scope="col" class="text-end">Preço</th>
+                      <th scope="col">Situação</th>
+                      <th scope="col">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbTabelasPreco" aria-busy="false"></tbody>
+                </table>
+              </div>
+
+              <h3 class="h6 mb-2">Histórico de alterações de preço</h3>
+              <p class="small text-muted">Toda alteração de preço registra valor anterior, novo valor, responsável e motivo.</p>
+              <div class="table-responsive">
+                <table class="table table-striped table-hover align-middle mb-0 tabela-fase2">
+                  <thead>
+                    <tr>
+                      <th scope="col">Data/hora</th>
+                      <th scope="col">Origem</th>
+                      <th scope="col">Item</th>
+                      <th scope="col" class="text-end">Anterior</th>
+                      <th scope="col" class="text-end">Novo</th>
+                      <th scope="col">Responsável</th>
+                      <th scope="col">Motivo</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbHistoricoPreco" aria-busy="false"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      </div>
+
+      <div class="tab-pane fade" id="abaOrcamentos" role="tabpanel" aria-labelledby="abaOrcamentos-tab" tabindex="0">
+      <!-- ORÇAMENTOS COM ITENS DE PRODUTO E SERVIÇO -->
+      <section class="row g-3 mt-1" aria-labelledby="tituloOrcamentos">
+        <div class="col-12">
+          <div class="card shadow-sm">
+            <div class="card-header bg-transparent border-0 pb-0">
+              <h2 id="tituloOrcamentos" class="h5 mb-0">Orçamentos</h2>
+            </div>
+            <div class="card-body">
+              <div id="orAvisoLeitura" class="alert alert-info mb-3" role="note" hidden>
+                Seu perfil pode consultar orçamentos. Somente administradores e veterinários podem criar, editar ou alterar o status.
+              </div>
+
+              <div id="orAreaEdicao" hidden>
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                  <h3 id="orTituloForm" class="h6 mb-0">Novo orçamento</h3>
+                </div>
+                <form id="formOrcamento" class="row g-3 align-items-end mb-4" novalidate>
+                  <div class="col-12 col-md-4 mb-3">
+                    <label for="orCliente" class="form-label">Cliente</label>
+                    <select id="orCliente" class="form-select" aria-describedby="orClienteFeedback" required></select>
+                    <div id="orClienteFeedback" class="invalid-feedback"></div>
+                  </div>
+                  <div class="col-12 col-md-4 mb-3">
+                    <label for="orPet" class="form-label">Pet (opcional)</label>
+                    <select id="orPet" class="form-select" aria-describedby="orPetFeedback"></select>
+                    <div id="orPetFeedback" class="invalid-feedback"></div>
+                  </div>
+                  <div class="col-12 col-md-4 mb-3">
+                    <label for="orValidade" class="form-label">Validade</label>
+                    <input id="orValidade" type="date" class="form-control" aria-describedby="orValidadeFeedback" required />
+                    <div id="orValidadeFeedback" class="invalid-feedback"></div>
+                  </div>
+                  <div class="col-12 col-md-4 mb-3">
+                    <label for="orDesconto" class="form-label">Desconto (R$)</label>
+                    <input id="orDesconto" type="text" class="form-control" inputmode="decimal" placeholder="0,00" aria-describedby="orDescontoFeedback orDescontoAjuda" />
+                    <div id="orDescontoFeedback" class="invalid-feedback"></div>
+                    <div id="orDescontoAjuda" class="form-text">Valor em reais, não percentual.</div>
+                  </div>
+                  <div class="col-12 col-md-8 mb-3">
+                    <label for="orObservacoes" class="form-label">Observações</label>
+                    <textarea id="orObservacoes" class="form-control" rows="2" maxlength="2000" aria-describedby="orObservacoesFeedback"></textarea>
+                    <div id="orObservacoesFeedback" class="invalid-feedback"></div>
+                  </div>
+
+                  <div class="col-12"><hr class="my-2" /></div>
+
+                  <div class="col-12 col-md-2 mb-3">
+                    <label for="orItemTipo" class="form-label">Tipo do item</label>
+                    <select id="orItemTipo" class="form-select" aria-describedby="orItemTipoFeedback">
+                      <option value="PRODUTO">Produto</option>
+                      <option value="SERVICO">Serviço</option>
+                    </select>
+                    <div id="orItemTipoFeedback" class="invalid-feedback"></div>
+                  </div>
+                  <div id="orGrupoProduto" class="col-12 col-md-4 mb-3">
+                    <label for="orItemProduto" class="form-label">Produto</label>
+                    <select id="orItemProduto" class="form-select" aria-describedby="orItemProdutoFeedback"></select>
+                    <div id="orItemProdutoFeedback" class="invalid-feedback"></div>
+                  </div>
+                  <div id="orGrupoServico" class="col-12 col-md-4 mb-3" hidden>
+                    <label for="orItemServico" class="form-label">Serviço (tabela de preço)</label>
+                    <select id="orItemServico" class="form-select" aria-describedby="orItemServicoFeedback"></select>
+                    <div id="orItemServicoFeedback" class="invalid-feedback"></div>
+                  </div>
+                  <div class="col-12 col-md-2 mb-3">
+                    <label for="orItemQuantidade" class="form-label">Quantidade</label>
+                    <input id="orItemQuantidade" type="number" class="form-control" min="1" max="100000" step="1" inputmode="numeric" value="1" aria-describedby="orItemQuantidadeFeedback" />
+                    <div id="orItemQuantidadeFeedback" class="invalid-feedback"></div>
+                  </div>
+                  <div class="col-12 col-md-2 mb-3">
+                    <label for="orItemPreco" class="form-label">Preço unit. (R$)</label>
+                    <input id="orItemPreco" type="text" class="form-control" inputmode="decimal" placeholder="0,00" aria-describedby="orItemPrecoFeedback orStatusItem" />
+                    <div id="orItemPrecoFeedback" class="invalid-feedback"></div>
+                    <div id="orStatusItem" class="form-text" role="status" aria-live="polite">Selecione um item para sugerir o preço.</div>
+                  </div>
+                  <div class="col-12 d-flex flex-wrap align-items-end gap-2">
+                    <button id="btnAdicionarItem" type="button" class="btn btn-outline-primary">Adicionar item</button>
+                    <span class="small text-muted">O preço sugerido pode ser ajustado antes de adicionar.</span>
+                  </div>
+
+                  <div class="col-12">
+                    <div class="table-responsive">
+                      <table class="table table-striped table-hover align-middle mb-0 tabela-fase2">
+                        <thead>
+                          <tr>
+                            <th scope="col">Tipo</th>
+                            <th scope="col">Descrição</th>
+                            <th scope="col" class="text-end">Qtd.</th>
+                            <th scope="col" class="text-end">Preço unit.</th>
+                            <th scope="col" class="text-end">Subtotal</th>
+                            <th scope="col">Ação</th>
+                          </tr>
+                        </thead>
+                        <tbody id="tbItensOrcamento" aria-busy="false"></tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <div class="col-12 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <div>
+                      <span class="small text-muted text-uppercase d-block">Subtotal dos itens</span>
+                      <output id="orSubtotal" class="fw-semibold">R$ 0,00</output>
+                    </div>
+                    <div class="text-end">
+                      <span class="small text-muted text-uppercase d-block">Total (com desconto)</span>
+                      <output id="orTotal" class="fs-4 fw-semibold text-success valor-monetario">R$ 0,00</output>
+                    </div>
+                  </div>
+
+                  <div class="col-12 d-flex flex-wrap gap-2">
+                    <button id="btnSalvarOrcamento" type="submit" class="btn btn-primary">Salvar orçamento</button>
+                    <button id="btnCancelarEdicaoOrcamento" type="button" class="btn btn-outline-secondary" hidden>Cancelar edição</button>
+                  </div>
+                </form>
+              </div>
+
+              <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                <h3 class="h6 mb-0">Orçamentos registrados</h3>
+                <span id="orResumo" class="badge text-bg-light border" hidden></span>
+              </div>
+              <div class="table-responsive">
+                <table class="table table-striped table-hover align-middle mb-0 tabela-fase2">
+                  <thead>
+                    <tr>
+                      <th scope="col">Número</th>
+                      <th scope="col">Cliente</th>
+                      <th scope="col">Pet</th>
+                      <th scope="col">Validade</th>
+                      <th scope="col">Status</th>
+                      <th scope="col" class="text-end">Total</th>
+                      <th scope="col">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbOrcamentos" aria-busy="false"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      </div>
+
+      <div class="tab-pane fade" id="abaFinanceiro" role="tabpanel" aria-labelledby="abaFinanceiro-tab" tabindex="0">
+      <!-- MOVIMENTAÇÕES E RESUMO FINANCEIRO -->
+      <section class="row g-3 mt-1" aria-labelledby="tituloFinanceiro">
+        <div class="col-12">
+          <div class="card shadow-sm">
+            <div class="card-header bg-transparent border-0 pb-0">
+              <h2 id="tituloFinanceiro" class="h5 mb-0">Financeiro</h2>
+            </div>
+            <div class="card-body">
+              <div id="fnAvisoLeitura" class="alert alert-info mb-3" role="note" hidden>
+                Seu perfil pode consultar movimentações e indicadores. Somente administradores e veterinários podem registrar, editar, baixar ou cancelar.
+              </div>
+
+              <div id="fnResumo" class="row g-3 mb-4 resumo-fase2" aria-busy="false" aria-label="Resumo financeiro">
+                <div class="col-6 col-lg-3">
+                  <div class="card h-100">
+                    <div class="card-body p-3">
+                      <div class="small text-muted text-uppercase">Receitas pagas</div>
+                      <div id="fnReceitas" class="fs-5 fw-semibold valor-monetario">—</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-6 col-lg-3">
+                  <div class="card h-100">
+                    <div class="card-body p-3">
+                      <div class="small text-muted text-uppercase">Despesas pagas</div>
+                      <div id="fnDespesas" class="fs-5 fw-semibold valor-monetario">—</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-6 col-lg-3">
+                  <div class="card h-100">
+                    <div class="card-body p-3">
+                      <div class="small text-muted text-uppercase">Saldo</div>
+                      <div id="fnSaldo" class="fs-5 fw-semibold valor-monetario">—</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-6 col-lg-3">
+                  <div class="card h-100">
+                    <div class="card-body p-3">
+                      <div class="small text-muted text-uppercase">Inadimplência</div>
+                      <div id="fnInadimplencia" class="fs-5 fw-semibold">—</div>
+                      <div class="small text-muted">Receitas vencidas em aberto</div>
+                      <div class="small text-muted">Pendentes: <span id="fnReceitasPendentes">—</span> · Despesas: <span id="fnDespesasPendentes">—</span></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div id="fnAreaEdicao" hidden>
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                  <h3 id="fnTituloForm" class="h6 mb-0">Nova movimentação</h3>
+                </div>
+                <form id="formMovimentacao" class="row g-3 align-items-end mb-4" novalidate>
+                  <div class="col-12 col-md-2 mb-3">
+                    <label for="fnTipo" class="form-label">Tipo</label>
+                    <select id="fnTipo" class="form-select" aria-describedby="fnTipoFeedback">
+                      <option value="RECEITA">Receita</option>
+                      <option value="DESPESA">Despesa</option>
+                    </select>
+                    <div id="fnTipoFeedback" class="invalid-feedback"></div>
+                  </div>
+                  <div class="col-12 col-md-3 mb-3">
+                    <label for="fnCategoria" class="form-label">Categoria</label>
+                    <input id="fnCategoria" type="text" class="form-control" maxlength="80" aria-describedby="fnCategoriaFeedback" required />
+                    <div id="fnCategoriaFeedback" class="invalid-feedback"></div>
+                  </div>
+                  <div class="col-12 col-md-4 mb-3">
+                    <label for="fnDescricao" class="form-label">Descrição</label>
+                    <input id="fnDescricao" type="text" class="form-control" maxlength="200" aria-describedby="fnDescricaoFeedback" required />
+                    <div id="fnDescricaoFeedback" class="invalid-feedback"></div>
+                  </div>
+                  <div class="col-12 col-md-3 mb-3">
+                    <label for="fnValor" class="form-label">Valor (R$)</label>
+                    <input id="fnValor" type="text" class="form-control" inputmode="decimal" placeholder="0,00" aria-describedby="fnValorFeedback" required />
+                    <div id="fnValorFeedback" class="invalid-feedback"></div>
+                  </div>
+                  <div class="col-12 col-md-3 mb-3">
+                    <label for="fnVencimento" class="form-label">Vencimento</label>
+                    <input id="fnVencimento" type="date" class="form-control" aria-describedby="fnVencimentoFeedback" required />
+                    <div id="fnVencimentoFeedback" class="invalid-feedback"></div>
+                  </div>
+                  <div class="col-12 col-md-3 mb-3">
+                    <label for="fnPagamento" class="form-label">Pagamento</label>
+                    <input id="fnPagamento" type="date" class="form-control" aria-describedby="fnPagamentoFeedback fnPagamentoAjuda" />
+                    <div id="fnPagamentoFeedback" class="invalid-feedback"></div>
+                    <div id="fnPagamentoAjuda" class="form-text">Obrigatório quando o status for PAGO.</div>
+                  </div>
+                  <div class="col-12 col-md-2 mb-3">
+                    <label for="fnStatus" class="form-label">Status</label>
+                    <select id="fnStatus" class="form-select" aria-describedby="fnStatusFeedback">
+                      <option value="PENDENTE">Pendente</option>
+                      <option value="PAGO">Pago</option>
+                    </select>
+                    <div id="fnStatusFeedback" class="invalid-feedback"></div>
+                  </div>
+                  <div class="col-12 col-md-2 mb-3">
+                    <label for="fnFormaPagamento" class="form-label">Forma de pagamento</label>
+                    <input id="fnFormaPagamento" type="text" class="form-control" maxlength="40" placeholder="Opcional" aria-describedby="fnFormaPagamentoFeedback" />
+                    <div id="fnFormaPagamentoFeedback" class="invalid-feedback"></div>
+                  </div>
+                  <div class="col-12 col-md-4 mb-3">
+                    <label for="fnOrcamento" class="form-label">Orçamento vinculado (opcional)</label>
+                    <select id="fnOrcamento" class="form-select" aria-describedby="fnOrcamentoFeedback"></select>
+                    <div id="fnOrcamentoFeedback" class="invalid-feedback"></div>
+                  </div>
+                  <div class="col-12 d-flex flex-wrap gap-2">
+                    <button id="btnSalvarMovimentacao" type="submit" class="btn btn-primary">Salvar movimentação</button>
+                    <button id="btnCancelarEdicaoMovimentacao" type="button" class="btn btn-outline-secondary" hidden>Cancelar edição</button>
+                  </div>
+                </form>
+              </div>
+
+              <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                <h3 class="h6 mb-0">Movimentações registradas</h3>
+              </div>
+              <div class="table-responsive">
+                <table class="table table-striped table-hover align-middle mb-0 tabela-fase2">
+                  <thead>
+                    <tr>
+                      <th scope="col">Tipo</th>
+                      <th scope="col">Descrição</th>
+                      <th scope="col" class="text-end">Valor</th>
+                      <th scope="col">Vencimento</th>
+                      <th scope="col">Pagamento</th>
+                      <th scope="col">Status</th>
+                      <th scope="col">Orçamento</th>
+                      <th scope="col">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbMovimentacoes" aria-busy="false"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      </div>
+
       <div class="tab-pane fade" id="abaRelatorios" role="tabpanel" aria-labelledby="abaRelatorios-tab" tabindex="0">
       <!-- RELATÓRIOS AGREGADOS DO PERÍODO -->
       <section class="row g-3 mt-1" aria-labelledby="tituloRelatorios">
@@ -1062,6 +1444,22 @@
               </div>
 
               <div class="row g-3">
+                <div class="col-12">
+                  <h3 class="h6 mb-2">Receitas e despesas por mês</h3>
+                  <div class="table-responsive">
+                    <table class="table table-striped table-hover align-middle mb-0 tabela-fase2">
+                      <thead>
+                        <tr>
+                          <th scope="col">Mês</th>
+                          <th scope="col" class="text-end">Receitas</th>
+                          <th scope="col" class="text-end">Despesas</th>
+                          <th scope="col" class="text-end">Saldo</th>
+                        </tr>
+                      </thead>
+                      <tbody id="tbRelatorioFinanceiro" aria-busy="false"></tbody>
+                    </table>
+                  </div>
+                </div>
                 <div class="col-12 col-xl-6">
                   <h3 class="h6 mb-2">Clientes por cidade</h3>
                   <div class="table-responsive">
@@ -1369,6 +1767,39 @@
           </div>
           <div class="modal-footer">
             <button id="btnConfirmarMotivo" type="button" class="btn btn-primary">Confirmar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- BAIXA DE MOVIMENTAÇÃO FINANCEIRA -->
+  <div class="modal fade" id="modalBaixaFinanceira" tabindex="-1" aria-labelledby="modalBaixaFinanceiraTitulo" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <form id="formBaixaFinanceira" novalidate>
+          <div class="modal-header">
+            <h2 class="modal-title h5" id="modalBaixaFinanceiraTitulo">Baixar movimentação</h2>
+            <button id="btnFecharBaixaFinanceira" type="button" class="btn-close" aria-label="Fechar"></button>
+          </div>
+          <div class="modal-body">
+            <p id="modalBaixaFinanceiraDescricao" class="small text-muted"></p>
+            <div class="row g-3">
+              <div class="col-12 col-md-6 mb-3">
+                <label for="bfPagamento" class="form-label">Data do pagamento</label>
+                <input id="bfPagamento" type="date" class="form-control" aria-describedby="bfPagamentoFeedback" required />
+                <div id="bfPagamentoFeedback" class="invalid-feedback"></div>
+              </div>
+              <div class="col-12 col-md-6 mb-3">
+                <label for="bfFormaPagamento" class="form-label">Forma de pagamento</label>
+                <input id="bfFormaPagamento" type="text" class="form-control" maxlength="40" placeholder="Opcional" aria-describedby="bfFormaPagamentoFeedback" />
+                <div id="bfFormaPagamentoFeedback" class="invalid-feedback"></div>
+              </div>
+            </div>
+            <p class="small text-muted mb-0" role="status">A baixa registra data, responsável e instante automaticamente; o cancelamento exige motivo.</p>
+          </div>
+          <div class="modal-footer">
+            <button id="btnConfirmarBaixaFinanceira" type="button" class="btn btn-primary">Confirmar baixa</button>
           </div>
         </form>
       </div>

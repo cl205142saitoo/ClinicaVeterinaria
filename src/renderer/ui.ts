@@ -1,5 +1,6 @@
 /** Utilitários de interface: DOM seguro, validação, feedback e formatação. */
 
+import { ESTOQUE_PRECO_MAXIMO } from '../shared/constants';
 import { ErroAplicacao } from '../shared/errors';
 import { ehCpf } from '../shared/validators';
 
@@ -369,4 +370,62 @@ export function telefoneValido(valor: string): boolean {
 export function pesoValido(valor: string): boolean {
   const peso = Number(valor.replace(',', '.'));
   return valor.trim() !== '' && Number.isFinite(peso) && peso > 0;
+}
+
+/** Formata valores em BRL; inválidos viram traço para não sugerir número errado. */
+export function formatarMoeda(valor: number): string {
+  return Number.isFinite(valor)
+    ? valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+    : '—';
+}
+
+/** O backend devolve inadimplência como proporção (0 a 1); a tela mostra %. */
+export function formatarPercentual(proporcao: number): string {
+  if (!Number.isFinite(proporcao)) return '—';
+  return `${(proporcao * 100).toLocaleString('pt-BR', {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  })}%`;
+}
+
+/**
+ * Máscara de preço em BRL: aceita dígitos e uma vírgula decimal, agrupando
+ * milhares com ponto. Não transforma "120" em "1,20" — o valor digitado é o
+ * valor em reais.
+ */
+export function mascararPreco(valor: string): string {
+  const texto = valor.replace(/[^\d,]/g, '');
+  const partes = texto.split(',');
+  const inteiros = (partes[0] ?? '').replace(/\D/g, '').slice(0, 8);
+  const temVirgula = partes.length > 1;
+  const decimais = temVirgula
+    ? partes
+        .slice(1)
+        .join('')
+        .replace(/\D/g, '')
+        .slice(0, 2)
+    : '';
+  const comMilhar = inteiros.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return temVirgula ? `${comMilhar},${decimais}` : comMilhar;
+}
+
+export function aplicarMascaraPreco(campo: HTMLInputElement): void {
+  campo.addEventListener('input', () => {
+    campo.value = mascararPreco(campo.value);
+  });
+}
+
+/** Converte o texto mascarado em number com no máximo duas casas decimais. */
+export function precoOuNull(valor: string, permitirZero = true): number | null {
+  const texto = valor.trim().replace(/\s/g, '').replace(/\./g, '').replace(',', '.');
+  if (!/^\d+(?:\.\d{1,2})?$/.test(texto)) return null;
+  const numero = Number(texto);
+  if (!Number.isFinite(numero) || numero > ESTOQUE_PRECO_MAXIMO) return null;
+  if (!permitirZero && numero <= 0) return null;
+  return numero;
+}
+
+/** Texto de preço pronto para voltar ao campo com a máscara aplicada. */
+export function textoPreco(valor: number): string {
+  return mascararPreco(valor.toFixed(2).replace('.', ','));
 }

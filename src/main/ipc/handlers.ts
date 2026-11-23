@@ -8,10 +8,14 @@ import type { ClientePetService } from '../services/ClientePetService';
 import type { ConsultaService } from '../services/ConsultaService';
 import type { CotacaoService } from '../services/CotacaoService';
 import type { EstoqueService } from '../services/EstoqueService';
+import type { HistoricoPrecoService } from '../services/HistoricoPrecoService';
 import type { IntegracoesService } from '../services/IntegracoesService';
+import type { MovimentacaoFinanceiraService } from '../services/MovimentacaoFinanceiraService';
+import type { OrcamentoService } from '../services/OrcamentoService';
 import type { PolicyService } from '../services/PolicyService';
 import type { RelatorioService } from '../services/RelatorioService';
 import type { SessaoService } from '../services/SessaoService';
+import type { TabelaPrecoService } from '../services/TabelaPrecoService';
 import type { UsuarioService } from '../services/UsuarioService';
 import type { VacinaService } from '../services/VacinaService';
 import { paraErroSeguro } from './erros';
@@ -21,6 +25,7 @@ import { criarHandlersClientePet } from './handlersClientePet';
 import { criarHandlersComplementos } from './handlersComplementos';
 import { criarHandlersConsulta } from './handlersConsulta';
 import { criarHandlersEstoque } from './handlersEstoque';
+import { criarHandlersFase2 } from './handlersFase2';
 import { criarHandlersIntegracoes } from './handlersIntegracoes';
 import { criarHandlersProntuario } from './handlersProntuario';
 import { criarHandlersUsuarios } from './handlersUsuarios';
@@ -42,6 +47,10 @@ export interface DependenciasIpc {
   alertaVacinaService: AlertaVacinaService;
   cotacaoService: CotacaoService;
   relatorioService: RelatorioService;
+  tabelaPrecoService: TabelaPrecoService;
+  historicoPrecoService: HistoricoPrecoService;
+  orcamentoService: OrcamentoService;
+  financeiroService: MovimentacaoFinanceiraService;
 }
 
 const CANAIS: readonly IpcChannel[] = [
@@ -99,6 +108,22 @@ const CANAIS: readonly IpcChannel[] = [
   IPC_CHANNELS.API_COTACAO_DOLAR,
   IPC_CHANNELS.RELATORIOS_GERAR,
   IPC_CHANNELS.RELATORIOS_EXPORTAR_CSV,
+  IPC_CHANNELS.PRECOS_TABELA_LISTAR,
+  IPC_CHANNELS.PRECOS_TABELA_CRIAR,
+  IPC_CHANNELS.PRECOS_TABELA_ATUALIZAR,
+  IPC_CHANNELS.PRECOS_TABELA_INATIVAR,
+  IPC_CHANNELS.PRECOS_HISTORICO_LISTAR,
+  IPC_CHANNELS.ORCAMENTOS_LISTAR,
+  IPC_CHANNELS.ORCAMENTOS_CRIAR,
+  IPC_CHANNELS.ORCAMENTOS_ATUALIZAR,
+  IPC_CHANNELS.ORCAMENTOS_DEFINIR_STATUS,
+  IPC_CHANNELS.ORCAMENTOS_CANCELAR,
+  IPC_CHANNELS.FINANCEIRO_LISTAR,
+  IPC_CHANNELS.FINANCEIRO_CRIAR,
+  IPC_CHANNELS.FINANCEIRO_ATUALIZAR,
+  IPC_CHANNELS.FINANCEIRO_BAIXAR,
+  IPC_CHANNELS.FINANCEIRO_CANCELAR,
+  IPC_CHANNELS.FINANCEIRO_RESUMO,
 ];
 
 async function executar(
@@ -158,6 +183,14 @@ export function registrarHandlersIpc(dependencias: DependenciasIpc): () => void 
       dependencias.alertaVacinaService,
       dependencias.cotacaoService,
       dependencias.relatorioService,
+      dependencias.sessaoService,
+      dependencias.policyService
+    ),
+    ...criarHandlersFase2(
+      dependencias.tabelaPrecoService,
+      dependencias.historicoPrecoService,
+      dependencias.orcamentoService,
+      dependencias.financeiroService,
       dependencias.sessaoService,
       dependencias.policyService
     ),

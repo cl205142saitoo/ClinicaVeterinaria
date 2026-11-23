@@ -10,7 +10,14 @@ import {
   ESTOQUE_CODIGO_LOTE_MAXIMO,
   ESTOQUE_NOME_MAXIMO,
   ESTOQUE_PRECO_MAXIMO,
+  FORMA_PAGAMENTO_MAXIMA,
+  ITEM_QUANTIDADE_MAXIMA,
+  MOVIMENTACAO_STATUS,
+  MOVIMENTACAO_TIPOS,
+  ORCAMENTO_STATUS,
+  ORIGEM_HISTORICO_PRECO,
   PET_IDADE_MAXIMA_ANOS,
+  PRECO_ITEM_TIPOS,
   PRONTUARIO_TEMPERATURA_MAXIMA_C,
   PRONTUARIO_TEMPERATURA_MINIMA_C,
   PRONTUARIO_TEXTO_MAXIMO,
@@ -37,18 +44,29 @@ import type {
   DadosAtualizacaoProduto,
   DadosAtualizacaoUsuario,
   DadosAtualizacaoVacina,
+  DadosAtualizacaoMovimentacao,
+  DadosAtualizacaoOrcamento,
+  DadosAtualizacaoTabelaPreco,
+  DadosBaixaMovimentacao,
   DadosCliente,
   DadosConsulta,
   DadosInativacao,
+  DadosItemOrcamento,
   DadosLote,
+  DadosMovimentacao,
   DadosNovoUsuario,
+  DadosOrcamento,
   DadosPet,
   DadosProduto,
   DadosProntuario,
   DadosRegistro,
   DadosRegistroAnexo,
   DadosRegistroVacina,
+  DadosStatusOrcamento,
+  DadosTabelaPreco,
   FiltroAgenda,
+  FiltroRelatorio,
+  OrigemHistoricoPreco,
   Role,
   StatusConsulta,
 } from './types';
@@ -436,4 +454,108 @@ export function exigir<T>(valor: unknown, guarda: (valor: unknown) => valor is T
     throw new ErroAplicacao(mensagem);
   }
   return valor;
+}
+
+/* ---------------- Fase 2: preços, orçamentos e financeiro ---------------- */
+
+/** Valor monetário com no máximo duas casas decimais e dentro do DECIMAL(10,2). */
+function ehValorMonetario(valor: unknown, permitsZero = true): valor is number {
+  if (typeof valor !== 'number' || !Number.isFinite(valor)) return false;
+  if (!permitsZero && valor <= 0) return false;
+  if (permitsZero && valor < 0) return false;
+  return (
+    valor <= ESTOQUE_PRECO_MAXIMO && Math.abs(valor * 100 - Math.round(valor * 100)) <= 1e-9
+  );
+}
+
+export function ehFiltroRelatorio(valor: unknown): valor is FiltroRelatorio {
+  return ehObjeto(valor) && ehDataCivil(valor.de) && ehDataCivil(valor.ate) && valor.de <= valor.ate;
+}
+
+export function ehDadosTabelaPreco(valor: unknown): valor is DadosTabelaPreco {
+  return (
+    ehObjeto(valor) &&
+    ehTexto(valor.codigo, 1, 40) &&
+    ehTexto(valor.descricao, 2, 160) &&
+    ehTexto(valor.categoria, 1, ESTOQUE_CATEGORIA_MAXIMO) &&
+    ehValorMonetario(valor.preco)
+  );
+}
+
+export function ehDadosAtualizacaoTabelaPreco(valor: unknown): valor is DadosAtualizacaoTabelaPreco {
+  return ehObjeto(valor) && ehIdPositivo(valor.id) && ehDadosTabelaPreco(valor);
+}
+
+export function ehOrigemHistoricoPreco(valor: unknown): valor is OrigemHistoricoPreco {
+  return typeof valor === 'string' && ORIGEM_HISTORICO_PRECO.some((origem) => origem === valor);
+}
+
+export function ehDadosItemOrcamento(valor: unknown): valor is DadosItemOrcamento {
+  if (!ehObjeto(valor)) return false;
+  if (!PRECO_ITEM_TIPOS.some((tipo) => tipo === valor.tipo)) return false;
+  if (valor.tipo === 'PRODUTO') {
+    if (!ehIdPositivo(valor.produtoId) || valor.tabelaPrecoId !== null) return false;
+  } else if (!ehIdPositivo(valor.tabelaPrecoId) || valor.produtoId !== null) {
+    return false;
+  }
+  return (
+    ehTexto(valor.descricao, 2, 200) &&
+    typeof valor.quantidade === 'number' &&
+    Number.isInteger(valor.quantidade) &&
+    valor.quantidade >= 1 &&
+    valor.quantidade <= ITEM_QUANTIDADE_MAXIMA &&
+    ehValorMonetario(valor.precoUnitario)
+  );
+}
+
+export function ehDadosOrcamento(valor: unknown): valor is DadosOrcamento {
+  if (!ehObjeto(valor)) return false;
+  if (!ehIdPositivo(valor.clienteId) || !ehIdOpcional(valor.petId)) return false;
+  if (!ehDataCivil(valor.validade) || !ehValorMonetario(valor.desconto)) return false;
+  if (!ehTextoOpcional(valor.observacoes, 2000)) return false;
+  return Array.isArray(valor.itens) && valor.itens.length > 0 && valor.itens.every(ehDadosItemOrcamento);
+}
+
+export function ehDadosAtualizacaoOrcamento(valor: unknown): valor is DadosAtualizacaoOrcamento {
+  return ehObjeto(valor) && ehIdPositivo(valor.id) && ehDadosOrcamento(valor);
+}
+
+export function ehDadosStatusOrcamento(valor: unknown): valor is DadosStatusOrcamento {
+  return (
+    ehObjeto(valor) &&
+    ehIdPositivo(valor.id) &&
+    typeof valor.status === 'string' &&
+    ORCAMENTO_STATUS.some((status) => status === valor.status) &&
+    valor.status !== 'CANCELADO'
+  );
+}
+
+export function ehDadosMovimentacao(valor: unknown): valor is DadosMovimentacao {
+  if (!ehObjeto(valor)) return false;
+  if (!MOVIMENTACAO_TIPOS.some((tipo) => tipo === valor.tipo)) return false;
+  if (!MOVIMENTACAO_STATUS.some((status) => status === valor.status)) return false;
+  if (!ehTexto(valor.categoria, 2, ESTOQUE_CATEGORIA_MAXIMO)) return false;
+  if (!ehTexto(valor.descricao, 3, 200)) return false;
+  if (!ehValorMonetario(valor.valor, false)) return false;
+  if (!ehDataCivil(valor.vencimento)) return false;
+  if (valor.pagamento !== null && !ehDataCivil(valor.pagamento)) return false;
+  if (valor.status === 'PAGO' && !ehDataCivil(valor.pagamento)) return false;
+  if (!ehIdOpcional(valor.orcamentoId)) return false;
+  return (
+    valor.formaPagamento === null ||
+    ehTexto(valor.formaPagamento, 1, FORMA_PAGAMENTO_MAXIMA)
+  );
+}
+
+export function ehDadosAtualizacaoMovimentacao(valor: unknown): valor is DadosAtualizacaoMovimentacao {
+  return ehObjeto(valor) && ehIdPositivo(valor.id) && ehDadosMovimentacao(valor);
+}
+
+export function ehDadosBaixaMovimentacao(valor: unknown): valor is DadosBaixaMovimentacao {
+  return (
+    ehObjeto(valor) &&
+    ehIdPositivo(valor.id) &&
+    ehDataCivil(valor.pagamento) &&
+    (valor.formaPagamento === null || ehTexto(valor.formaPagamento, 1, FORMA_PAGAMENTO_MAXIMA))
+  );
 }

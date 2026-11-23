@@ -937,3 +937,76 @@ nas cinco correções aprovadas e não foram alterados nesta rodada.
    vigilância sanitária a política de prazos antes de autorizar exclusão
    física; até lá, apenas inativação lógica. Varredura de arquivos órfãos deve
    mover para quarentena, nunca apagar automaticamente.
+
+## Complementos Fase 1 e Fase 2 (respostas do Will no PDF)
+
+### Login de entrega
+
+```
+admin@pethealthpd.local
+PetHealth@2026!
+```
+
+### Massa de dados fictícia
+
+Os dois seeds são **idempotentes** e apenas acrescentam registros:
+
+```powershell
+npm run seed:dados        # 180 clientes, 240 pets, 600 consultas, 400 vacinas,
+                          # 50 produtos, 150 lotes, 100 anexos e 30 cotações
+npm run seed:financeiro   # 30 tabelas de preço, 80 orçamentos, 279 itens,
+                          # 200 movimentações e 40 registros de histórico
+```
+
+Se uma segunda execução detectar os CPFs/códigos reservados, ela avisa e sai sem
+gravar nada. Nenhum `DELETE`/`TRUNCATE` é emitido.
+
+### Fase 1 — requisitos pendentes
+
+- **Estoque:** `Produto.alertaEstoque` liga/desliga somente o alerta de quantidade
+  mínima; alertas de lote/validade continuam ativos.
+- **Vacinas:** alertas no sistema para próximas doses em até 30 dias (ou vencidas)
+  e envio opcional de e-mail ao tutor. O deduplicador evita reenvio no mesmo dia
+  para a mesma próxima dose.
+- **Dólar:** cotação diária persistida em `CotacaoDolar`, com cache e fallback
+  para a última cotação salva quando a API externa falha.
+- **Relatórios:** nova aba com filtros de período, KPIs, gráficos em SVG/CSS,
+  tabelas, exportação CSV e impressão via `window.print()` (sem novas
+  dependências).
+
+### Fase 2 — preços, orçamentos e financeiro
+
+- **Preços:** tabela de serviços com código único e auditoria de toda alteração
+  de preço (produtos e tabela) em `HistoricoPreco`.
+- **Orçamentos:** numeração `ORC-YYYYMM-####`, itens de produto/serviço,
+  desconto em BRL, total calculado no backend e transições controladas de
+  `PENDENTE → APROVADO|REPROVADO` e cancelamento com motivo.
+- **Financeiro:** receitas/despesas com status `PENDENTE`, `PAGO` ou
+  `CANCELADO`, baixa com data e responsável, cancelamento auditado e resumo com
+  saldo e inadimplência.
+- **Relatórios integrados:** faturamento, despesas, saldo, ticket médio,
+  inadimplência e série mensal financeira passam a usar os dados reais.
+
+### Variáveis de ambiente adicionais
+
+```dotenv
+PHD_ANEXOS_DIR=C:\caminho\para\anexos   # opcional; por padrão userData/anexos
+SMTP_HOST=
+SMTP_PORT=587
+SMTP_USER=
+SMTP_PASS=
+SMTP_FROM=
+PHD_CLAREZA_EMAIL=                      # cópia oculta opcional dos avisos
+```
+
+Sem SMTP configurado, o envio de avisos de vacina devolve uma mensagem clara e
+não interrompe o uso do sistema; o alerta interno continua funcionando.
+
+### Migrações e validação
+
+```powershell
+npx prisma generate
+npx prisma migrate deploy
+npx tsc --noEmit
+npm run build
+```

@@ -13,27 +13,39 @@ import type {
   DadosAtualizacaoCliente,
   DadosAtualizacaoConsulta,
   DadosAtualizacaoLote,
+  DadosAtualizacaoMovimentacao,
+  DadosAtualizacaoOrcamento,
   DadosAtualizacaoPet,
   DadosAtualizacaoProduto,
+  DadosAtualizacaoTabelaPreco,
   DadosAtualizacaoUsuario,
   DadosAtualizacaoVacina,
+  DadosBaixaMovimentacao,
   DadosCliente,
   DadosConsulta,
   DadosInativacao,
   DadosLote,
+  DadosMovimentacao,
   DadosNovoUsuario,
+  DadosOrcamento,
   DadosPet,
   DadosProduto,
   DadosProntuario,
   DadosRegistro,
   DadosRegistroAnexo,
   DadosRegistroVacina,
+  DadosStatusOrcamento,
+  DadosTabelaPreco,
   Endereco,
   Feriado,
   FiltroAgenda,
   FiltroRelatorio,
+  HistoricoPreco,
   Lote,
+  MovimentacaoFinanceira,
   MunicipioIbge,
+  Orcamento,
+  OrigemHistoricoPreco,
   Pet,
   Produto,
   RegistroVacina,
@@ -41,6 +53,8 @@ import type {
   ResultadoEnvioAvisos,
   ResultadoExportacaoCsv,
   ResumoDashboard,
+  ResumoFinanceiro,
+  TabelaPreco,
   Usuario,
   VeterinarioResumo,
 } from '../shared/types';
@@ -131,6 +145,35 @@ const api: Api = {
     invocar<RelatorioDados>(IPC_CHANNELS.RELATORIOS_GERAR, filtro),
   relatorioExportarCsv: (filtro: FiltroRelatorio) =>
     invocar<ResultadoExportacaoCsv | null>(IPC_CHANNELS.RELATORIOS_EXPORTAR_CSV, filtro),
+  tabelaPrecoListar: () => invocar<TabelaPreco[]>(IPC_CHANNELS.PRECOS_TABELA_LISTAR),
+  tabelaPrecoCriar: (dados: DadosTabelaPreco) =>
+    invocar<TabelaPreco>(IPC_CHANNELS.PRECOS_TABELA_CRIAR, dados),
+  tabelaPrecoAtualizar: (dados: DadosAtualizacaoTabelaPreco) =>
+    invocar<TabelaPreco>(IPC_CHANNELS.PRECOS_TABELA_ATUALIZAR, dados),
+  tabelaPrecoInativar: (dados: DadosInativacao) =>
+    invocar<TabelaPreco>(IPC_CHANNELS.PRECOS_TABELA_INATIVAR, dados),
+  historicoPrecoListar: (origem?: OrigemHistoricoPreco, origemId?: number) =>
+    invocar<HistoricoPreco[]>(IPC_CHANNELS.PRECOS_HISTORICO_LISTAR, origem, origemId),
+  orcamentosListar: () => invocar<Orcamento[]>(IPC_CHANNELS.ORCAMENTOS_LISTAR),
+  orcamentoCriar: (dados: DadosOrcamento) =>
+    invocar<Orcamento>(IPC_CHANNELS.ORCAMENTOS_CRIAR, dados),
+  orcamentoAtualizar: (dados: DadosAtualizacaoOrcamento) =>
+    invocar<Orcamento>(IPC_CHANNELS.ORCAMENTOS_ATUALIZAR, dados),
+  orcamentoDefinirStatus: (dados: DadosStatusOrcamento) =>
+    invocar<Orcamento>(IPC_CHANNELS.ORCAMENTOS_DEFINIR_STATUS, dados),
+  orcamentoCancelar: (dados: DadosInativacao) =>
+    invocar<Orcamento>(IPC_CHANNELS.ORCAMENTOS_CANCELAR, dados),
+  movimentacoesListar: () =>
+    invocar<MovimentacaoFinanceira[]>(IPC_CHANNELS.FINANCEIRO_LISTAR),
+  movimentacaoCriar: (dados: DadosMovimentacao) =>
+    invocar<MovimentacaoFinanceira>(IPC_CHANNELS.FINANCEIRO_CRIAR, dados),
+  movimentacaoAtualizar: (dados: DadosAtualizacaoMovimentacao) =>
+    invocar<MovimentacaoFinanceira>(IPC_CHANNELS.FINANCEIRO_ATUALIZAR, dados),
+  movimentacaoBaixar: (dados: DadosBaixaMovimentacao) =>
+    invocar<MovimentacaoFinanceira>(IPC_CHANNELS.FINANCEIRO_BAIXAR, dados),
+  movimentacaoCancelar: (dados: DadosInativacao) =>
+    invocar<MovimentacaoFinanceira>(IPC_CHANNELS.FINANCEIRO_CANCELAR, dados),
+  resumoFinanceiro: () => invocar<ResumoFinanceiro>(IPC_CHANNELS.FINANCEIRO_RESUMO),
 };
 
 contextBridge.exposeInMainWorld('api', api);

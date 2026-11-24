@@ -341,6 +341,15 @@ const CATEGORIAS_PRODUTO = [
     'Repelente Natural 200ml', 'Algodão Hidrofilo 500g', 'Esponja Banho Pet'] },
 ];
 
+/** Fabricante dos produtos da categoria Vacinas (preenchimento apenas se vazio). */
+const FABRICANTES_VACINAS: Readonly<Record<string, string>> = {
+  'Vacina V8 1 dose': 'Zoetis',
+  'Vacina V10 1 dose': 'MSD Saúde Animal',
+  'Vacina Antirrábica 1 dose': 'Instituto Butantan',
+  'Vacina Quádrupla Felina 1 dose': 'Zoetis',
+  'Vacina V5 1 dose': 'Boehringer Ingelheim',
+};
+
 /* -------------------------- Diretório de anexos -------------------------- */
 
 /**
@@ -812,9 +821,11 @@ async function inserirProdutos(admin: UsuarioSeed): Promise<ProdutoSeed[]> {
     };
     const ativo = indice % 13 !== 0;
     const inativadoEm = ativo ? null : dataHoraUtc(somarDias(HOJE, -inteiro(1, 120)), 11);
+    const nome = grupo.itens[Math.floor(indice / CATEGORIAS_PRODUTO.length)] as string;
     dados.push({
-      nome: grupo.itens[Math.floor(indice / CATEGORIAS_PRODUTO.length)] as string,
+      nome,
       categoria: grupo.categoria,
+      fabricante: grupo.categoria === 'Vacinas' ? FABRICANTES_VACINAS[nome] ?? null : null,
       estoqueMinimo: inteiro(0, 30),
       alertaEstoque: indice % 7 !== 0,
       precoBrl: new Prisma.Decimal(decimal(4.9, 899.9, 2)),
@@ -834,7 +845,13 @@ async function inserirProdutos(admin: UsuarioSeed): Promise<ProdutoSeed[]> {
   if (criados.length !== 50) {
     throw new Error(`Esperados 50 produtos, encontrados ${criados.length} após a inserção.`);
   }
-  registrar('Produtos', criados.length, 'categorias, Decimal(10,2), alertaEstoque');
+  registrar('Produtos', criados.length, 'categorias, Decimal(10,2), alertaEstoque, fabricante');
+  for (const [nome, fabricante] of Object.entries(FABRICANTES_VACINAS)) {
+    await prisma.produto.updateMany({
+      where: { nome, categoria: 'Vacinas', fabricante: null },
+      data: { fabricante },
+    });
+  }
   return criados as ProdutoSeed[];
 }
 

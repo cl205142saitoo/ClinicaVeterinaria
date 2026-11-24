@@ -68,6 +68,7 @@ export class UsuarioService {
       role: dados.role,
       crmv: dados.role === 'VETERINARIO' ? dados.crmv?.trim() || null : null,
       rg: dados.rg?.trim() || null,
+      ativo: dados.ativo ?? true,
     });
     return paraDto(registro);
   }

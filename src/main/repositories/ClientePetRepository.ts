@@ -169,6 +169,7 @@ export class ClientePetRepository {
         rg: dados.rg.trim(),
         dataNascimento: paraDataCivil(dados.dataNascimento),
         telefone,
+        email: dados.email === null ? null : dados.email.trim().toLowerCase() || null,
         cep,
         logradouro: dados.logradouro.trim(),
         bairro: dados.bairro.trim(),
@@ -209,6 +210,7 @@ export class ClientePetRepository {
         rg: dados.rg.trim(),
         dataNascimento: paraDataCivil(dados.dataNascimento),
         telefone: dados.telefone.replace(/\D/g, ''),
+        email: dados.email === null ? null : dados.email.trim().toLowerCase() || null,
         cep: dados.cep.replace(/\D/g, ''),
         logradouro: dados.logradouro.trim(),
         bairro: dados.bairro.trim(),
@@ -237,6 +239,21 @@ export class ClientePetRepository {
         inativadoPorId: responsavelId,
         inativadoEm: agora,
         motivoInativacao: motivo.trim(),
+      },
+    });
+    if (resultado.count !== 1) return null;
+    return this.buscarClientePorId(id);
+  }
+
+  /** Reativação limpa os campos de inativação para manter o estado coerente. */
+  async reativarCliente(id: number): Promise<Cliente | null> {
+    const resultado = await this.prisma.cliente.updateMany({
+      where: { id, ativo: false },
+      data: {
+        ativo: true,
+        inativadoPorId: null,
+        inativadoEm: null,
+        motivoInativacao: null,
       },
     });
     if (resultado.count !== 1) return null;

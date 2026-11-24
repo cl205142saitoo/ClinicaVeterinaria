@@ -39,6 +39,7 @@ export class AgendaController {
   private filtroAtual: FiltroAgenda | undefined;
   private selectsCarregados = false;
   private sequenciaCarregamento = 0;
+  private sequenciaVeterinarios = 0;
   private consultasVisiveis = new Map<number, ConsultaAgenda>();
   private veterinarios: VeterinarioResumo[] = [];
   private idReagendamento: number | null = null;
@@ -53,6 +54,12 @@ export class AgendaController {
     this.configurarFiltros();
     this.configurarAcoes();
     this.configurarReagendamento();
+    obrigatorio<HTMLButtonElement>('#abaAgenda-tab').addEventListener('shown.bs.tab', () => {
+      if (this.contexto.auth.obterUsuario() === null) return;
+      void this.carregarVeterinarios().catch((erro: unknown) =>
+        mostrarToast(mensagemErro(erro), 'erro')
+      );
+    });
   }
 
   /** Recarrega selects e tabela; usado também pelo contexto compartilhado. */
@@ -92,6 +99,7 @@ export class AgendaController {
   /** Limpa a agenda ao sair e invalida carregamentos pendentes. */
   limpar(): void {
     this.sequenciaCarregamento += 1;
+    this.sequenciaVeterinarios += 1;
     this.filtroAtual = undefined;
     this.selectsCarregados = false;
     this.idReagendamento = null;
@@ -174,15 +182,20 @@ export class AgendaController {
     }
   }
 
-  private async carregarSelects(): Promise<void> {
-    const [pets, veterinarios] = await Promise.all([
-      window.api.listarPets(),
-      window.api.veterinariosListar(),
-    ]);
+  private async carregarVeterinarios(): Promise<void> {
+    const sequencia = this.sequenciaVeterinarios + 1;
+    this.sequenciaVeterinarios = sequencia;
+    const veterinarios = await window.api.veterinariosListar();
+    if (sequencia !== this.sequenciaVeterinarios) return;
     this.veterinarios = veterinarios;
-    this.preencherSelectPets(pets);
     this.preencherSelectVeterinarios(veterinarios);
     this.preencherSelectReagendamento();
+  }
+
+  private async carregarSelects(): Promise<void> {
+    const pets = await window.api.listarPets();
+    this.preencherSelectPets(pets);
+    await this.carregarVeterinarios();
     this.selectsCarregados = true;
   }
 

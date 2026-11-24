@@ -14,6 +14,7 @@ import type {
   DadosAtualizacaoVacina,
   DadosRegistroVacina,
   Pet,
+  Produto,
   RegistroVacina,
   ResultadoEnvioAvisos,
   VeterinarioResumo,
@@ -51,6 +52,8 @@ const ROTULOS_STATUS: Readonly<Record<string, string>> = {
 export class VacinaController {
   private petsVisiveis = new Map<number, Pet>();
   private registrosVisiveis = new Map<number, RegistroVacina>();
+  private produtosVacina = new Map<string, Produto>();
+  private produtosCarregados = false;
   private petsCarregados = false;
   private veterinariosCarregados = false;
   private petAtualId: number | null = null;
@@ -103,6 +106,7 @@ export class VacinaController {
 
     void this.carregarAlertas();
     await this.garantirVeterinarios();
+    await this.garantirProdutos();
 
     const select = obrigatorio<HTMLSelectElement>('#vcPet');
     if (petId !== undefined && select.value !== String(petId)) select.value = String(petId);
@@ -166,6 +170,8 @@ export class VacinaController {
     this.idEdicao = null;
     this.petsVisiveis = new Map();
     this.registrosVisiveis = new Map();
+    this.produtosVacina.clear();
+    this.produtosCarregados = false;
     this.alertasCarregados = false;
     this.alertasSequencia += 1;
 
@@ -177,6 +183,7 @@ export class VacinaController {
     petSelect.append(placeholderPet);
 
     this.resetarConsulta();
+    obrigatorio<HTMLDataListElement>('#vcVacinasOpcoes').replaceChildren();
 
     const veterinario = obrigatorio<HTMLSelectElement>('#vcVeterinario');
     veterinario.replaceChildren();
@@ -437,6 +444,55 @@ export class VacinaController {
     } catch (erro) {
       mostrarToast(mensagemErro(erro), 'erro');
     }
+  }
+
+  /** Catálogo de vacinas do estoque; falha de leitura não bloqueia a carteira. */
+  private async garantirProdutos(): Promise<void> {
+    if (this.produtosCarregados || !this.contexto.auth.temAcessoClinico()) return;
+    try {
+      this.preencherOpcoesVacinas(await window.api.estoqueProdutosListar());
+      this.produtosCarregados = true;
+    } catch (erro) {
+      mostrarToast(mensagemErro(erro), 'erro');
+    }
+  }
+
+  private preencherOpcoesVacinas(produtos: Produto[]): void {
+    const opcoes = obrigatorio<HTMLDataListElement>('#vcVacinasOpcoes');
+    opcoes.replaceChildren();
+    this.produtosVacina.clear();
+
+    for (const produto of produtos) {
+      if (produto.ativo === false) continue;
+      const nome = produto.nome.trim();
+      this.produtosVacina.set(nome.toLocaleLowerCase('pt-BR'), produto);
+      const opcao = document.createElement('option');
+      opcao.value = nome;
+      opcoes.append(opcao);
+    }
+  }
+
+  /** Preenche fabricante, lote e validade com o lote ativo mais próximo. */
+  private autoPreencherPorProduto(): void {
+    const campoVacina = obrigatorio<HTMLInputElement>('#vcVacina');
+    const produto = this.produtosVacina.get(campoVacina.value.trim().toLocaleLowerCase('pt-BR'));
+    if (produto === undefined) return;
+
+    obrigatorio<HTMLInputElement>('#vcFabricante').value = produto.fabricante ?? '';
+    const lote = produto.lotes
+      .filter((item) => item.ativo !== false)
+      .slice()
+      .sort((a, b) => a.validade.localeCompare(b.validade) || a.id - b.id)[0];
+    if (lote === undefined) {
+      mostrarToast(
+        `O produto "${produto.nome}" não tem lote ativo. Informe lote e validade manualmente.`,
+        'info'
+      );
+    } else {
+      obrigatorio<HTMLInputElement>('#vcLote').value = lote.codigo;
+      obrigatorio<HTMLInputElement>('#vcValidade').value = lote.validade;
+    }
+    limparValidacao(obrigatorio<HTMLFormElement>('#formVacina'));
   }
 
   private resetarConsulta(): void {
@@ -715,9 +771,15 @@ export class VacinaController {
 
     obrigatorio<HTMLButtonElement>('#abaVacinas-tab').addEventListener('shown.bs.tab', () => {
       if (!this.alertasCarregados) void this.carregarAlertas();
+      this.produtosCarregados = false;
+      void this.garantirProdutos();
     });
     obrigatorio<HTMLButtonElement>('#btnEnviarAvisosVacina').addEventListener('click', () => {
       void this.enviarAvisos();
+    });
+
+    obrigatorio<HTMLInputElement>('#vcVacina').addEventListener('change', () => {
+      this.autoPreencherPorProduto();
     });
 
     obrigatorio<HTMLFormElement>('#formVacina').addEventListener('submit', (evento) => {

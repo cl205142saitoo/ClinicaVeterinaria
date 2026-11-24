@@ -115,6 +115,24 @@ export class ClientePetService {
     return atualizado;
   }
 
+  async reativarCliente(id: number, usuario: Usuario): Promise<Cliente> {
+    const atual = await this.repo.buscarClientePorId(id);
+    if (atual === null) {
+      throw new ErroAplicacao('Cliente não encontrado.');
+    }
+    if (atual.ativo !== false) {
+      throw new ErroAplicacao('Este cliente já está ativo.');
+    }
+    const atualizado = await this.repo.reativarCliente(id);
+    if (atualizado === null) {
+      throw new ErroAplicacao('Não foi possível reativar o cliente. Tente novamente.');
+    }
+    // `usuario` permanece no contrato para simetria com inativarCliente e
+    // futura rastreabilidade da reativação (a autorização já está no handler).
+    void usuario;
+    return atualizado;
+  }
+
   async deletarCliente(id: number): Promise<Cliente> {
     const quantidadePets = await this.repo.contarPetsDoCliente(id);
     if (quantidadePets > 0) {

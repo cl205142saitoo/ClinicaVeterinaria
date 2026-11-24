@@ -31,10 +31,11 @@ import {
 import type { ContextoApp } from './contexto';
 
 const FORMATO_DATA_CIVIL = /^\d{4}-\d{2}-\d{2}$/;
-const COLUNAS_PRODUTOS = 8;
+const COLUNAS_PRODUTOS = 9;
 const COLUNAS_LOTES = 6;
 const NOME_MAXIMO = 120;
 const CATEGORIA_MAXIMA = 80;
+const FABRICANTE_MAXIMO = 120;
 const CODIGO_LOTE_MAXIMO = 64;
 
 interface Situacao {
@@ -298,6 +299,7 @@ export class EstoqueController {
       linha.append(
         criarCelula(textoOuTraco(produto.nome), 'text-break small'),
         criarCelula(textoOuTraco(produto.categoria), 'text-break small'),
+        criarCelula(textoOuTraco(produto.fabricante), 'text-break small'),
         criarCelula(this.formatarMoeda(produto.precoBrl), 'text-nowrap small'),
         criarCelula(String(produto.estoqueMinimo), 'text-nowrap small'),
         this.celulaSituacao(this.situacaoAlerta(produto.alertaEstoque)),
@@ -458,6 +460,7 @@ export class EstoqueController {
     this.idProdutoEdicao = produto.id;
     this.definirValor('#esNome', produto.nome);
     this.definirValor('#esCategoria', produto.categoria);
+    this.definirValor('#esFabricante', produto.fabricante ?? '');
     this.definirValor('#esEstoqueMinimo', String(produto.estoqueMinimo));
     this.definirValor('#esPreco', String(produto.precoBrl));
     obrigatorio<HTMLInputElement>('#esAlertaEstoque').checked = produto.alertaEstoque;
@@ -497,6 +500,7 @@ export class EstoqueController {
 
     const nome = obrigatorio<HTMLInputElement>('#esNome');
     const categoria = obrigatorio<HTMLInputElement>('#esCategoria');
+    const fabricante = obrigatorio<HTMLInputElement>('#esFabricante');
     const estoqueMinimoCampo = obrigatorio<HTMLInputElement>('#esEstoqueMinimo');
     const precoCampo = obrigatorio<HTMLInputElement>('#esPreco');
 
@@ -509,6 +513,11 @@ export class EstoqueController {
       categoria,
       categoria.value.trim().length >= 1 && categoria.value.trim().length <= CATEGORIA_MAXIMA,
       `Informe a categoria (até ${CATEGORIA_MAXIMA} caracteres).`
+    );
+    const fabricanteValido = exigir(
+      fabricante,
+      fabricante.value.trim().length <= FABRICANTE_MAXIMO,
+      `O fabricante deve ter no máximo ${FABRICANTE_MAXIMO} caracteres.`
     );
 
     const estoqueMinimo = this.inteiroOuNull(estoqueMinimoCampo.value);
@@ -528,6 +537,7 @@ export class EstoqueController {
     if (
       !nomeValido ||
       !categoriaValida ||
+      !fabricanteValido ||
       !estoqueValido ||
       !precoValido ||
       estoqueMinimo === null ||
@@ -540,6 +550,7 @@ export class EstoqueController {
     const dados: DadosProduto = {
       nome: nome.value.trim(),
       categoria: categoria.value.trim(),
+      fabricante: fabricante.value.trim() || null,
       estoqueMinimo,
       alertaEstoque: obrigatorio<HTMLInputElement>('#esAlertaEstoque').checked,
       precoBrl,

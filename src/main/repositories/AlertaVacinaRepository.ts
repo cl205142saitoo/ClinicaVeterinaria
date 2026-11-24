@@ -74,12 +74,13 @@ export class AlertaVacinaRepository implements AlertaVacinaRepositorio {
         select: selecaoAlerta,
         orderBy: [{ proximaDose: 'asc' }, { id: 'asc' }],
       })
-      .then((registros) =>
-        registros.flatMap((registro) => {
+      .then((registros) => {
+        console.log('[Vacinas] Query Prisma:', JSON.stringify(where), 'registros:', registros.length);
+        return registros.flatMap((registro) => {
           const alerta = paraRegistroAlerta(registro);
           return alerta === null ? [] : [alerta];
-        })
-      );
+        });
+      });
   }
 
   async marcarAvisoEnviado(id: number, proximaDose: Date, agora: Date): Promise<boolean> {

@@ -1,7 +1,7 @@
 /** Utilitários de interface: DOM seguro, validação, feedback e formatação. */
 
 import { ESTOQUE_PRECO_MAXIMO } from '../shared/constants';
-import { ErroAplicacao } from '../shared/errors';
+import { extrairMensagemAplicacao } from '../shared/errors';
 import { ehCpf } from '../shared/validators';
 
 /** Texto usado sempre que o erro não é uma falha de domínio explicitamente segura. */
@@ -29,17 +29,6 @@ const PADROES_TECNICOS: readonly RegExp[] = [
   /[\r\n]/,
 ];
 
-interface ErroSerializado {
-  readonly name?: unknown;
-  readonly message?: unknown;
-}
-
-/** O IPC pode entregar o erro como objeto simples; só confiamos na marca `name`. */
-function eErroAplicacaoSerializado(erro: unknown): erro is ErroSerializado {
-  if (typeof erro !== 'object' || erro === null) return false;
-  return (erro as ErroSerializado).name === 'ErroAplicacao';
-}
-
 /** Aceita apenas texto curto, de linha única, sem indícios técnicos. */
 function mensagemSegura(mensagem: unknown): string {
   if (typeof mensagem !== 'string') return MENSAGEM_ERRO_GENERICA;
@@ -50,14 +39,13 @@ function mensagemSegura(mensagem: unknown): string {
 }
 
 /**
- * Converte qualquer falha em texto seguro para a tela. Somente `ErroAplicacao`
- * (instância ou serialização IPC com `name === 'ErroAplicacao'`) pode exibir a
- * própria mensagem; erros crus de Prisma, rede ou sistema recebem texto genérico.
+ * Converte qualquer falha em texto seguro para a tela. Somente mensagens
+ * marcadas como `ErroAplicacao` — único dado preservado pelo IPC — podem ser
+ * exibidas; erros crus de Prisma, rede ou sistema recebem texto genérico.
  */
 export function mensagemErro(erro: unknown): string {
-  if (erro instanceof ErroAplicacao) return mensagemSegura(erro.message);
-  if (eErroAplicacaoSerializado(erro)) return mensagemSegura(erro.message);
-  return MENSAGEM_ERRO_GENERICA;
+  const mensagem = extrairMensagemAplicacao(erro);
+  return mensagem === null ? MENSAGEM_ERRO_GENERICA : mensagemSegura(mensagem);
 }
 
 export function obrigatorio<T extends Element>(seletor: string): T {

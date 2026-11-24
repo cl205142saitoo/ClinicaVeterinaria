@@ -89,6 +89,7 @@ export interface DadosCliente {
   /** Data civil YYYY-MM-DD. */
   dataNascimento: string;
   telefone: string;
+  email: string | null;
   cep: string;
   logradouro: string;
   bairro: string;
@@ -291,6 +292,8 @@ export interface Produto {
   id: number;
   nome: string;
   categoria: string;
+  /** Preenchido no cadastro do produto; usado pela carteira de vacinação. */
+  fabricante: string | null;
   estoqueMinimo: number;
   /** Flag por produto: desliga apenas o alerta de quantidade mínima. */
   alertaEstoque: boolean;
@@ -305,6 +308,8 @@ export interface Produto {
 export interface DadosProduto {
   nome: string;
   categoria: string;
+  /** Opcional: fabricante do produto (vacinas, medicamentos etc.). */
+  fabricante?: string | null;
   estoqueMinimo: number;
   alertaEstoque: boolean;
   precoBrl: number;
@@ -342,6 +347,8 @@ export interface DadosNovoUsuario {
   crmv: string | null;
   rg: string | null;
   role: 'VETERINARIO' | 'ATENDENTE';
+  /** Opcional por compatibilidade; omitido = ativo (default do banco). */
+  ativo?: boolean;
 }
 
 export interface DadosAtualizacaoUsuario {
@@ -699,6 +706,7 @@ export interface Api {
   estoqueLotesCriar(dados: DadosLote): Promise<Lote>;
   atualizarCliente(dados: DadosAtualizacaoCliente): Promise<Cliente>;
   inativarCliente(dados: DadosInativacao): Promise<Cliente>;
+  reativarCliente(id: number): Promise<Cliente>;
   atualizarPet(dados: DadosAtualizacaoPet): Promise<Pet>;
   inativarPet(dados: DadosInativacao): Promise<Pet>;
   listarUsuarios(): Promise<Usuario[]>;

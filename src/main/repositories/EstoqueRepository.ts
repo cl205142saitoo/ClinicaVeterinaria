@@ -30,6 +30,7 @@ const selecaoProdutoBase = {
   id: true,
   nome: true,
   categoria: true,
+  fabricante: true,
   estoqueMinimo: true,
   alertaEstoque: true,
   precoBrl: true,
@@ -70,6 +71,7 @@ export interface ProdutoPersistido {
   id: number;
   nome: string;
   categoria: string;
+  fabricante: string | null;
   estoqueMinimo: number;
   alertaEstoque: boolean;
   precoBrl: Prisma.Decimal;
@@ -133,6 +135,7 @@ function paraProduto(registro: RegistroProduto): ProdutoPersistido {
     id: registro.id,
     nome: registro.nome,
     categoria: registro.categoria,
+    fabricante: registro.fabricante,
     estoqueMinimo: registro.estoqueMinimo,
     alertaEstoque: registro.alertaEstoque,
     precoBrl: registro.precoBrl,
@@ -181,6 +184,7 @@ export class EstoqueRepository implements EstoqueRepositorio {
       data: {
         nome: dados.nome.trim(),
         categoria: dados.categoria.trim(),
+        fabricante: dados.fabricante?.trim() || null,
         estoqueMinimo: dados.estoqueMinimo,
         alertaEstoque: dados.alertaEstoque,
         precoBrl: new Prisma.Decimal(dados.precoBrl),
@@ -237,6 +241,7 @@ export class EstoqueRepository implements EstoqueRepositorio {
       data: {
         nome: dados.nome.trim(),
         categoria: dados.categoria.trim(),
+        fabricante: dados.fabricante?.trim() || null,
         estoqueMinimo: dados.estoqueMinimo,
         alertaEstoque: dados.alertaEstoque,
         precoBrl: new Prisma.Decimal(dados.precoBrl),

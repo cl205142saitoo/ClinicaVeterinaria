@@ -435,6 +435,9 @@ export class ProntuarioController {
   }
 
   private configurarEventos(): void {
+    obrigatorio<HTMLButtonElement>('#abaProntuario-tab').addEventListener('shown.bs.tab', () => {
+      if (this.consultasVisiveis.size === 0) void this.carregar();
+    });
     obrigatorio<HTMLSelectElement>('#prPet').addEventListener('change', () => {
       this.petAtualId = null;
       this.limparFormulario();
@@ -448,18 +451,18 @@ export class ProntuarioController {
     obrigatorio<HTMLTableSectionElement>('#tbProntuario').addEventListener('click', (evento) => {
       const alvo = evento.target;
       if (!(alvo instanceof Element)) return;
-      const botao = alvo.closest<HTMLButtonElement>('button[data-pr-acao][data-id]');
+      const botao = alvo.closest<HTMLButtonElement>('button[data-acao][data-id]');
       if (botao === null || botao.disabled) return;
 
       const id = Number(botao.dataset.id);
       const consulta = Number.isInteger(id) && id > 0 ? this.consultasVisiveis.get(id) : undefined;
       if (consulta === undefined || !this.podeGerenciar(consulta)) return;
 
-      if (botao.dataset.prAcao === 'editar') {
+      if (botao.dataset.acao === 'editar') {
         this.preencherFormulario(consulta);
         this.destacarLinha(botao);
         obrigatorio<HTMLTextAreaElement>('#prExameClinico').focus();
-      } else if (botao.dataset.prAcao === 'concluir') {
+      } else if (botao.dataset.acao === 'concluir') {
         void this.concluir(consulta, botao);
       }
     });

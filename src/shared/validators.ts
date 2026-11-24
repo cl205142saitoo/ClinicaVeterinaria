@@ -200,6 +200,7 @@ export function ehDadosCliente(valor: unknown): valor is DadosCliente {
     ehRg(valor.rg) &&
     ehDataNascimento(valor.dataNascimento) &&
     ehTelefone(valor.telefone) &&
+    (valor.email === null || valor.email === '' || ehEmail(valor.email)) &&
     ehCep(valor.cep) &&
     ehTexto(valor.logradouro, 1, 200) &&
     typeof valor.bairro === 'string' &&
@@ -328,6 +329,7 @@ export function ehDadosProduto(valor: unknown): valor is DadosProduto {
   return (
     ehTexto(valor.nome, 2, ESTOQUE_NOME_MAXIMO) &&
     ehTexto(valor.categoria, 1, ESTOQUE_CATEGORIA_MAXIMO) &&
+    ehTextoOpcional(valor.fabricante, VACINA_FABRICANTE_MAXIMO) &&
     typeof valor.alertaEstoque === 'boolean' &&
     typeof valor.estoqueMinimo === 'number' &&
     Number.isInteger(valor.estoqueMinimo) &&
@@ -394,7 +396,8 @@ export function ehDadosNovoUsuario(valor: unknown): valor is DadosNovoUsuario {
     typeof valor.senha === 'string' &&
     valor.senha.length >= 6 &&
     (valor.crmv === null || (typeof valor.crmv === 'string' && valor.crmv.length <= 30)) &&
-    (valor.rg === null || (typeof valor.rg === 'string' && valor.rg.length <= 30))
+    (valor.rg === null || (typeof valor.rg === 'string' && valor.rg.length <= 30)) &&
+    (valor.ativo === undefined || typeof valor.ativo === 'boolean')
   );
 }
 

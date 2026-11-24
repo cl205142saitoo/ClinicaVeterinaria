@@ -170,6 +170,8 @@ model Produto {
   id            Int     @id @default(autoincrement())
   nome          String  @db.VarChar(120)
   categoria     String  @db.VarChar(80)
+  /// Fabricante do produto; usado no preenchimento automático da vacinação.
+  fabricante    String? @db.VarChar(120)
   estoqueMinimo Int     @default(5)
   /// Liga/desliga somente o alerta de quantidade mínima; validade continua ativa.
   alertaEstoque Boolean @default(true)

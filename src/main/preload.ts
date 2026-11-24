@@ -107,6 +107,7 @@ const api: Api = {
     invocar<Cliente>(IPC_CHANNELS.CLIENTES_ATUALIZAR, dados),
   inativarCliente: (dados: DadosInativacao) =>
     invocar<Cliente>(IPC_CHANNELS.CLIENTES_INATIVAR, dados),
+  reativarCliente: (id: number) => invocar<Cliente>(IPC_CHANNELS.CLIENTES_REATIVAR, id),
   atualizarPet: (dados: DadosAtualizacaoPet) => invocar<Pet>(IPC_CHANNELS.PETS_ATUALIZAR, dados),
   inativarPet: (dados: DadosInativacao) => invocar<Pet>(IPC_CHANNELS.PETS_INATIVAR, dados),
   listarUsuarios: () => invocar<Usuario[]>(IPC_CHANNELS.USUARIOS_LISTAR),

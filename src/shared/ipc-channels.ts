@@ -32,6 +32,7 @@ export const IPC_CHANNELS = {
   ESTOQUE_LOTES_CRIAR: 'estoque:lotesCriar',
   CLIENTES_ATUALIZAR: 'clientes:atualizar',
   CLIENTES_INATIVAR: 'clientes:inativar',
+  CLIENTES_REATIVAR: 'clientes:reativar',
   PETS_ATUALIZAR: 'pets:atualizar',
   PETS_INATIVAR: 'pets:inativar',
   USUARIOS_LISTAR: 'usuarios:listar',

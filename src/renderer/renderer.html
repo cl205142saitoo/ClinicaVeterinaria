@@ -140,6 +140,11 @@
                     <div id="cTelFeedback" class="invalid-feedback"></div>
                   </div>
                 </div>
+                <div class="mb-3">
+                  <label for="cEmail" class="form-label">E-mail (opcional — usado para avisos de vacina)</label>
+                  <input id="cEmail" type="email" class="form-control" maxlength="254" autocomplete="email" placeholder="tutor@exemplo.com" aria-describedby="cEmailFeedback" />
+                  <div id="cEmailFeedback" class="invalid-feedback"></div>
+                </div>
                 <div class="row g-3">
                   <div class="col-12 col-md-6 mb-3">
                     <label for="cRg" class="form-label">RG</label>
@@ -258,6 +263,7 @@
                       <th scope="col">CPF</th>
                       <th scope="col">RG</th>
                       <th scope="col">Nascimento</th>
+                      <th scope="col">E-mail</th>
                       <th scope="col">Cidade/UF</th>
                       <th scope="col" class="text-center">Pets</th>
                       <th scope="col">Ação</th>
@@ -580,8 +586,10 @@
                     <form id="formVacina" novalidate>
                       <div class="mb-3">
                         <label for="vcVacina" class="form-label">Vacina</label>
-                        <input id="vcVacina" type="text" class="form-control" maxlength="120" aria-describedby="vcVacinaFeedback" required />
+                        <input id="vcVacina" type="text" class="form-control" list="vcVacinasOpcoes" maxlength="120" aria-describedby="vcVacinaFeedback vcVacinaAjuda" required />
+                        <datalist id="vcVacinasOpcoes"></datalist>
                         <div id="vcVacinaFeedback" class="invalid-feedback"></div>
+                        <div id="vcVacinaAjuda" class="form-text">Selecione um produto do estoque para preencher fabricante, lote e validade automaticamente. Também é possível digitar outra vacina.</div>
                       </div>
                       <div class="mb-3">
                         <label for="vcFabricante" class="form-label">Fabricante</label>
@@ -685,6 +693,11 @@
                             <label for="esCategoria" class="form-label">Categoria</label>
                             <input id="esCategoria" type="text" class="form-control" maxlength="80" aria-describedby="esCategoriaFeedback" required />
                             <div id="esCategoriaFeedback" class="invalid-feedback"></div>
+                          </div>
+                          <div class="mb-3">
+                            <label for="esFabricante" class="form-label">Fabricante (opcional — usado na vacinação)</label>
+                            <input id="esFabricante" type="text" class="form-control" maxlength="120" aria-describedby="esFabricanteFeedback" />
+                            <div id="esFabricanteFeedback" class="invalid-feedback"></div>
                           </div>
                           <div class="row g-3">
                             <div class="col-12 col-sm-6 mb-3">
@@ -794,6 +807,7 @@
                         <tr>
                           <th scope="col">Produto</th>
                           <th scope="col">Categoria</th>
+                          <th scope="col">Fabricante</th>
                           <th scope="col">Preço</th>
                           <th scope="col">Estoque mínimo</th>
                           <th scope="col">Alerta</th>
@@ -1525,91 +1539,85 @@
             <div class="card-body">
               <div class="row g-3">
                 <div class="col-12 col-xl-4">
-                  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
-                    <h3 id="uFormTitulo" class="h6 mb-0">Editar usuário</h3>
-                    <button id="btnNovoUsuario" type="button" class="btn btn-sm btn-outline-secondary">Limpar</button>
+                  <ul class="nav nav-tabs" role="tablist" aria-label="Tipo de novo usuário">
+                    <li class="nav-item" role="presentation">
+                      <button class="nav-link active" id="abaCriarVeterinario-tab" data-bs-toggle="tab" data-bs-target="#abaCriarVeterinario" type="button" role="tab" aria-controls="abaCriarVeterinario" aria-selected="true">Cadastrar veterinário</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                      <button class="nav-link" id="abaCriarAtendente-tab" data-bs-toggle="tab" data-bs-target="#abaCriarAtendente" type="button" role="tab" aria-controls="abaCriarAtendente" aria-selected="false">Cadastrar atendente</button>
+                    </li>
+                  </ul>
+                  <div class="tab-content border-bottom pb-3 mb-3 pt-3">
+                    <div class="tab-pane fade show active" id="abaCriarVeterinario" role="tabpanel" aria-labelledby="abaCriarVeterinario-tab" tabindex="0">
+                      <form id="formCriarUsuario" novalidate>
+                        <input id="nuRole" type="hidden" value="VETERINARIO" />
+                        <h3 class="h6 mb-2">Cadastrar veterinário</h3>
+                        <div class="mb-3">
+                          <label for="nuNome" class="form-label">Nome completo</label>
+                          <input id="nuNome" type="text" class="form-control" autocomplete="name" aria-describedby="nuNomeFeedback" required />
+                          <div id="nuNomeFeedback" class="invalid-feedback"></div>
+                        </div>
+                        <div class="mb-3">
+                          <label for="nuEmail" class="form-label">E-mail</label>
+                          <input id="nuEmail" type="email" class="form-control" autocomplete="email" aria-describedby="nuEmailFeedback" required />
+                          <div id="nuEmailFeedback" class="invalid-feedback"></div>
+                        </div>
+                        <div class="mb-3">
+                          <label for="nuSenha" class="form-label">Senha (mínimo 6 caracteres)</label>
+                          <input id="nuSenha" type="password" class="form-control" autocomplete="new-password" aria-describedby="nuSenhaFeedback" required />
+                          <div id="nuSenhaFeedback" class="invalid-feedback"></div>
+                        </div>
+                        <div class="row g-3">
+                          <div class="col-12 col-sm-6 mb-3">
+                            <label for="nuCrmv" class="form-label">CRMV (veterinário)</label>
+                            <input id="nuCrmv" type="text" class="form-control" maxlength="30" aria-describedby="nuCrmvFeedback" />
+                            <div id="nuCrmvFeedback" class="invalid-feedback"></div>
+                          </div>
+                          <div class="col-12 col-sm-6 mb-3">
+                            <label for="nuRg" class="form-label">RG</label>
+                            <input id="nuRg" type="text" class="form-control" maxlength="30" aria-describedby="nuRgFeedback" />
+                            <div id="nuRgFeedback" class="invalid-feedback"></div>
+                          </div>
+                        </div>
+                        <div class="form-check mb-3">
+                          <input id="nuAtivo" type="checkbox" class="form-check-input" checked />
+                          <label for="nuAtivo" class="form-check-label">Usuário ativo</label>
+                        </div>
+                        <button id="btnCriarUsuario" type="submit" class="btn btn-success w-100">Criar veterinário</button>
+                      </form>
+                    </div>
+                    <div class="tab-pane fade" id="abaCriarAtendente" role="tabpanel" aria-labelledby="abaCriarAtendente-tab" tabindex="0">
+                      <form id="formCriarAtendente" novalidate>
+                        <input id="naRole" type="hidden" value="ATENDENTE" />
+                        <h3 class="h6 mb-2">Cadastrar atendente</h3>
+                        <div class="mb-3">
+                          <label for="naNome" class="form-label">Nome completo</label>
+                          <input id="naNome" type="text" class="form-control" autocomplete="name" aria-describedby="naNomeFeedback" required />
+                          <div id="naNomeFeedback" class="invalid-feedback"></div>
+                        </div>
+                        <div class="mb-3">
+                          <label for="naEmail" class="form-label">E-mail</label>
+                          <input id="naEmail" type="email" class="form-control" autocomplete="email" aria-describedby="naEmailFeedback" required />
+                          <div id="naEmailFeedback" class="invalid-feedback"></div>
+                        </div>
+                        <div class="mb-3">
+                          <label for="naSenha" class="form-label">Senha (mínimo 6 caracteres)</label>
+                          <input id="naSenha" type="password" class="form-control" autocomplete="new-password" aria-describedby="naSenhaFeedback" required />
+                          <div id="naSenhaFeedback" class="invalid-feedback"></div>
+                        </div>
+                        <div class="mb-3">
+                          <label for="naRg" class="form-label">RG</label>
+                          <input id="naRg" type="text" class="form-control" maxlength="30" aria-describedby="naRgFeedback" />
+                          <div id="naRgFeedback" class="invalid-feedback"></div>
+                        </div>
+                        <div class="form-check mb-3">
+                          <input id="naAtivo" type="checkbox" class="form-check-input" checked />
+                          <label for="naAtivo" class="form-check-label">Usuário ativo</label>
+                        </div>
+                        <button id="btnCriarAtendente" type="submit" class="btn btn-success w-100">Criar atendente</button>
+                      </form>
+                    </div>
                   </div>
-
-                  <form id="formCriarUsuario" class="border-bottom pb-3 mb-3" novalidate>
-                    <h3 class="h6 mb-2">Novo usuário (veterinário/atendente)</h3>
-                    <div class="mb-3">
-                      <label for="nuNome" class="form-label">Nome completo</label>
-                      <input id="nuNome" type="text" class="form-control" autocomplete="name" aria-describedby="nuNomeFeedback" required />
-                      <div id="nuNomeFeedback" class="invalid-feedback"></div>
-                    </div>
-                    <div class="mb-3">
-                      <label for="nuEmail" class="form-label">E-mail</label>
-                      <input id="nuEmail" type="email" class="form-control" autocomplete="email" aria-describedby="nuEmailFeedback" required />
-                      <div id="nuEmailFeedback" class="invalid-feedback"></div>
-                    </div>
-                    <div class="mb-3">
-                      <label for="nuSenha" class="form-label">Senha (mínimo 6 caracteres)</label>
-                      <input id="nuSenha" type="password" class="form-control" autocomplete="new-password" aria-describedby="nuSenhaFeedback" required />
-                      <div id="nuSenhaFeedback" class="invalid-feedback"></div>
-                    </div>
-                    <div class="row g-3">
-                      <div class="col-12 col-sm-6 mb-3">
-                        <label for="nuCrmv" class="form-label">CRMV (veterinário)</label>
-                        <input id="nuCrmv" type="text" class="form-control" maxlength="30" aria-describedby="nuCrmvFeedback" />
-                        <div id="nuCrmvFeedback" class="invalid-feedback"></div>
-                      </div>
-                      <div class="col-12 col-sm-6 mb-3">
-                        <label for="nuRg" class="form-label">RG</label>
-                        <input id="nuRg" type="text" class="form-control" maxlength="30" aria-describedby="nuRgFeedback" />
-                        <div id="nuRgFeedback" class="invalid-feedback"></div>
-                      </div>
-                    </div>
-                    <div class="mb-3">
-                      <label for="nuRole" class="form-label">Perfil</label>
-                      <select id="nuRole" class="form-select" aria-describedby="nuRoleFeedback" required>
-                        <option value="VETERINARIO">Veterinário</option>
-                        <option value="ATENDENTE">Atendente</option>
-                      </select>
-                      <div id="nuRoleFeedback" class="invalid-feedback"></div>
-                    </div>
-                    <button id="btnCriarUsuario" type="submit" class="btn btn-success w-100">Criar usuário</button>
-                  </form>
-
-                  <form id="formUsuario" novalidate>
-                    <input id="uId" type="hidden" />
-                    <div class="mb-3">
-                      <label for="uNome" class="form-label">Nome completo</label>
-                      <input id="uNome" type="text" class="form-control" autocomplete="name" aria-describedby="uNomeFeedback" required />
-                      <div id="uNomeFeedback" class="invalid-feedback"></div>
-                    </div>
-                    <div class="mb-3">
-                      <label for="uEmail" class="form-label">E-mail</label>
-                      <input id="uEmail" type="email" class="form-control" autocomplete="email" aria-describedby="uEmailFeedback" required />
-                      <div id="uEmailFeedback" class="invalid-feedback"></div>
-                    </div>
-                    <div class="row g-3">
-                      <div class="col-12 col-sm-6 mb-3">
-                        <label for="uCrmv" class="form-label">CRMV</label>
-                        <input id="uCrmv" type="text" class="form-control" maxlength="30" aria-describedby="uCrmvFeedback" />
-                        <div id="uCrmvFeedback" class="invalid-feedback"></div>
-                      </div>
-                      <div class="col-12 col-sm-6 mb-3">
-                        <label for="uRg" class="form-label">RG</label>
-                        <input id="uRg" type="text" class="form-control" maxlength="30" aria-describedby="uRgFeedback" />
-                        <div id="uRgFeedback" class="invalid-feedback"></div>
-                      </div>
-                    </div>
-                    <div class="mb-3">
-                      <label for="uRole" class="form-label">Perfil de acesso</label>
-                      <select id="uRole" class="form-select" aria-describedby="uRoleFeedback" required>
-                        <option value="ADMIN">Administrador</option>
-                        <option value="VETERINARIO">Veterinário</option>
-                        <option value="ATENDENTE">Atendente</option>
-                      </select>
-                      <div id="uRoleFeedback" class="invalid-feedback"></div>
-                    </div>
-                    <div class="form-check mb-3">
-                      <input id="uAtivo" type="checkbox" class="form-check-input" aria-describedby="uAtivoFeedback" />
-                      <label for="uAtivo" class="form-check-label">Usuário ativo</label>
-                      <div id="uAtivoFeedback" class="invalid-feedback"></div>
-                    </div>
-                    <button id="btnSalvarUsuario" type="submit" class="btn btn-primary w-100">Salvar alterações</button>
-                  </form>
                 </div>
 
                 <div class="col-12 col-xl-8">
@@ -1885,6 +1893,62 @@
           <div class="modal-footer">
             <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
             <button id="btnSalvarEdicaoAnexo" type="button" class="btn btn-primary">Salvar alterações</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- EDIÇÃO DE USUÁRIO (somente ADMIN) -->
+  <div class="modal fade" id="modalEditarUsuario" tabindex="-1" aria-labelledby="modalEditarUsuarioTitulo" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <form id="formEditarUsuario" novalidate>
+          <div class="modal-header">
+            <h2 class="modal-title h5" id="modalEditarUsuarioTitulo">Editar usuário</h2>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+          </div>
+          <div class="modal-body">
+            <input id="euId" type="hidden" />
+            <div class="row g-3">
+              <div class="col-12 col-sm-6 mb-3">
+                <label for="euNome" class="form-label">Nome completo</label>
+                <input id="euNome" type="text" class="form-control" autocomplete="name" aria-describedby="euNomeFeedback" required />
+                <div id="euNomeFeedback" class="invalid-feedback"></div>
+              </div>
+              <div class="col-12 col-sm-6 mb-3">
+                <label for="euEmail" class="form-label">E-mail</label>
+                <input id="euEmail" type="email" class="form-control" autocomplete="email" aria-describedby="euEmailFeedback" required />
+                <div id="euEmailFeedback" class="invalid-feedback"></div>
+              </div>
+              <div class="col-12 col-sm-6 mb-3">
+                <label for="euCrmv" class="form-label">CRMV</label>
+                <input id="euCrmv" type="text" class="form-control" maxlength="30" aria-describedby="euCrmvFeedback" />
+                <div id="euCrmvFeedback" class="invalid-feedback"></div>
+              </div>
+              <div class="col-12 col-sm-6 mb-3">
+                <label for="euRg" class="form-label">RG</label>
+                <input id="euRg" type="text" class="form-control" maxlength="30" aria-describedby="euRgFeedback" />
+                <div id="euRgFeedback" class="invalid-feedback"></div>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label for="euRole" class="form-label">Perfil de acesso</label>
+              <select id="euRole" class="form-select" aria-describedby="euRoleFeedback" required>
+                <option value="ADMIN">Administrador</option>
+                <option value="VETERINARIO">Veterinário</option>
+                <option value="ATENDENTE">Atendente</option>
+              </select>
+              <div id="euRoleFeedback" class="invalid-feedback"></div>
+            </div>
+            <div class="form-check mb-3">
+              <input id="euAtivo" type="checkbox" class="form-check-input" checked />
+              <label for="euAtivo" class="form-check-label">Usuário ativo</label>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button id="btnSalvarEdicaoUsuario" type="submit" class="btn btn-primary">Salvar alterações</button>
           </div>
         </form>
       </div>

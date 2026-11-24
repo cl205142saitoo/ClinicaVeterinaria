@@ -59,6 +59,17 @@ export function lerConfiguracaoSmtp(): ConfiguracaoSmtp | null {
     porta <= 0 ||
     porta > 65535
   ) {
+    const faltantes: string[] = [];
+    if (host === '') faltantes.push('SMTP_HOST');
+    if (remetente === '') faltantes.push('SMTP_FROM');
+    if (portaTexto !== '' && (!Number.isInteger(porta) || porta <= 0 || porta > 65535)) {
+      faltantes.push('SMTP_PORT (inválida)');
+    }
+    console.warn(
+      `[Vacinas] SMTP não configurado. Variáveis ausentes/inválidas: ${
+        faltantes.join(', ') || 'nenhuma detectada'
+      }`
+    );
     return null;
   }
 
@@ -128,11 +139,24 @@ export class AlertaVacinaService {
     const veterinarioId = this.perfilVisivel(usuario);
     const hoje = dataCivilClinica(this.agora());
     const registros = await this.repo.listar(veterinarioId);
+    console.log('[Vacinas] listarAlertas:', {
+      hoje,
+      veterinarioId: veterinarioId ?? 'TODOS',
+      limiteDias: VACINA_ALERTA_DIAS,
+      registrosDoRepositorio: registros.length,
+    });
 
     return registros.flatMap((registro) => {
       const proximaDose = diaCivilBanco(registro.proximaDose);
       const diasParaProximaDose = diasAte(proximaDose, hoje);
-      if (diasParaProximaDose > VACINA_ALERTA_DIAS) return [];
+      const descartadoPorData = diasParaProximaDose > VACINA_ALERTA_DIAS;
+      console.log(
+        `[Vacinas] ${descartadoPorData ? 'DESCARTADO_POR_DATA' : 'INCLUIDO'} registro=${registro.id}` +
+          ` pet="${registro.petNome}" tutorEmail=${JSON.stringify(registro.tutorEmail)}` +
+          ` proximaDose=${proximaDose} hoje=${hoje}` +
+          ` dias=${diasParaProximaDose} limite=${VACINA_ALERTA_DIAS}`
+      );
+      if (descartadoPorData) return [];
 
       const alerta: AlertaVacina = {
         registroVacinaId: registro.id,
@@ -159,14 +183,25 @@ export class AlertaVacinaService {
   async enviarAvisos(usuario: Usuario): Promise<ResultadoEnvioAvisos> {
     const alertas = await this.listarAlertas(usuario);
     const hoje = dataCivilClinica(this.agora());
+    console.log('[Vacinas] enviarAvisos:', { alertas: alertas.length, hoje });
 
     const semEmail: AlertaVacina[] = [];
     const jaAvisados: AlertaVacina[] = [];
     const candidatos: AlertaVacina[] = [];
     for (const alerta of alertas) {
-      if (!ehEmail(alerta.tutorEmail)) {
+      const emailValido = ehEmail(alerta.tutorEmail);
+      const jaAvisado = emailValido ? jaAvisadoNoDia(alerta, hoje) : false;
+      const destino = !emailValido ? 'SEM_EMAIL' : jaAvisado ? 'JA_AVISADO_HOJE' : 'CANDIDATO';
+      console.log(
+        `[Vacinas] ${destino} registro=${alerta.registroVacinaId}` +
+          ` pet="${alerta.petNome}" tutorEmail=${JSON.stringify(alerta.tutorEmail)}` +
+          ` emailValido=${emailValido} ultimoAvisoEm=${JSON.stringify(alerta.ultimoAvisoEm)}` +
+          ` ultimoAvisoProximaDose=${JSON.stringify(alerta.ultimoAvisoProximaDose)}` +
+          ` proximaDose=${alerta.proximaDose} hoje=${hoje} jaAvisadoNoDia=${jaAvisado}`
+      );
+      if (!emailValido) {
         semEmail.push(alerta);
-      } else if (jaAvisadoNoDia(alerta, hoje)) {
+      } else if (jaAvisado) {
         jaAvisados.push(alerta);
       } else {
         candidatos.push(alerta);
@@ -188,6 +223,14 @@ export class AlertaVacinaService {
         ],
       };
     }
+    console.log('[Vacinas] Configuração SMTP:', {
+      host: config.host,
+      port: config.port,
+      remetente: config.remetente,
+      usuarioConfigurado: Boolean(config.usuario),
+      senhaConfigurada: Boolean(config.senha),
+      copiaValida: Boolean(config.copia),
+    });
 
     let transportador: TransportadorAvisos;
     try {
@@ -225,6 +268,10 @@ export class AlertaVacinaService {
           // Outra chamada já registrou a mesma dose; não reenviamos na próxima execução.
           mensagens.push(`Aviso de ${alerta.petNome} já havia sido registrado nesta dose.`);
         }
+        console.log(
+          `[Vacinas] ENVIADO registro=${alerta.registroVacinaId}` +
+            ` para=${alerta.tutorEmail} marcadoNoBanco=${registrado}`
+        );
         enviados += 1;
       } catch (erro) {
         falhas += 1;
@@ -240,6 +287,14 @@ export class AlertaVacinaService {
       mensagens.push(`${jaAvisados.length} aviso(s) já enviados hoje para a mesma próxima dose.`);
     }
     mensagens.push(`Avisos enviados: ${enviados}. Falhas: ${falhas}.`);
+    console.log('[Vacinas] Resultado:', {
+      destinatarios: alertas.length,
+      semEmail: semEmail.length,
+      jaAvisados: jaAvisados.length,
+      candidatos: candidatos.length,
+      enviados,
+      falhas,
+    });
 
     return {
       destinatarios: alertas.length,

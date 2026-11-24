@@ -21,6 +21,7 @@ import {
   obrigatorio,
   setCarregando,
   telefoneValido,
+  textoOuTraco,
 } from './ui';
 
 export function carregarClientes(): Promise<Cliente[]> {
@@ -34,7 +35,7 @@ export function renderizarClientes(clientes: Cliente[]): void {
   if (clientes.length === 0) {
     const linha = document.createElement('tr');
     const celula = document.createElement('td');
-    celula.colSpan = 7;
+    celula.colSpan = 8;
     celula.className = 'text-center text-muted fst-italic py-4';
     celula.textContent = 'Nenhum cliente cadastrado.';
     linha.append(celula);
@@ -49,6 +50,7 @@ export function renderizarClientes(clientes: Cliente[]): void {
       criarCelula(cliente.cpf, 'text-nowrap small'),
       criarCelula(cliente.rg ?? '—', 'small'),
       criarCelula(formatarDataCivil(cliente.dataNascimento), 'text-nowrap small'),
+      criarCelula(textoOuTraco(cliente.email), 'small text-break'),
       criarCelula(`${cliente.cidade} - ${cliente.uf}`),
       criarCelula(String(cliente.pets?.length ?? 0), 'text-center'),
     );
@@ -139,6 +141,7 @@ export function iniciarClientes(opcoes: { aoSalvar: () => void }): void {
         rg: rg.value.trim(),
         dataNascimento: nascimento.value,
         telefone: telefone.value,
+        email: document.querySelector<HTMLInputElement>('#cEmail')?.value.trim() || null,
         cep: cep.value,
         logradouro: logradouro.value.trim(),
         bairro: bairro.value.trim(),

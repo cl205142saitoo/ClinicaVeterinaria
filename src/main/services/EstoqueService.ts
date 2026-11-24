@@ -67,6 +67,7 @@ function paraProduto(produto: ProdutoPersistido): Produto {
     id: produto.id,
     nome: produto.nome,
     categoria: produto.categoria,
+    fabricante: produto.fabricante,
     estoqueMinimo: produto.estoqueMinimo,
     alertaEstoque: produto.alertaEstoque,
     precoBrl: produto.precoBrl.toNumber(),
@@ -101,6 +102,7 @@ export class EstoqueService {
     const produto = await this.repo.criarProduto({
       nome: dados.nome.trim(),
       categoria: dados.categoria.trim(),
+      fabricante: dados.fabricante?.trim() || null,
       estoqueMinimo: dados.estoqueMinimo,
       // Cliente antigo pode não enviar a flag; o padrão do domínio é alerta ligado.
       alertaEstoque: dados.alertaEstoque ?? ESTOQUE_ALERTA_PADRAO,
@@ -121,6 +123,8 @@ export class EstoqueService {
     const precoAnterior = anterior.precoBrl.toNumber();
     const produto = await this.repo.atualizarProduto({
       ...dados,
+      fabricante:
+        dados.fabricante == null ? anterior.fabricante : dados.fabricante.trim() || null,
       alertaEstoque: dados.alertaEstoque ?? ESTOQUE_ALERTA_PADRAO,
     });
 

@@ -38,6 +38,7 @@ export class UsuarioRepository {
     role: Role;
     crmv?: string | null;
     rg?: string | null;
+    ativo?: boolean;
   }) {
     return this.prisma.usuario.create({ data: dados });
   }
@@ -52,6 +53,11 @@ export class UsuarioRepository {
         rg: dados.rg,
         role: dados.role,
         ativo: dados.ativo,
+        // Reativação pelo formulário limpa os dados da inativação anterior;
+        // a desativação auditada continua exclusiva de `inativar()`.
+        ...(dados.ativo
+          ? { inativadoEm: null, inativadoPorId: null, motivoInativacao: null }
+          : {}),
       },
       select: selecaoSegura,
     });

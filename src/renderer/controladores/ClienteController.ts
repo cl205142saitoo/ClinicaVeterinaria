@@ -23,10 +23,12 @@ import {
   pedirMotivo,
   setCarregando,
   telefoneValido,
+  textoOuTraco,
 } from '../ui';
+import { ehEmail } from '../../shared/validators';
 import type { ContextoApp } from './contexto';
 
-const COLUNAS = 7;
+const COLUNAS = 8;
 
 export class ClienteController {
   private clientesVisiveis = new Map<number, Cliente>();
@@ -80,6 +82,7 @@ export class ClienteController {
         criarCelula(cliente.cpf, 'text-nowrap small'),
         criarCelula(cliente.rg ?? '—', 'small'),
         criarCelula(formatarDataCivil(cliente.dataNascimento), 'text-nowrap small'),
+        criarCelula(textoOuTraco(cliente.email), 'small text-break'),
         criarCelula(`${cliente.cidade} - ${cliente.uf}`),
         criarCelula(String(cliente.pets?.length ?? 0), 'text-center')
       );
@@ -89,16 +92,29 @@ export class ClienteController {
       grupo.className = 'd-flex flex-wrap gap-1';
       grupo.setAttribute('role', 'group');
       grupo.setAttribute('aria-label', `Ações do cliente ${cliente.nome}`);
-      grupo.append(
+      const botoes = [
         criarBotaoAcao('editar-cliente', cliente.id, 'Editar', `Editar o cliente ${cliente.nome}`),
-        criarBotaoAcao(
-          'inativar-cliente',
-          cliente.id,
-          'Inativar',
-          `Inativar o cliente ${cliente.nome}`,
-          'btn-outline-warning danger'
-        )
-      );
+      ];
+      if (this.contexto.auth.isAdmin()) {
+        botoes.push(
+          cliente.ativo === false
+            ? criarBotaoAcao(
+                'reativar-cliente',
+                cliente.id,
+                'Reativar',
+                `Reativar o cliente ${cliente.nome}`,
+                'btn-outline-success'
+              )
+            : criarBotaoAcao(
+                'inativar-cliente',
+                cliente.id,
+                'Inativar',
+                `Inativar o cliente ${cliente.nome}`,
+                'btn-outline-warning danger'
+              )
+        );
+      }
+      grupo.append(...botoes);
       acao.append(grupo);
       linha.append(acao);
       corpo.append(linha);
@@ -120,6 +136,8 @@ export class ClienteController {
       this.preencherFormulario(cliente);
     } else if (botao.dataset.acao === 'inativar-cliente') {
       await this.inativar(cliente, botao);
+    } else if (botao.dataset.acao === 'reativar-cliente') {
+      await this.reativar(cliente, botao);
     }
   }
 
@@ -130,6 +148,7 @@ export class ClienteController {
     this.definirValor('#cRg', cliente.rg ?? '');
     this.definirValor('#cNascimento', cliente.dataNascimento ?? '');
     this.definirValor('#cTel', cliente.telefone);
+    this.definirValor('#cEmail', cliente.email ?? '');
     this.definirValor('#cCep', cliente.cep);
     this.definirValor('#cRua', cliente.logradouro);
     this.definirValor('#cBairro', cliente.bairro);
@@ -202,6 +221,7 @@ export class ClienteController {
     const rg = obrigatorio<HTMLInputElement>('#cRg');
     const nascimento = obrigatorio<HTMLInputElement>('#cNascimento');
     const telefone = obrigatorio<HTMLInputElement>('#cTel');
+    const email = obrigatorio<HTMLInputElement>('#cEmail');
     const cep = obrigatorio<HTMLInputElement>('#cCep');
     const logradouro = obrigatorio<HTMLInputElement>('#cRua');
     const bairro = obrigatorio<HTMLInputElement>('#cBairro');
@@ -220,6 +240,11 @@ export class ClienteController {
         'Informe uma data de nascimento válida (não pode ser futura).'
       ),
       exigir(telefone, telefoneValido(telefone.value), 'Informe um telefone com DDD (10 ou 11 dígitos).'),
+      exigir(
+        email,
+        email.value.trim() === '' || ehEmail(email.value),
+        'Informe um e-mail válido ou deixe o campo em branco.'
+      ),
       exigir(cep, cepValido(cep.value), 'Informe um CEP com 8 dígitos.'),
       exigir(logradouro, logradouro.value.trim() !== '', 'Informe o logradouro.'),
       exigir(cidade, cidade.value.trim() !== '', 'Informe a cidade.'),
@@ -237,6 +262,7 @@ export class ClienteController {
       rg: rg.value.trim(),
       dataNascimento: nascimento.value,
       telefone: telefone.value,
+      email: email.value.trim() === '' ? null : email.value.trim().toLowerCase(),
       cep: cep.value,
       logradouro: logradouro.value.trim(),
       bairro: bairro.value.trim(),
@@ -283,6 +309,22 @@ export class ClienteController {
       await window.api.inativarCliente({ id: cliente.id, motivo });
       if (this.idEdicao === cliente.id) this.sairDaEdicao();
       mostrarToast('Cliente inativado. O motivo foi registrado na auditoria.', 'sucesso');
+      await this.contexto.recarregarTudo();
+    } catch (erro) {
+      mostrarToast(mensagemErro(erro), 'erro');
+    } finally {
+      setCarregando(botao, false);
+    }
+  }
+
+  private async reativar(cliente: Cliente, botao: HTMLButtonElement): Promise<void> {
+    if (!this.contexto.auth.isAdmin()) return;
+
+    setCarregando(botao, true, 'Reativando…');
+    try {
+      await window.api.reativarCliente(cliente.id);
+      if (this.idEdicao === cliente.id) this.sairDaEdicao();
+      mostrarToast('Cliente reativado com sucesso.', 'sucesso');
       await this.contexto.recarregarTudo();
     } catch (erro) {
       mostrarToast(mensagemErro(erro), 'erro');

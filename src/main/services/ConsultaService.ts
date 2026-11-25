@@ -108,10 +108,13 @@ export class ConsultaService {
 
   async listar(filtro: FiltroAgenda, usuario: Usuario): Promise<ConsultaAgenda[]> {
     exigirPerfilConhecido(usuario);
+    // Veterinários só veem a própria agenda; ADMIN/ATENDENTE podem filtrar.
+    const visivel = veterinarioVisivel(usuario);
+    const veterinarioId = visivel === undefined ? filtro.veterinarioId : visivel;
     const registros = await this.repo.listar({
       de: filtro.de === undefined ? undefined : new Date(filtro.de),
       ate: filtro.ate === undefined ? undefined : new Date(filtro.ate),
-      veterinarioId: veterinarioVisivel(usuario),
+      veterinarioId,
     });
     return registros.map(paraAgenda);
   }

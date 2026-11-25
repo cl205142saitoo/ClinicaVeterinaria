@@ -16,6 +16,7 @@ import {
   criarCelula,
   exigir,
   focarPrimeiroInvalido,
+  formatarDataCivil,
   formatarDataHora,
   linhaMensagem,
   limparValidacao,
@@ -113,7 +114,7 @@ export class AgendaController {
     this.selectsCarregados = false;
     this.idReagendamento = null;
     this.modalReagendamento?.hide();
-    for (const seletor of ['#aPet', '#aVeterinario', '#reVeterinario']) {
+    for (const seletor of ['#aPet', '#aVeterinario', '#aFiltroVeterinario', '#reVeterinario']) {
       const select = obrigatorio<HTMLSelectElement>(seletor);
       select.replaceChildren();
       select.disabled = false;
@@ -125,7 +126,28 @@ export class AgendaController {
     const formularioConsulta = obrigatorio<HTMLFormElement>('#formAgenda');
     limparValidacao(formularioFiltros);
     limparValidacao(formularioConsulta);
+    this.limparErroAgenda('#aErroAgenda');
+    this.limparErroAgenda('#reErroAgenda');
+    obrigatorio<HTMLElement>('#aResumoFiltro').textContent =
+      'Período: todos — todos os veterinários';
     this.renderizar([]);
+  }
+
+  /** Erro de domínio: mesma mensagem no campo, em alerta persistente e no toast. */
+  private mostrarErroAgenda(erro: unknown, campo: HTMLInputElement, seletorAlerta: string): void {
+    const mensagem = mensagemErro(erro);
+    marcarInvalido(campo, mensagem);
+    mostrarToast(mensagem, 'erro');
+    const alerta = obrigatorio<HTMLElement>(seletorAlerta);
+    alerta.textContent = mensagem;
+    alerta.hidden = false;
+    campo.focus();
+  }
+
+  private limparErroAgenda(seletorAlerta: string): void {
+    const alerta = obrigatorio<HTMLElement>(seletorAlerta);
+    alerta.textContent = '';
+    alerta.hidden = true;
   }
 
   private rotuloStatus(status: string): string {
@@ -189,6 +211,19 @@ export class AgendaController {
       select.disabled = true;
     } else {
       select.disabled = false;
+    }
+
+    const filtro = this.preencherSelect(
+      '#aFiltroVeterinario',
+      itens,
+      'Nenhum veterinário ativo cadastrado'
+    );
+    if (filtro.options.length > 0) filtro.options[0].textContent = 'Todos os veterinários';
+    if (usuario?.role === 'VETERINARIO') {
+      filtro.value = String(usuario.id);
+      filtro.disabled = true;
+    } else {
+      filtro.disabled = false;
     }
   }
 
@@ -331,6 +366,7 @@ export class AgendaController {
     evento.preventDefault();
     const formulario = obrigatorio<HTMLFormElement>('#formAgenda');
     limparValidacao(formulario);
+    this.limparErroAgenda('#aErroAgenda');
 
     const usuario = this.contexto.auth.obterUsuario();
     const ehVeterinario = usuario !== null && usuario.role === 'VETERINARIO';
@@ -380,10 +416,7 @@ export class AgendaController {
       pet.focus();
       await this.carregar();
     } catch (erro) {
-      const mensagem = mensagemErro(erro);
-      marcarInvalido(dataHora, mensagem);
-      mostrarToast(mensagem, 'erro');
-      dataHora.focus();
+      this.mostrarErroAgenda(erro, dataHora, '#aErroAgenda');
     } finally {
       setCarregando(botao, false);
     }
@@ -393,6 +426,7 @@ export class AgendaController {
     const formulario = obrigatorio<HTMLFormElement>('#formFiltrosAgenda');
     const de = obrigatorio<HTMLInputElement>('#aDe');
     const ate = obrigatorio<HTMLInputElement>('#aAte');
+    const veterinario = obrigatorio<HTMLSelectElement>('#aFiltroVeterinario');
     const botaoLimpar = obrigatorio<HTMLButtonElement>('#btnLimparFiltrosAgenda');
 
     formulario.addEventListener('submit', (evento) => {
@@ -431,6 +465,11 @@ export class AgendaController {
         }
       }
 
+      const idFiltro = Number(veterinario.value);
+      if (veterinario.value !== '' && Number.isInteger(idFiltro) && idFiltro > 0) {
+        filtro.veterinarioId = idFiltro;
+      }
+
       if (!deValido || !ateValido || !ordemValida || !datasConvertidas) {
         focarPrimeiroInvalido(formulario);
         mostrarToast('Confira as datas do período antes de filtrar.', 'erro');
@@ -438,16 +477,33 @@ export class AgendaController {
       }
 
       this.filtroAtual = Object.keys(filtro).length === 0 ? undefined : filtro;
+      this.atualizarResumoFiltro(valorDe, valorAte, veterinario);
       void this.carregar(this.filtroAtual);
     });
 
     botaoLimpar.addEventListener('click', () => {
       formulario.reset();
       limparValidacao(formulario);
+      const usuario = this.contexto.auth.obterUsuario();
+      if (veterinario.disabled && usuario !== null) veterinario.value = String(usuario.id);
       this.filtroAtual = undefined;
+      this.atualizarResumoFiltro('', '', veterinario);
       void this.carregar();
       de.focus();
     });
+  }
+
+  /** Deixa explícito que a tabela abaixo é a mesma listagem, agora filtrada. */
+  private atualizarResumoFiltro(de: string, ate: string, veterinario: HTMLSelectElement): void {
+    const periodo =
+      de === '' && ate === ''
+        ? 'todos'
+        : `${de === '' ? 'início' : formatarDataCivil(de)} a ${ate === '' ? 'fim' : formatarDataCivil(ate)}`;
+    const responsavel =
+      veterinario.value === ''
+        ? 'todos os veterinários'
+        : (veterinario.selectedOptions[0]?.textContent ?? 'veterinário selecionado');
+    obrigatorio<HTMLElement>('#aResumoFiltro').textContent = `Período: ${periodo} — ${responsavel}`;
   }
 
   private pedirMotivoCancelamento(): Promise<string | null> {
@@ -561,6 +617,7 @@ export class AgendaController {
     modalElemento.addEventListener('hidden.bs.modal', () => {
       this.idReagendamento = null;
       limparValidacao(formulario);
+      this.limparErroAgenda('#reErroAgenda');
     });
   }
 
@@ -614,6 +671,7 @@ export class AgendaController {
     evento.preventDefault();
     const formulario = obrigatorio<HTMLFormElement>('#formReagendarConsulta');
     limparValidacao(formulario);
+    this.limparErroAgenda('#reErroAgenda');
     const id = this.idReagendamento;
     if (id === null) return;
 
@@ -654,7 +712,7 @@ export class AgendaController {
       mostrarToast('Consulta reagendada com sucesso.', 'sucesso');
       await this.carregar();
     } catch (erro) {
-      mostrarToast(mensagemErro(erro), 'erro');
+      this.mostrarErroAgenda(erro, dataHora, '#reErroAgenda');
     } finally {
       setCarregando(botao, false);
     }

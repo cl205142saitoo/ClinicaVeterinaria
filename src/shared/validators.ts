@@ -249,7 +249,8 @@ export function ehFiltroAgenda(valor: unknown): valor is FiltroAgenda {
   if (!ehObjeto(valor)) return false;
   return (
     (valor.de === undefined || ehDataIso(valor.de)) &&
-    (valor.ate === undefined || ehDataIso(valor.ate))
+    (valor.ate === undefined || ehDataIso(valor.ate)) &&
+    (valor.veterinarioId === undefined || ehIdPositivo(valor.veterinarioId))
   );
 }
 

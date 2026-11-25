@@ -178,6 +178,7 @@ export interface VeterinarioResumo {
 export interface FiltroAgenda {
   de?: string;
   ate?: string;
+  veterinarioId?: number;
 }
 
 /** Registro de vacinação: dado clínico sensível, nunca exposto a ATENDENTE. */

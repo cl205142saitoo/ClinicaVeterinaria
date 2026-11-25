@@ -1,8 +1,8 @@
 /** Utilitários de interface: DOM seguro, validação, feedback e formatação. */
 
-import { ESTOQUE_PRECO_MAXIMO } from '../shared/constants';
+import { CLIENTE_RG_MAXIMO, ESTOQUE_PRECO_MAXIMO } from '../shared/constants';
 import { extrairMensagemAplicacao } from '../shared/errors';
-import { ehCpf } from '../shared/validators';
+import { ehCpf, ehRg } from '../shared/validators';
 
 /** Texto usado sempre que o erro não é uma falha de domínio explicitamente segura. */
 const MENSAGEM_ERRO_GENERICA = 'Não foi possível concluir a operação. Tente novamente.';
@@ -344,6 +344,13 @@ export function aplicarMascara(campo: HTMLInputElement, formatador: (valor: stri
 
 export function cpfValido(valor: string): boolean {
   return ehCpf(valor);
+}
+
+/** RG: até 11 dígitos; vazio só é aceito nos campos opcionais. */
+export function validarRg(campo: CampoValidavel, exigido = false): boolean {
+  const texto = campo.value.trim();
+  const valido = (texto === '' && !exigido) || ehRg(texto);
+  return exigir(campo, valido, `O RG deve ter até ${CLIENTE_RG_MAXIMO} dígitos (somente números).`);
 }
 
 export function cepValido(valor: string): boolean {

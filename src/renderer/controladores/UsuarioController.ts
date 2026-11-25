@@ -1,7 +1,5 @@
 /** Administração de usuários: criação em abas, listagem e inativação auditada. */
 
-import { CLIENTE_RG_MAXIMO } from '../../shared/constants';
-import { ehRg } from '../../shared/validators';
 import type { BootstrapModal, DadosAtualizacaoUsuario, Role, Usuario } from '../types';
 import {
   criarBadge,
@@ -17,6 +15,7 @@ import {
   obrigatorio,
   pedirMotivo,
   setCarregando,
+  validarRg,
 } from '../ui';
 import type { ContextoApp } from './contexto';
 
@@ -179,11 +178,7 @@ export class UsuarioController {
       exigir(nome, nome.value.trim().length >= 2, 'Informe o nome completo do usuário.'),
       exigir(email, email.value.trim() !== '' && email.checkValidity(), 'Informe um e-mail válido.'),
       exigir(senha, senha.value.length >= 6, 'A senha deve ter pelo menos 6 caracteres.'),
-      exigir(
-        rg,
-        rg.value.trim() === '' || ehRg(rg.value.trim()),
-        `O RG deve ter no máximo ${CLIENTE_RG_MAXIMO} dígitos (somente números).`
-      ),
+      validarRg(rg),
     ];
     if (opcoes.crmv !== null) {
       resultados.push(
@@ -326,11 +321,7 @@ export class UsuarioController {
       ),
       exigir(email, email.value.trim() !== '' && email.checkValidity(), 'Informe um e-mail válido.'),
       exigir(roleSelect, roleValida, 'Selecione um perfil válido.'),
-      exigir(
-        rg,
-        rg.value.trim() === '' || ehRg(rg.value.trim()),
-        `O RG deve ter no máximo ${CLIENTE_RG_MAXIMO} dígitos (somente números).`
-      ),
+      validarRg(rg),
     ];
     if (crmvVisivel) {
       resultados.push(exigir(crmv, crmv.value.trim().length <= 30, 'O CRMV deve ter no máximo 30 caracteres.'));

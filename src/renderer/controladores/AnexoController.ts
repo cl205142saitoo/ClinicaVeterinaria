@@ -13,6 +13,7 @@ import type {
   ArquivoAnexoSelecionado,
   BootstrapModal,
   CategoriaAnexo,
+  ConsultaProntuario,
   DadosAtualizacaoAnexo,
   DadosRegistroAnexo,
   Pet,
@@ -56,6 +57,7 @@ const ROTULOS_STATUS: Readonly<Record<string, string>> = {
 export class AnexoController {
   private petsVisiveis = new Map<number, Pet>();
   private anexosVisiveis = new Map<number, AnexoClinico>();
+  private consultasVisiveis = new Map<number, ConsultaProntuario>();
   private arquivoPendente: ArquivoAnexoSelecionado | null = null;
   private sequenciaCarregamento = 0;
   private petAtualId: number | null = null;
@@ -63,6 +65,7 @@ export class AnexoController {
   private anexoParaInativar: number | null = null;
   private anexoParaEditar: number | null = null;
   private modalInativacao: BootstrapModal | null = null;
+  private modalEdicao: BootstrapModal | null = null;
   private eventosLigados = false;
 
   constructor(private readonly contexto: ContextoApp) {}
@@ -159,9 +162,12 @@ export class AnexoController {
     this.petAtualId = null;
     this.petsVisiveis = new Map();
     this.anexosVisiveis = new Map();
+    this.consultasVisiveis = new Map();
     this.veterinariosCarregados = false;
     this.anexoParaInativar = null;
     this.anexoParaEditar = null;
+    this.modalInativacao?.hide();
+    this.modalEdicao?.hide();
 
     const petSelect = obrigatorio<HTMLSelectElement>('#axPet');
     petSelect.replaceChildren();
@@ -332,6 +338,7 @@ export class AnexoController {
 
   private resetarConsulta(): void {
     const select = obrigatorio<HTMLSelectElement>('#axConsulta');
+    this.consultasVisiveis = new Map();
     select.replaceChildren();
     const nenhuma = document.createElement('option');
     nenhuma.value = '';
@@ -346,6 +353,7 @@ export class AnexoController {
       const consultas = await window.api.prontuarioListarPet(petId);
       if (sequencia !== this.sequenciaCarregamento) return;
 
+      this.consultasVisiveis = new Map(consultas.map((consulta) => [consulta.id, consulta]));
       select.replaceChildren();
       const nenhuma = document.createElement('option');
       nenhuma.value = '';
@@ -361,11 +369,22 @@ export class AnexoController {
         select.append(opcao);
       }
       select.value = consultas.some((consulta) => String(consulta.id) === anterior) ? anterior : '';
+      this.aplicarResponsavelDaConsulta();
     } catch (erro) {
       if (sequencia !== this.sequenciaCarregamento) return;
       this.resetarConsulta();
       mostrarToast(mensagemErro(erro), 'erro');
     }
+  }
+
+  /** ADMIN: o responsável passa a ser o veterinário da consulta vinculada. */
+  private aplicarResponsavelDaConsulta(): void {
+    if (obrigatorio<HTMLElement>('#axGrupoResponsavel').hidden) return;
+    const valor = obrigatorio<HTMLSelectElement>('#axConsulta').value;
+    const id = valor === '' ? null : Number(valor);
+    const consulta = id === null ? undefined : this.consultasVisiveis.get(id);
+    obrigatorio<HTMLSelectElement>('#axResponsavel').value =
+      consulta === undefined ? '' : String(consulta.veterinario.id);
   }
 
   /** Nunca exibe token, caminho do disco nem checksum completo. */
@@ -569,7 +588,11 @@ export class AnexoController {
     this.anexoParaInativar = id;
     formulario.reset();
     limparValidacao(formulario);
-    this.modalInativacao = new window.bootstrap.Modal(elemento, { backdrop: 'static', keyboard: false });
+    // Uma única instância por elemento: recriá-la deixa o backdrop preso.
+    this.modalInativacao ??= new window.bootstrap.Modal(elemento, {
+      backdrop: 'static',
+      keyboard: false,
+    });
     elemento.addEventListener('shown.bs.modal', () => motivo.focus(), { once: true });
     this.modalInativacao.show();
   }
@@ -616,16 +639,18 @@ export class AnexoController {
     const formulario = obrigatorio<HTMLFormElement>('#formEditarAnexo');
     limparValidacao(formulario);
 
-    const modal = new window.bootstrap.Modal(obrigatorio<HTMLDivElement>('#modalEditarAnexo'), {
+    const elemento = obrigatorio<HTMLDivElement>('#modalEditarAnexo');
+    // Uma única instância por elemento: criar outra no hide deixaria o backdrop preso.
+    this.modalEdicao ??= new window.bootstrap.Modal(elemento, {
       backdrop: 'static',
       keyboard: false,
     });
-    obrigatorio<HTMLDivElement>('#modalEditarAnexo').addEventListener(
+    elemento.addEventListener(
       'shown.bs.modal',
       () => obrigatorio<HTMLTextAreaElement>('#edAnexoDescricao').focus(),
       { once: true }
     );
-    modal.show();
+    this.modalEdicao.show();
   }
 
   private async salvarEdicao(botao: HTMLButtonElement): Promise<void> {
@@ -669,7 +694,7 @@ export class AnexoController {
     setCarregando(botao, true, 'Salvando…');
     try {
       await window.api.anexosAtualizar(dados);
-      new window.bootstrap.Modal(obrigatorio<HTMLDivElement>('#modalEditarAnexo')).hide();
+      this.modalEdicao?.hide();
       this.anexoParaEditar = null;
       mostrarToast('Metadados do anexo atualizados com sucesso.', 'sucesso');
       await this.carregar();
@@ -684,6 +709,10 @@ export class AnexoController {
     obrigatorio<HTMLSelectElement>('#axPet').addEventListener('change', () => {
       this.limparFormulario();
       void this.carregar();
+    });
+
+    obrigatorio<HTMLSelectElement>('#axConsulta').addEventListener('change', () => {
+      this.aplicarResponsavelDaConsulta();
     });
 
     obrigatorio<HTMLButtonElement>('#btnEscolherArquivo').addEventListener('click', () => {

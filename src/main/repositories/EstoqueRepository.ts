@@ -42,6 +42,7 @@ const selecaoProdutoBase = {
 const selecaoProduto = {
   ...selecaoProdutoBase,
   lotes: {
+    where: { ativo: true },
     select: selecaoLote,
     orderBy: [{ validade: 'asc' }, { id: 'asc' }],
   },
@@ -172,6 +173,7 @@ export class EstoqueRepository implements EstoqueRepositorio {
 
   async listarLotes(): Promise<LotePersistido[]> {
     const registros = await this.prisma.lote.findMany({
+      where: { ativo: true },
       select: selecaoLoteComProduto,
       orderBy: [{ validade: 'asc' }, { id: 'asc' }],
       take: LIMITE_LISTAGEM_ESTOQUE,
@@ -295,7 +297,7 @@ export class EstoqueRepository implements EstoqueRepositorio {
     motivo: string
   ): Promise<LotePersistido | null> {
     const resultado = await this.prisma.lote.updateMany({
-      where: { id, ativo: true },
+      where: { id },
       data: {
         ativo: false,
         baixadoPorId: responsavelId,

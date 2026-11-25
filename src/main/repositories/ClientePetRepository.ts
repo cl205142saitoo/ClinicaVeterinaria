@@ -1,5 +1,9 @@
 import type { Prisma } from '@prisma/client';
-import { LGPD_FINALIDADE_CADASTRO, LGPD_VERSAO_TERMO } from '../../shared/constants';
+import {
+  LGPD_FINALIDADE_CADASTRO,
+  LGPD_VERSAO_TERMO,
+  STATUS_AGENDA_ATIVA,
+} from '../../shared/constants';
 import type {
   Cliente,
   DadosAtualizacaoCliente,
@@ -78,7 +82,7 @@ function paraDataCivil(valor: string): Date {
   return new Date(`${valor}T00:00:00.000Z`);
 }
 
-function paraPet(registro: RegistroPet): Pet {
+function paraPet(registro: RegistroPet, possuiConsultaAgendada = false): Pet {
   return {
     id: registro.id,
     nome: registro.nome,
@@ -91,6 +95,7 @@ function paraPet(registro: RegistroPet): Pet {
     ativo: registro.ativo,
     inativadoEm: dataOpcional(registro.inativadoEm),
     motivoInativacao: registro.motivoInativacao,
+    possuiConsultaAgendada,
   };
 }
 
@@ -119,13 +124,13 @@ function paraCliente(registro: RegistroCliente): Cliente {
 function paraClienteComPets(registro: RegistroClienteComPets): Cliente {
   return {
     ...paraCliente(registro),
-    pets: registro.pets.map(paraPet),
+    pets: registro.pets.map((pet) => paraPet(pet)),
   };
 }
 
-function paraPetComCliente(registro: RegistroPetComCliente): Pet {
+function paraPetComCliente(registro: RegistroPetComCliente, possuiConsultaAgendada = false): Pet {
   return {
-    ...paraPet(registro),
+    ...paraPet(registro, possuiConsultaAgendada),
     cliente: paraCliente(registro.cliente),
   };
 }
@@ -270,11 +275,21 @@ export class ClientePetRepository {
   }
 
   async listarPets(): Promise<Pet[]> {
-    const registros = await this.prisma.pet.findMany({
-      select: selecaoPetComCliente,
-      orderBy: { id: 'desc' },
-    });
-    return registros.map(paraPetComCliente);
+    const [registros, consultasAtivas] = await Promise.all([
+      this.prisma.pet.findMany({
+        select: selecaoPetComCliente,
+        orderBy: { id: 'desc' },
+      }),
+      this.prisma.consulta.findMany({
+        where: { status: { in: [...STATUS_AGENDA_ATIVA] } },
+        select: { petId: true },
+        distinct: ['petId'],
+      }),
+    ]);
+    const petsComConsulta = new Set(consultasAtivas.map((consulta) => consulta.petId));
+    return registros.map((registro) =>
+      paraPetComCliente(registro, petsComConsulta.has(registro.id))
+    );
   }
 
   async buscarPetPorId(id: number): Promise<Pet | null> {
@@ -341,12 +356,34 @@ export class ClientePetRepository {
     return this.buscarPetPorId(id);
   }
 
+  async reativarPet(id: number): Promise<Pet | null> {
+    const resultado = await this.prisma.pet.updateMany({
+      where: { id, ativo: false },
+      data: {
+        ativo: true,
+        inativadoPorId: null,
+        inativadoEm: null,
+        motivoInativacao: null,
+      },
+    });
+    if (resultado.count !== 1) return null;
+    return this.buscarPetPorId(id);
+  }
+
   contarConsultasDoPet(petId: number): Promise<number> {
     return this.prisma.consulta.count({ where: { petId } });
   }
 
   contarAnexosDoPet(petId: number): Promise<number> {
     return this.prisma.anexoClinico.count({ where: { petId } });
+  }
+
+  /** Consultas ainda pendentes impedem alterar os dados do pet. */
+  async petComConsultaAgendada(petId: number): Promise<boolean> {
+    const quantidade = await this.prisma.consulta.count({
+      where: { petId, status: { in: [...STATUS_AGENDA_ATIVA] } },
+    });
+    return quantidade > 0;
   }
 
   /** Impede transferir o histórico clínico de um pet para outro tutor. */

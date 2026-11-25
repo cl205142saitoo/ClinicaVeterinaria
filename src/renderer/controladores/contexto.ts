@@ -9,6 +9,8 @@ export interface ContextoApp {
   recarregarTudo(): Promise<void>;
   /** Recarrega apenas a agenda (usado por prontuário e ao reagendar). */
   recarregarAgenda(): Promise<void>;
+  /** Atualiza o dropdown de serviços após criar/inativar/reativar tabelas de preço. */
+  recarregarTabelasPreco(): Promise<void>;
   /** Recarrega clientes, pets e os seletores dependentes. */
   recarregarClientesEPets(): Promise<void>;
   /** Limpa tabelas e formulários quando a sessão termina. */

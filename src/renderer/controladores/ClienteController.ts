@@ -1,5 +1,6 @@
 /** Domínio de clientes: formulário, ViaCEP, listagem, edição e inativação. */
 
+import { CLIENTE_RG_MAXIMO } from '../../shared/constants';
 import { dataCivilClinica, formatarDataCivil } from '../../shared/datas';
 import type { Cliente, DadosCliente } from '../types';
 import {
@@ -29,6 +30,7 @@ import { ehEmail } from '../../shared/validators';
 import type { ContextoApp } from './contexto';
 
 const COLUNAS = 8;
+const RE_RG = new RegExp(`^\\d{1,${CLIENTE_RG_MAXIMO}}$`);
 
 export class ClienteController {
   private clientesVisiveis = new Map<number, Cliente>();
@@ -233,7 +235,11 @@ export class ClienteController {
     const resultados = [
       exigir(nome, nome.value.trim().length >= 2, 'Informe o nome completo do cliente.'),
       exigir(cpf, cpfValido(cpf.value), 'CPF inválido. Confira os números digitados.'),
-      exigir(rg, rg.value.trim().length > 0, 'Informe o RG do cliente.'),
+      exigir(
+        rg,
+        RE_RG.test(rg.value.trim()),
+        `Informe o RG do cliente com até ${CLIENTE_RG_MAXIMO} dígitos (somente números).`
+      ),
       exigir(
         nascimento,
         nascimento.value !== '' && nascimento.value <= dataCivilClinica(new Date()),

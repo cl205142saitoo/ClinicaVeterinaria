@@ -22,6 +22,9 @@ import type { ContextoApp } from './contexto';
 
 const COLUNAS = 4;
 
+const MENSAGEM_EDICAO_COM_CONSULTA =
+  'Não é possível editar este pet enquanto houver consulta agendada ou confirmada. Cancele ou conclua a consulta antes de alterar os dados.';
+
 export class PetController {
   private petsVisiveis = new Map<number, Pet>();
   private idEdicao: number | null = null;
@@ -92,16 +95,29 @@ export class PetController {
       grupo.className = 'd-flex flex-wrap gap-1';
       grupo.setAttribute('role', 'group');
       grupo.setAttribute('aria-label', `Ações do pet ${pet.nome}`);
-      grupo.append(
+      const botoes = [
         criarBotaoAcao('editar-pet', pet.id, 'Editar', `Editar o pet ${pet.nome}`),
-        criarBotaoAcao(
-          'inativar-pet',
-          pet.id,
-          'Inativar',
-          `Inativar o pet ${pet.nome}`,
-          'btn-outline-warning danger'
-        )
-      );
+      ];
+      if (this.contexto.auth.isAdmin()) {
+        botoes.push(
+          pet.ativo === false
+            ? criarBotaoAcao(
+                'reativar-pet',
+                pet.id,
+                'Reativar',
+                `Reativar o pet ${pet.nome}`,
+                'btn-outline-success'
+              )
+            : criarBotaoAcao(
+                'inativar-pet',
+                pet.id,
+                'Inativar',
+                `Inativar o pet ${pet.nome}`,
+                'btn-outline-warning danger'
+              )
+        );
+      }
+      grupo.append(...botoes);
       acao.append(grupo);
       linha.append(acao);
       corpo.append(linha);
@@ -119,9 +135,15 @@ export class PetController {
     if (pet === undefined) return;
 
     if (botao.dataset.acao === 'editar-pet') {
+      if (pet.possuiConsultaAgendada) {
+        window.alert(MENSAGEM_EDICAO_COM_CONSULTA);
+        return;
+      }
       this.preencherFormulario(pet);
     } else if (botao.dataset.acao === 'inativar-pet') {
       await this.inativar(pet, botao);
+    } else if (botao.dataset.acao === 'reativar-pet') {
+      await this.reativar(pet, botao);
     }
   }
 
@@ -237,6 +259,22 @@ export class PetController {
       await window.api.inativarPet({ id: pet.id, motivo });
       if (this.idEdicao === pet.id) this.sairDaEdicao();
       mostrarToast('Pet inativado. O motivo foi registrado na auditoria.', 'sucesso');
+      await this.contexto.recarregarTudo();
+    } catch (erro) {
+      mostrarToast(mensagemErro(erro), 'erro');
+    } finally {
+      setCarregando(botao, false);
+    }
+  }
+
+  private async reativar(pet: Pet, botao: HTMLButtonElement): Promise<void> {
+    if (!this.contexto.auth.isAdmin()) return;
+
+    setCarregando(botao, true, 'Reativando…');
+    try {
+      await window.api.reativarPet(pet.id);
+      if (this.idEdicao === pet.id) this.sairDaEdicao();
+      mostrarToast('Pet reativado com sucesso.', 'sucesso');
       await this.contexto.recarregarTudo();
     } catch (erro) {
       mostrarToast(mensagemErro(erro), 'erro');

@@ -27,6 +27,7 @@ type CanaisFase2 =
   | typeof IPC_CHANNELS.PRECOS_TABELA_CRIAR
   | typeof IPC_CHANNELS.PRECOS_TABELA_ATUALIZAR
   | typeof IPC_CHANNELS.PRECOS_TABELA_INATIVAR
+  | typeof IPC_CHANNELS.PRECOS_TABELA_REATIVAR
   | typeof IPC_CHANNELS.PRECOS_HISTORICO_LISTAR
   | typeof IPC_CHANNELS.ORCAMENTOS_LISTAR
   | typeof IPC_CHANNELS.ORCAMENTOS_CRIAR
@@ -83,6 +84,12 @@ export function criarHandlersFase2(
         'Informe a tabela de preço e o motivo da inativação (de 3 a 500 caracteres).'
       );
       return tabelaPrecoService.inativar(dados, usuario);
+    },
+
+    [IPC_CHANNELS.PRECOS_TABELA_REATIVAR]: async (args) => {
+      const usuario = await policy.exigirAutenticadoVerificado();
+      const id = exigir(args[0], ehIdPositivo, 'Informe uma tabela de preço válida.');
+      return tabelaPrecoService.reativar(id, usuario);
     },
 
     [IPC_CHANNELS.PRECOS_HISTORICO_LISTAR]: async (args) => {

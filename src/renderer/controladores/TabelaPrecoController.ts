@@ -159,21 +159,33 @@ export class TabelaPrecoController {
       );
 
       const celulaAcoes = document.createElement('td');
-      if (podeEditar && tabela.ativo !== false) {
+      if (podeEditar) {
+        const botoes: HTMLButtonElement[] =
+          tabela.ativo !== false
+            ? [
+                criarBotaoAcao('editar-tabela', tabela.id, 'Editar', `Editar a tabela ${tabela.codigo}`),
+                criarBotaoAcao(
+                  'inativar-tabela',
+                  tabela.id,
+                  'Inativar',
+                  `Inativar a tabela ${tabela.codigo}`,
+                  'btn-outline-warning'
+                ),
+              ]
+            : [
+                criarBotaoAcao(
+                  'reativar-tabela',
+                  tabela.id,
+                  'Reativar',
+                  `Reativar a tabela ${tabela.codigo}`,
+                  'btn-outline-success'
+                ),
+              ];
         const grupo = document.createElement('div');
         grupo.className = 'd-flex flex-wrap gap-1';
         grupo.setAttribute('role', 'group');
         grupo.setAttribute('aria-label', `Ações da tabela ${tabela.codigo}`);
-        grupo.append(
-          criarBotaoAcao('editar-tabela', tabela.id, 'Editar', `Editar a tabela ${tabela.codigo}`),
-          criarBotaoAcao(
-            'inativar-tabela',
-            tabela.id,
-            'Inativar',
-            `Inativar a tabela ${tabela.codigo}`,
-            'btn-outline-warning'
-          )
-        );
+        grupo.append(...botoes);
         celulaAcoes.append(grupo);
       } else {
         celulaAcoes.textContent = '—';
@@ -310,6 +322,7 @@ export class TabelaPrecoController {
       }
       salvoComSucesso = true;
       await this.carregar();
+      await this.contexto.recarregarTabelasPreco();
     } catch (erro) {
       mostrarToast(mensagemErro(erro), 'erro');
     } finally {
@@ -336,6 +349,23 @@ export class TabelaPrecoController {
       if (this.idEdicao === tabela.id) this.sairDaEdicao(false);
       mostrarToast('Tabela inativada. O motivo foi registrado na auditoria.', 'sucesso');
       await this.carregar();
+      await this.contexto.recarregarTabelasPreco();
+    } catch (erro) {
+      mostrarToast(mensagemErro(erro), 'erro');
+    } finally {
+      setCarregando(botao, false);
+    }
+  }
+
+  private async reativar(tabela: TabelaPreco, botao: HTMLButtonElement): Promise<void> {
+    if (!this.contexto.auth.isAdmin()) return;
+
+    setCarregando(botao, true, 'Reativando…');
+    try {
+      await window.api.tabelaPrecoReativar(tabela.id);
+      mostrarToast('Tabela de preço reativada com sucesso.', 'sucesso');
+      await this.carregar();
+      await this.contexto.recarregarTabelasPreco();
     } catch (erro) {
       mostrarToast(mensagemErro(erro), 'erro');
     } finally {
@@ -362,6 +392,7 @@ export class TabelaPrecoController {
       if (tabela === undefined) return;
       if (botao.dataset.acao === 'editar-tabela') this.preencherFormulario(tabela);
       else if (botao.dataset.acao === 'inativar-tabela') void this.inativar(tabela, botao);
+      else if (botao.dataset.acao === 'reativar-tabela') void this.reativar(tabela, botao);
     });
   }
 }

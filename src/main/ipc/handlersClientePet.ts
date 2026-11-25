@@ -28,7 +28,8 @@ type CanaisClientePet =
   | typeof IPC_CHANNELS.PETS_CRIAR
   | typeof IPC_CHANNELS.PETS_DELETAR
   | typeof IPC_CHANNELS.PETS_ATUALIZAR
-  | typeof IPC_CHANNELS.PETS_INATIVAR;
+  | typeof IPC_CHANNELS.PETS_INATIVAR
+  | typeof IPC_CHANNELS.PETS_REATIVAR;
 
 export function criarHandlersClientePet(
   clientePetService: ClientePetService,
@@ -136,6 +137,13 @@ export function criarHandlersClientePet(
         'Informe o pet e o motivo da inativação (de 3 a 500 caracteres).'
       );
       return clientePetService.inativarPet(dados, usuario);
+    },
+
+    [IPC_CHANNELS.PETS_REATIVAR]: async (args) => {
+      const usuario = await policy.exigirAutenticadoVerificado();
+      policy.exigirAdmin(usuario);
+      const id = exigir(args[0], ehIdPositivo, 'Informe um pet válido para reativar.');
+      return clientePetService.reativarPet(id, usuario);
     },
   };
 }

@@ -3,6 +3,7 @@ import {
   ehDadosAtualizacaoUsuario,
   ehDadosInativacao,
   ehDadosNovoUsuario,
+  ehIdPositivo,
   exigir,
 } from '../../shared/validators';
 import { PolicyService } from '../services/PolicyService';
@@ -14,7 +15,8 @@ type CanaisUsuarios =
   | typeof IPC_CHANNELS.USUARIOS_LISTAR
   | typeof IPC_CHANNELS.USUARIOS_CRIAR
   | typeof IPC_CHANNELS.USUARIOS_ATUALIZAR
-  | typeof IPC_CHANNELS.USUARIOS_INATIVAR;
+  | typeof IPC_CHANNELS.USUARIOS_INATIVAR
+  | typeof IPC_CHANNELS.USUARIOS_REATIVAR;
 
 export function criarHandlersUsuarios(
   usuarioService: UsuarioService,
@@ -59,6 +61,13 @@ export function criarHandlersUsuarios(
         'Informe o usuário e o motivo da inativação (de 3 a 500 caracteres).'
       );
       return usuarioService.inativar(dados, usuario);
+    },
+
+    [IPC_CHANNELS.USUARIOS_REATIVAR]: async (args) => {
+      const usuario = await policy.exigirAutenticadoVerificado();
+      policy.exigirAdmin(usuario);
+      const id = exigir(args[0], ehIdPositivo, 'Informe um usuário válido para reativar.');
+      return usuarioService.reativar(id, usuario);
     },
   };
 }

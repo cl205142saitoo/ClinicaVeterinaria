@@ -41,6 +41,8 @@ export interface Pet {
   motivoInativacao?: string | null;
   /** Presente quando o pet vem de `listarPets()`. */
   cliente?: Cliente;
+  /** Usado para bloquear a edição enquanto houver consulta agendada/confirmada. */
+  possuiConsultaAgendada?: boolean;
 }
 
 export interface Cliente {
@@ -522,6 +524,11 @@ export interface ResultadoExportacaoCsv {
   linhas: number;
 }
 
+/** Resultado da exportação do prontuário clínico em arquivo de texto. */
+export interface ResultadoExportacaoTxt {
+  caminho: string;
+}
+
 /* ---------------- Fase 2: preços, orçamentos e financeiro ---------------- */
 
 export interface TabelaPreco {
@@ -692,6 +699,7 @@ export interface Api {
   veterinariosListar(): Promise<VeterinarioResumo[]>;
   prontuarioSalvar(dados: DadosProntuario): Promise<ConsultaProntuario>;
   prontuarioListarPet(petId: number): Promise<ConsultaProntuario[]>;
+  prontuarioExportarTxt(consultaId: number): Promise<ResultadoExportacaoTxt | null>;
   vacinasListarPet(petId: number): Promise<RegistroVacina[]>;
   vacinasRegistrar(dados: DadosRegistroVacina): Promise<RegistroVacina>;
   anexosListarPet(petId: number): Promise<AnexoClinico[]>;
@@ -709,10 +717,12 @@ export interface Api {
   reativarCliente(id: number): Promise<Cliente>;
   atualizarPet(dados: DadosAtualizacaoPet): Promise<Pet>;
   inativarPet(dados: DadosInativacao): Promise<Pet>;
+  reativarPet(id: number): Promise<Pet>;
   listarUsuarios(): Promise<Usuario[]>;
   criarUsuario(dados: DadosNovoUsuario): Promise<Usuario>;
   atualizarUsuario(dados: DadosAtualizacaoUsuario): Promise<Usuario>;
   inativarUsuario(dados: DadosInativacao): Promise<Usuario>;
+  reativarUsuario(id: number): Promise<Usuario>;
   consultasAtualizar(dados: DadosAtualizacaoConsulta): Promise<ConsultaAgenda>;
   consultasExcluir(dados: DadosInativacao): Promise<ConsultaAgenda>;
   estoqueProdutosAtualizar(dados: DadosAtualizacaoProduto): Promise<Produto>;
@@ -734,6 +744,7 @@ export interface Api {
   tabelaPrecoCriar(dados: DadosTabelaPreco): Promise<TabelaPreco>;
   tabelaPrecoAtualizar(dados: DadosAtualizacaoTabelaPreco): Promise<TabelaPreco>;
   tabelaPrecoInativar(dados: DadosInativacao): Promise<TabelaPreco>;
+  tabelaPrecoReativar(id: number): Promise<TabelaPreco>;
   historicoPrecoListar(origem?: OrigemHistoricoPreco, origemId?: number): Promise<HistoricoPreco[]>;
   orcamentosListar(): Promise<Orcamento[]>;
   orcamentoCriar(dados: DadosOrcamento): Promise<Orcamento>;

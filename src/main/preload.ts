@@ -52,6 +52,7 @@ import type {
   RelatorioDados,
   ResultadoEnvioAvisos,
   ResultadoExportacaoCsv,
+  ResultadoExportacaoTxt,
   ResumoDashboard,
   ResumoFinanceiro,
   TabelaPreco,
@@ -84,6 +85,8 @@ const api: Api = {
     invocar<ConsultaProntuario>(IPC_CHANNELS.PRONTUARIO_SALVAR, dados),
   prontuarioListarPet: (petId: number) =>
     invocar<ConsultaProntuario[]>(IPC_CHANNELS.PRONTUARIO_LISTAR_PET, petId),
+  prontuarioExportarTxt: (consultaId: number) =>
+    invocar<ResultadoExportacaoTxt | null>(IPC_CHANNELS.PRONTUARIO_EXPORTAR_TXT, consultaId),
   vacinasListarPet: (petId: number) =>
     invocar<RegistroVacina[]>(IPC_CHANNELS.VACINAS_LISTAR_PET, petId),
   vacinasRegistrar: (dados: DadosRegistroVacina) =>
@@ -110,12 +113,14 @@ const api: Api = {
   reativarCliente: (id: number) => invocar<Cliente>(IPC_CHANNELS.CLIENTES_REATIVAR, id),
   atualizarPet: (dados: DadosAtualizacaoPet) => invocar<Pet>(IPC_CHANNELS.PETS_ATUALIZAR, dados),
   inativarPet: (dados: DadosInativacao) => invocar<Pet>(IPC_CHANNELS.PETS_INATIVAR, dados),
+  reativarPet: (id: number) => invocar<Pet>(IPC_CHANNELS.PETS_REATIVAR, id),
   listarUsuarios: () => invocar<Usuario[]>(IPC_CHANNELS.USUARIOS_LISTAR),
   criarUsuario: (dados: DadosNovoUsuario) => invocar<Usuario>(IPC_CHANNELS.USUARIOS_CRIAR, dados),
   atualizarUsuario: (dados: DadosAtualizacaoUsuario) =>
     invocar<Usuario>(IPC_CHANNELS.USUARIOS_ATUALIZAR, dados),
   inativarUsuario: (dados: DadosInativacao) =>
     invocar<Usuario>(IPC_CHANNELS.USUARIOS_INATIVAR, dados),
+  reativarUsuario: (id: number) => invocar<Usuario>(IPC_CHANNELS.USUARIOS_REATIVAR, id),
   consultasAtualizar: (dados: DadosAtualizacaoConsulta) =>
     invocar<ConsultaAgenda>(IPC_CHANNELS.CONSULTAS_ATUALIZAR, dados),
   consultasExcluir: (dados: DadosInativacao) =>
@@ -153,6 +158,8 @@ const api: Api = {
     invocar<TabelaPreco>(IPC_CHANNELS.PRECOS_TABELA_ATUALIZAR, dados),
   tabelaPrecoInativar: (dados: DadosInativacao) =>
     invocar<TabelaPreco>(IPC_CHANNELS.PRECOS_TABELA_INATIVAR, dados),
+  tabelaPrecoReativar: (id: number) =>
+    invocar<TabelaPreco>(IPC_CHANNELS.PRECOS_TABELA_REATIVAR, id),
   historicoPrecoListar: (origem?: OrigemHistoricoPreco, origemId?: number) =>
     invocar<HistoricoPreco[]>(IPC_CHANNELS.PRECOS_HISTORICO_LISTAR, origem, origemId),
   orcamentosListar: () => invocar<Orcamento[]>(IPC_CHANNELS.ORCAMENTOS_LISTAR),

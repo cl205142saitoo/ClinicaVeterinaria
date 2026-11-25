@@ -123,6 +123,11 @@ class App implements ContextoApp {
     await this.agenda.carregar();
   }
 
+  async recarregarTabelasPreco(): Promise<void> {
+    if (this.auth.obterUsuario() === null) return;
+    await this.orcamentos.recarregarTabelas();
+  }
+
   async recarregarClientesEPets(): Promise<void> {
     if (this.auth.obterUsuario() === null) return;
     const [clientes, pets] = await Promise.all([this.clientes.carregar(), this.pets.carregar()]);

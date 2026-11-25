@@ -1,13 +1,13 @@
-/** Prontuário clínico: histórico por pet, formulário e conclusão explícita da consulta. */
+/** Prontuário clínico: histórico por pet, formulário e exportação em TXT. */
 
 import {
   PRONTUARIO_TEMPERATURA_MAXIMA_C,
   PRONTUARIO_TEMPERATURA_MINIMA_C,
   PRONTUARIO_TEXTO_MAXIMO,
   PRONTUARIO_TEXTO_MINIMO,
-  STATUS_CONCLUIVEIS,
+  STATUS_PRONTUARIO_PERMITIDO,
 } from '../../shared/constants';
-import type { ConsultaProntuario, DadosProntuario, Pet, Role } from '../types';
+import type { BootstrapModal, ConsultaProntuario, DadosProntuario, Pet, Role } from '../types';
 import {
   criarBadge,
   criarBotaoAcao,
@@ -26,6 +26,9 @@ import {
 import type { ContextoApp } from './contexto';
 
 const COLUNAS_HISTORICO = 8;
+
+const MENSAGEM_CONSULTA_NAO_CONCLUIDA =
+  'A consulta precisa ser marcada como CONCLUÍDA na aba de Consultas antes de registrar ou editar o prontuário.';
 
 const ROTULOS_STATUS: Readonly<Record<string, string>> = {
   AGENDADA: 'Agendada',
@@ -47,6 +50,8 @@ export class ProntuarioController {
   private petAtualId: number | null = null;
   private sequenciaCarregamento = 0;
   private eventosLigados = false;
+  private modalEscolhaProntuario: BootstrapModal | null = null;
+  private modoAtual: 'novo' | 'editar' | null = null;
 
   constructor(private readonly contexto: ContextoApp) {}
 
@@ -79,6 +84,7 @@ export class ProntuarioController {
 
     select.value = pets.some((pet) => String(pet.id) === anterior) ? anterior : '';
     this.petsCarregados = true;
+    this.atualizarBotaoExportar();
   }
 
   /** Carrega o histórico do pet informado (ou do selecionado). */
@@ -91,6 +97,7 @@ export class ProntuarioController {
     if (id === null || !Number.isInteger(id) || id <= 0) {
       this.petAtualId = null;
       this.renderizarHistorico([]);
+      this.atualizarBotaoExportar();
       return;
     }
     this.petAtualId = id;
@@ -117,6 +124,7 @@ export class ProntuarioController {
       }
     } finally {
       if (sequencia === this.sequenciaCarregamento) corpo.removeAttribute('aria-busy');
+      this.atualizarBotaoExportar();
     }
   }
 
@@ -132,6 +140,7 @@ export class ProntuarioController {
     this.sequenciaCarregamento += 1;
     this.petsCarregados = false;
     this.petAtualId = null;
+    this.modalEscolhaProntuario?.hide();
 
     const select = obrigatorio<HTMLSelectElement>('#prPet');
     select.replaceChildren();
@@ -145,6 +154,7 @@ export class ProntuarioController {
     this.renderizarHistorico([]);
     obrigatorio<HTMLElement>('#prAvisoAtendente').hidden = true;
     obrigatorio<HTMLElement>('#prAreaClinica').hidden = true;
+    this.atualizarBotaoExportar();
   }
 
   private podeGerenciar(consulta: ConsultaProntuario): boolean {
@@ -165,10 +175,21 @@ export class ProntuarioController {
       this.consultasVisiveis.clear();
       this.petAtualId = null;
     }
+    this.atualizarBotaoExportar();
   }
 
   private linhaMensagem(texto: string, classe?: string): HTMLTableRowElement {
     return linhaMensagem(texto, COLUNAS_HISTORICO, classe);
+  }
+
+  /** O prontuário é único por consulta; basta um dos textos clínicos para considerá-lo registrado. */
+  private possuiProntuario(consulta: ConsultaProntuario): boolean {
+    return (
+      consulta.exameClinico !== null ||
+      consulta.diagnostico !== null ||
+      consulta.conduta !== null ||
+      consulta.prescricao !== null
+    );
   }
 
   private criarBotoesAcao(consulta: ConsultaProntuario): HTMLButtonElement[] {
@@ -178,37 +199,28 @@ export class ProntuarioController {
     const papel: Role = usuario.role;
     if (papel === 'ATENDENTE' || !this.podeGerenciar(consulta)) return [];
 
-    const botoes: HTMLButtonElement[] = [];
-    if (consulta.status !== 'CANCELADA') {
-      botoes.push(
-        criarBotaoAcao('editar', consulta.id, 'Registrar/Editar prontuário', `Editar prontuário de ${consulta.pet.nome}`)
-      );
-    }
-    if (STATUS_CONCLUIVEIS.some((status) => status === consulta.status)) {
-      botoes.push(
-        criarBotaoAcao(
-          'concluir',
-          consulta.id,
-          'Concluir consulta',
-          `Concluir consulta de ${consulta.pet.nome}`,
-          'btn-outline-success'
-        )
-      );
-    }
-    return botoes;
+    return [
+      criarBotaoAcao(
+        'editar',
+        consulta.id,
+        'Registrar/Editar prontuário',
+        `Abrir prontuário de ${consulta.pet.nome}`
+      ),
+    ];
   }
 
   private renderizarHistorico(consultas: ConsultaProntuario[]): void {
-    this.consultasVisiveis = new Map(consultas.map((consulta) => [consulta.id, consulta]));
+    const visiveis = consultas.filter((consulta) => consulta.status !== 'CANCELADA');
+    this.consultasVisiveis = new Map(visiveis.map((consulta) => [consulta.id, consulta]));
 
     const corpo = obrigatorio<HTMLTableSectionElement>('#tbProntuario');
     const resumo = obrigatorio<HTMLElement>('#prResumo');
     corpo.replaceChildren();
-    resumo.hidden = consultas.length === 0;
+    resumo.hidden = visiveis.length === 0;
     resumo.textContent =
-      consultas.length === 0 ? '' : `${consultas.length} ${consultas.length === 1 ? 'consulta' : 'consultas'}`;
+      visiveis.length === 0 ? '' : `${visiveis.length} ${visiveis.length === 1 ? 'consulta' : 'consultas'}`;
 
-    if (consultas.length === 0) {
+    if (visiveis.length === 0) {
       const mensagem =
         this.petAtualId === null
           ? 'Selecione um pet para ver o histórico.'
@@ -217,7 +229,7 @@ export class ProntuarioController {
       return;
     }
 
-    for (const consulta of consultas) {
+    for (const consulta of visiveis) {
       const linha = document.createElement('tr');
       const crmv = consulta.veterinario.crmv?.trim();
       linha.append(
@@ -268,10 +280,22 @@ export class ProntuarioController {
     limparValidacao(formulario);
     obrigatorio<HTMLElement>('#prFormTitulo').textContent = 'Registrar prontuário';
     setCarregando(obrigatorio<HTMLButtonElement>('#btnSalvarProntuario'), false);
+    this.modoAtual = null;
+    this.atualizarBotaoExportar();
   }
 
-  private preencherFormulario(consulta: ConsultaProntuario): void {
+  private preencherFormulario(consulta: ConsultaProntuario, modo: 'novo' | 'editar' = 'editar'): void {
+    this.limparFormulario();
     obrigatorio<HTMLInputElement>('#prConsultaId').value = String(consulta.id);
+    this.modoAtual = modo;
+    this.atualizarBotaoExportar();
+
+    if (modo === 'novo') {
+      obrigatorio<HTMLElement>('#prFormTitulo').textContent =
+        `Registrando novo prontuário — ${consulta.pet.nome}, ${formatarDataHora(consulta.dataHora)}`;
+      return;
+    }
+
     obrigatorio<HTMLTextAreaElement>('#prExameClinico').value = consulta.exameClinico ?? '';
     obrigatorio<HTMLTextAreaElement>('#prDiagnostico').value = consulta.diagnostico ?? '';
     obrigatorio<HTMLTextAreaElement>('#prConduta').value = consulta.conduta ?? '';
@@ -282,7 +306,67 @@ export class ProntuarioController {
       consulta.temperaturaC === null ? '' : String(consulta.temperaturaC);
     obrigatorio<HTMLElement>('#prFormTitulo').textContent =
       `Editando prontuário — ${consulta.pet.nome}, ${formatarDataHora(consulta.dataHora)}`;
-    limparValidacao(obrigatorio<HTMLFormElement>('#formProntuario'));
+  }
+
+  /** Escolha entre substituir o prontuário existente ou apenas editá-lo. */
+  private escolherAcaoProntuario(consulta: ConsultaProntuario): Promise<'novo' | 'editar' | null> {
+    const modalElemento = obrigatorio<HTMLDivElement>('#modalEscolhaProntuario');
+    const descricao = obrigatorio<HTMLElement>('#modalEscolhaProntuarioDescricao');
+    const registrar = obrigatorio<HTMLButtonElement>('#btnRegistrarNovoProntuario');
+    const editar = obrigatorio<HTMLButtonElement>('#btnEditarProntuarioExistente');
+    const fechar = obrigatorio<HTMLButtonElement>('#btnFecharEscolhaProntuario');
+
+    descricao.textContent =
+      `O prontuário de ${consulta.pet.nome} em ${formatarDataHora(consulta.dataHora)} já está registrado. ` +
+      'Deseja registrar um novo prontuário (substituindo o atual) ou editar o existente?';
+
+    this.modalEscolhaProntuario ??= new window.bootstrap.Modal(modalElemento, {
+      backdrop: 'static',
+      keyboard: false,
+    });
+    const modal = this.modalEscolhaProntuario;
+
+    return new Promise<'novo' | 'editar' | null>((resolve) => {
+      let resolvido = false;
+      const finalizar = (resposta: 'novo' | 'editar' | null): void => {
+        if (resolvido) return;
+        resolvido = true;
+        registrar.removeEventListener('click', aceitarNovo);
+        editar.removeEventListener('click', aceitarEditar);
+        fechar.removeEventListener('click', recusar);
+        modalElemento.removeEventListener('hidden.bs.modal', aoOcultar);
+        modal.hide();
+        resolve(resposta);
+      };
+      const aceitarNovo = (): void => finalizar('novo');
+      const aceitarEditar = (): void => finalizar('editar');
+      const recusar = (): void => finalizar(null);
+      const aoOcultar = (): void => finalizar(null);
+
+      registrar.addEventListener('click', aceitarNovo);
+      editar.addEventListener('click', aceitarEditar);
+      fechar.addEventListener('click', recusar);
+      modalElemento.addEventListener('hidden.bs.modal', aoOcultar);
+      modal.show();
+    });
+  }
+
+  private async abrirProntuario(consulta: ConsultaProntuario, botao: HTMLButtonElement): Promise<void> {
+    if (!STATUS_PRONTUARIO_PERMITIDO.some((status) => status === consulta.status)) {
+      window.alert(MENSAGEM_CONSULTA_NAO_CONCLUIDA);
+      return;
+    }
+
+    let modo: 'novo' | 'editar' = 'editar';
+    if (this.possuiProntuario(consulta)) {
+      const escolha = await this.escolherAcaoProntuario(consulta);
+      if (escolha === null) return;
+      modo = escolha;
+    }
+
+    this.preencherFormulario(consulta, modo);
+    this.destacarLinha(botao);
+    obrigatorio<HTMLTextAreaElement>('#prExameClinico').focus();
   }
 
   private destacarLinha(botao: HTMLButtonElement): void {
@@ -336,6 +420,10 @@ export class ProntuarioController {
       mostrarToast('Não é possível salvar o prontuário de uma consulta cancelada.', 'erro');
       return;
     }
+    if (!STATUS_PRONTUARIO_PERMITIDO.some((status) => status === consulta.status)) {
+      mostrarToast('Só é possível registrar ou editar o prontuário de uma consulta concluída.', 'erro');
+      return;
+    }
 
     const exame = obrigatorio<HTMLTextAreaElement>('#prExameClinico');
     const diagnostico = obrigatorio<HTMLTextAreaElement>('#prDiagnostico');
@@ -373,10 +461,14 @@ export class ProntuarioController {
       temperaturaC: temperatura,
     };
 
+    const modo = this.modoAtual;
     setCarregando(botao, true, 'Salvando…');
     try {
       await window.api.prontuarioSalvar(dados);
-      mostrarToast('Prontuário salvo. Conclua a consulta separadamente quando o atendimento terminar.', 'sucesso');
+      mostrarToast(
+        modo === 'novo' ? 'Prontuário salvo com sucesso.' : 'Prontuário editado com sucesso.',
+        'sucesso'
+      );
       await this.recarregarDepoisDeAlterar(consulta.petId);
     } catch (erro) {
       mostrarToast(mensagemErro(erro), 'erro');
@@ -385,58 +477,44 @@ export class ProntuarioController {
     }
   }
 
-  private confirmarConclusao(consulta: ConsultaProntuario): Promise<boolean> {
-    const modalElemento = obrigatorio<HTMLDivElement>('#modalConcluirProntuario');
-    const descricao = obrigatorio<HTMLElement>('#modalConcluirProntuarioDescricao');
-    const confirmar = obrigatorio<HTMLButtonElement>('#btnConfirmarConclusaoProntuario');
-    const voltar = obrigatorio<HTMLButtonElement>('#btnFecharConclusaoProntuario');
-
-    descricao.textContent =
-      `Deseja concluir a consulta de ${consulta.pet.nome} em ${formatarDataHora(consulta.dataHora)}? ` +
-      'Esta ação não pode ser desfeita.';
-    const modal = new window.bootstrap.Modal(modalElemento, { backdrop: 'static', keyboard: false });
-
-    return new Promise<boolean>((resolve) => {
-      let resolvido = false;
-      const finalizar = (resposta: boolean): void => {
-        if (resolvido) return;
-        resolvido = true;
-        confirmar.removeEventListener('click', aceitar);
-        voltar.removeEventListener('click', recusar);
-        modalElemento.removeEventListener('hidden.bs.modal', aoOcultar);
-        modal.hide();
-        resolve(resposta);
-      };
-      const aceitar = (): void => finalizar(true);
-      const recusar = (): void => finalizar(false);
-      const aoOcultar = (): void => finalizar(false);
-
-      confirmar.addEventListener('click', aceitar);
-      voltar.addEventListener('click', recusar);
-      modalElemento.addEventListener('hidden.bs.modal', aoOcultar);
-      modalElemento.addEventListener('shown.bs.modal', () => confirmar.focus(), { once: true });
-      modal.show();
-    });
+  /** Habilita a exportação somente com uma consulta carregada no formulário e acesso clínico. */
+  private atualizarBotaoExportar(): void {
+    const selecionado = obrigatorio<HTMLInputElement>('#prConsultaId').value.trim();
+    obrigatorio<HTMLButtonElement>('#btnExportarProntuario').disabled =
+      !this.contexto.auth.temAcessoClinico() || selecionado === '';
   }
 
-  private async concluir(consulta: ConsultaProntuario, botao: HTMLButtonElement): Promise<void> {
-    if (!(await this.confirmarConclusao(consulta))) return;
+  private async exportar(): Promise<void> {
+    const selecionado = obrigatorio<HTMLInputElement>('#prConsultaId').value.trim();
+    const consultaId = Number(selecionado);
+    if (selecionado === '' || !Number.isInteger(consultaId) || consultaId <= 0) {
+      mostrarToast('Selecione uma consulta no formulário antes de exportar o prontuário.', 'erro');
+      return;
+    }
 
-    setCarregando(botao, true, 'Concluindo…');
+    const botao = obrigatorio<HTMLButtonElement>('#btnExportarProntuario');
+    setCarregando(botao, true, 'Exportando…');
     try {
-      await window.api.consultasConcluir(consulta.id);
-      mostrarToast('Consulta concluída com sucesso. O prontuário permanece disponível para edição.', 'sucesso');
-      await this.recarregarDepoisDeAlterar(consulta.petId);
+      const resultado = await window.api.prontuarioExportarTxt(consultaId);
+      if (resultado === null) {
+        mostrarToast('Exportação cancelada.', 'info');
+        return;
+      }
+      mostrarToast('Prontuário exportado com sucesso.', 'sucesso');
     } catch (erro) {
       mostrarToast(mensagemErro(erro), 'erro');
     } finally {
       setCarregando(botao, false);
+      this.atualizarBotaoExportar();
     }
   }
 
   private configurarEventos(): void {
+    obrigatorio<HTMLButtonElement>('#btnExportarProntuario').addEventListener('click', () => {
+      void this.exportar();
+    });
     obrigatorio<HTMLButtonElement>('#abaProntuario-tab').addEventListener('shown.bs.tab', () => {
-      if (this.consultasVisiveis.size === 0) void this.carregar();
+      void this.carregar();
     });
     obrigatorio<HTMLSelectElement>('#prPet').addEventListener('change', () => {
       this.petAtualId = null;
@@ -459,11 +537,7 @@ export class ProntuarioController {
       if (consulta === undefined || !this.podeGerenciar(consulta)) return;
 
       if (botao.dataset.acao === 'editar') {
-        this.preencherFormulario(consulta);
-        this.destacarLinha(botao);
-        obrigatorio<HTMLTextAreaElement>('#prExameClinico').focus();
-      } else if (botao.dataset.acao === 'concluir') {
-        void this.concluir(consulta, botao);
+        void this.abrirProntuario(consulta, botao);
       }
     });
   }

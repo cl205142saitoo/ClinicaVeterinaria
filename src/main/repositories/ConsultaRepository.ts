@@ -2,8 +2,10 @@ import type { Prisma, PrismaClient } from '@prisma/client';
 import {
   JANELA_BUSCA_CONFLITOS_HORAS,
   LIMITE_LISTAGEM_CONSULTAS,
+  STATUS_AGENDA_ATIVA,
   STATUS_CANCELAVEIS,
   STATUS_CONCLUIVEIS,
+  STATUS_PRONTUARIO_PERMITIDO,
 } from '../../shared/constants';
 import { ErroAplicacao } from '../../shared/errors';
 import type { VeterinarioResumo } from '../../shared/types';
@@ -149,7 +151,9 @@ export class ConsultaRepository implements ConsultaRepositorio {
   }
 
   listar(opcoes: OpcoesListagemConsulta): Promise<RegistroAgenda[]> {
-    const where: Prisma.ConsultaWhereInput = {};
+    const where: Prisma.ConsultaWhereInput = {
+      status: { in: [...STATUS_AGENDA_ATIVA] },
+    };
     if (opcoes.de !== undefined || opcoes.ate !== undefined) {
       const intervalo: Prisma.DateTimeFilter = {};
       if (opcoes.de !== undefined) intervalo.gte = opcoes.de;
@@ -282,7 +286,7 @@ export class ConsultaRepository implements ConsultaRepositorio {
   /** `where` também exclui canceladas para fechar a janela entre checagem e escrita. */
   async salvarProntuario(id: number, dados: DadosEscritaProntuario): Promise<boolean> {
     const resultado = await this.prisma.consulta.updateMany({
-      where: { id, status: { not: 'CANCELADA' } },
+      where: { id, status: { in: [...STATUS_PRONTUARIO_PERMITIDO] } },
       data: {
         exameClinico: dados.exameClinico,
         diagnostico: dados.diagnostico,
@@ -296,7 +300,7 @@ export class ConsultaRepository implements ConsultaRepositorio {
   }
 
   listarPorPet(petId: number, veterinarioId?: number): Promise<RegistroConsulta[]> {
-    const where: Prisma.ConsultaWhereInput = { petId };
+    const where: Prisma.ConsultaWhereInput = { petId, status: { not: 'CANCELADA' } };
     if (veterinarioId !== undefined) where.veterinarioId = veterinarioId;
 
     return this.prisma.consulta.findMany({

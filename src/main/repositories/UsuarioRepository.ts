@@ -76,6 +76,21 @@ export class UsuarioRepository {
     });
   }
 
+  /** Reativação limpa os campos de inativação; não reusa `alternarStatus`. */
+  async reativar(id: number) {
+    const resultado = await this.prisma.usuario.updateMany({
+      where: { id, ativo: false },
+      data: {
+        ativo: true,
+        inativadoPorId: null,
+        inativadoEm: null,
+        motivoInativacao: null,
+      },
+    });
+    if (resultado.count !== 1) return null;
+    return this.buscarPorId(id);
+  }
+
   contarAdminsAtivos() {
     return this.prisma.usuario.count({ where: { role: 'ADMIN', ativo: true } });
   }

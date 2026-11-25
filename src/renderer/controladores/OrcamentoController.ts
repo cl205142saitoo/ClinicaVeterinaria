@@ -151,6 +151,19 @@ export class OrcamentoController {
     }
   }
 
+  /** Atualiza somente as tabelas usadas no dropdown de serviços. */
+  async recarregarTabelas(): Promise<void> {
+    if (this.contexto.auth.obterUsuario() === null) return;
+    try {
+      const tabelas = await window.api.tabelaPrecoListar();
+      this.tabelas = new Map(tabelas.map((tabela) => [tabela.id, tabela]));
+      this.preencherSelectServicos();
+      this.atualizarCamposItem();
+    } catch (erro) {
+      mostrarToast(mensagemErro(erro), 'erro');
+    }
+  }
+
   /** Zera itens, formulário e listagens ao sair; ignora respostas antigas. */
   limpar(): void {
     this.sequenciaCarregamento += 1;

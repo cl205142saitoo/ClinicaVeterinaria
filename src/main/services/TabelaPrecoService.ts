@@ -132,4 +132,20 @@ export class TabelaPrecoService {
     }
     return paraTabelaPreco(atualizado);
   }
+
+  async reativar(id: number, usuario: Usuario): Promise<TabelaPreco> {
+    exigirEdicaoPrecos(usuario);
+    const anterior = await this.repo.buscarPorId(id);
+    if (anterior === null) {
+      throw new ErroAplicacao('Tabela de preço não encontrada. Confira a tabela selecionada.');
+    }
+    if (anterior.ativo) {
+      throw new ErroAplicacao('Esta tabela de preço já está ativa.');
+    }
+    const atualizado = await this.repo.reativar(id);
+    if (atualizado === null) {
+      throw new ErroAplicacao('Não foi possível reativar a tabela de preço. Tente novamente.');
+    }
+    return paraTabelaPreco(atualizado);
+  }
 }

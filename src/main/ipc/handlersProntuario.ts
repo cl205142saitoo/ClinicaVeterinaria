@@ -7,7 +7,8 @@ import type { HandlerIpc } from './tipos';
 
 type CanaisProntuario =
   | typeof IPC_CHANNELS.PRONTUARIO_SALVAR
-  | typeof IPC_CHANNELS.PRONTUARIO_LISTAR_PET;
+  | typeof IPC_CHANNELS.PRONTUARIO_LISTAR_PET
+  | typeof IPC_CHANNELS.PRONTUARIO_EXPORTAR_TXT;
 
 export function criarHandlersProntuario(
   consultaService: ConsultaService,
@@ -29,6 +30,12 @@ export function criarHandlersProntuario(
       const usuario = await policy.exigirAutenticadoVerificado();
       const petId = exigir(args[0], ehIdPositivo, 'Informe um pet válido.');
       return consultaService.listarProntuarioPet(petId, usuario);
+    },
+
+    [IPC_CHANNELS.PRONTUARIO_EXPORTAR_TXT]: async (args) => {
+      const usuario = await policy.exigirAutenticadoVerificado();
+      const consultaId = exigir(args[0], ehIdPositivo, 'Informe uma consulta válida.');
+      return consultaService.exportarProntuarioTxt(consultaId, usuario);
     },
   };
 }

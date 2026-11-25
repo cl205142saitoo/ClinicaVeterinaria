@@ -1,4 +1,7 @@
-import { DURACAO_PADRAO_CONSULTA_MINUTOS } from '../../shared/constants';
+import { dialog, type SaveDialogReturnValue } from 'electron';
+import { writeFile } from 'fs/promises';
+import { DURACAO_PADRAO_CONSULTA_MINUTOS, STATUS_PRONTUARIO_PERMITIDO } from '../../shared/constants';
+import { dataCivilClinica, FUSO_CLINICA } from '../../shared/datas';
 import { ErroAplicacao } from '../../shared/errors';
 import type {
   ConsultaAgenda,
@@ -8,6 +11,7 @@ import type {
   DadosInativacao,
   DadosProntuario,
   FiltroAgenda,
+  ResultadoExportacaoTxt,
   Usuario,
   VeterinarioResumo,
 } from '../../shared/types';
@@ -24,6 +28,18 @@ import type {
 } from '../repositories/ConsultaRepository';
 
 const MILISSEGUNDOS_POR_MINUTO = 60_000;
+
+/** Instante ISO formatado no fuso da clínica, sem deslocar o dia. */
+function formatarInstanteClinica(dataIso: string): string {
+  const data = new Date(dataIso);
+  return Number.isNaN(data.getTime())
+    ? '—'
+    : data.toLocaleString('pt-BR', { timeZone: FUSO_CLINICA });
+}
+
+function numeroOuTraco(valor: number | null, unidade: string): string {
+  return valor === null ? '—' : `${String(valor)}${unidade}`;
+}
 
 /** Nunca inclui diagnóstico, exame, conduta, peso ou temperatura. */
 function paraAgenda(registro: RegistroAgenda): ConsultaAgenda {
@@ -317,6 +333,9 @@ export class ConsultaService {
     if (registro.status === 'CANCELADA') {
       throw new ErroAplicacao('Não é possível salvar o prontuário de uma consulta cancelada.');
     }
+    if (!STATUS_PRONTUARIO_PERMITIDO.some((status) => status === registro.status)) {
+      throw new ErroAplicacao('Só é possível registrar ou editar o prontuário de uma consulta concluída.');
+    }
 
     const alterado = await this.repo.salvarProntuario(dados.consultaId, {
       exameClinico: dados.exameClinico.trim(),
@@ -344,9 +363,94 @@ export class ConsultaService {
     return registros.map(paraProntuario);
   }
 
+  /** Gera e salva o prontuário de uma consulta específica em TXT via diálogo nativo. */
+  async exportarProntuarioTxt(
+    consultaId: number,
+    usuario: Usuario
+  ): Promise<ResultadoExportacaoTxt | null> {
+    exigirPerfilConhecido(usuario);
+    this.exigirAcessoClinico(usuario, 'consultar');
+
+    const registro = await this.repo.buscarPorId(consultaId);
+    if (registro === null) {
+      throw new ErroAplicacao('Consulta não encontrada.');
+    }
+    exigirResponsavel(registro, usuario, 'exportar');
+    if (registro.status === 'CANCELADA') {
+      throw new ErroAplicacao('Não é possível exportar o prontuário de uma consulta cancelada.');
+    }
+
+    const consulta = paraProntuario(registro);
+    const agora = this.agora();
+    const crmv = consulta.veterinario.crmv?.trim();
+    const linhas: string[] = [
+      '============================================================',
+      'PETHEALTHPD — PRONTUÁRIO CLÍNICO',
+      '============================================================',
+      `Pet: ${consulta.pet.nome}`,
+      `Tutor(a): ${consulta.pet.clienteNome}`,
+      `Data/hora: ${formatarInstanteClinica(consulta.dataHora)}`,
+      `Status: ${consulta.status}`,
+      `Veterinário: ${consulta.veterinario.nome}${crmv ? ` — CRMV ${crmv}` : ' (CRMV não informado)'}`,
+      `Motivo: ${consulta.motivo}`,
+      `Peso aferido: ${numeroOuTraco(consulta.pesoAferido, ' kg')}`,
+      `Temperatura: ${numeroOuTraco(consulta.temperaturaC, ' °C')}`,
+      `Exportado em: ${agora.toLocaleString('pt-BR', { timeZone: FUSO_CLINICA })}`,
+      '',
+      'Exame clínico:',
+      consulta.exameClinico?.trim() || '—',
+      '',
+      'Diagnóstico:',
+      consulta.diagnostico?.trim() || '—',
+      '',
+      'Conduta:',
+      consulta.conduta?.trim() || '—',
+      '',
+      'Prescrição:',
+      consulta.prescricao?.trim() || '—',
+      '',
+      '============================================================',
+      'Fim do prontuário.',
+    ];
+
+    let resultado: SaveDialogReturnValue;
+    try {
+      resultado = await dialog.showSaveDialog({
+        title: 'Exportar prontuário PetHealthPD',
+        defaultPath: `prontuario-${this.nomeArquivoPet(consulta.pet.nome)}-${dataCivilClinica(agora)}.txt`,
+        filters: [{ name: 'Arquivo de texto', extensions: ['txt'] }],
+      });
+    } catch (erro) {
+      console.error('[Prontuário] Falha ao abrir a janela de salvamento:', erro);
+      throw new ErroAplicacao('Não foi possível abrir a janela para escolher o arquivo TXT.');
+    }
+    if (resultado.canceled || !resultado.filePath) return null;
+
+    const conteudo = `\uFEFF${linhas.join('\r\n')}\r\n`;
+    try {
+      await writeFile(resultado.filePath, conteudo, 'utf8');
+    } catch (erro) {
+      console.error('[Prontuário] Falha ao gravar o TXT:', erro);
+      throw new ErroAplicacao('Não foi possível salvar o arquivo TXT no local escolhido.');
+    }
+    return { caminho: resultado.filePath };
+  }
+
   async listarVeterinarios(): Promise<VeterinarioResumo[]> {
     const veterinarios = await this.repo.listarVeterinarios();
     return veterinarios.map(({ id, nome, crmv }) => ({ id, nome, crmv }));
+  }
+
+  /** Nome de arquivo sem acentos, espaços ou caracteres inválidos no Windows. */
+  private nomeArquivoPet(nome: string): string {
+    const base = nome
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLocaleLowerCase('pt-BR')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 60);
+    return base || 'pet';
   }
 
   private exigirAcessoClinico(usuario: Usuario, acao: 'salvar' | 'consultar'): void {

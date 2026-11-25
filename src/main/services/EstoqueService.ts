@@ -219,9 +219,6 @@ export class EstoqueService {
     if (anterior === null) {
       throw new ErroAplicacao('Lote não encontrado. Confira o lote selecionado.');
     }
-    if (!anterior.ativo) {
-      throw new ErroAplicacao('Este lote já foi baixado.');
-    }
     const atualizado = await this.repo.baixarLote(
       dados.id,
       usuario.id,
@@ -229,7 +226,7 @@ export class EstoqueService {
       dados.motivo
     );
     if (atualizado === null) {
-      throw new ErroAplicacao('Não foi possível baixar o lote. Tente novamente.');
+      throw new ErroAplicacao('Não foi possível excluir o lote. Tente novamente.');
     }
     return paraLote(atualizado);
   }

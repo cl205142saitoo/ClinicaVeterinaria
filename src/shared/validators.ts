@@ -144,6 +144,8 @@ export function ehDataIso(valor: unknown): valor is string {
   return data.getUTCFullYear() === ano && data.getUTCMonth() === mes - 1 && data.getUTCDate() === dia;
 }
 
+const RE_RG = new RegExp(`^\\d{1,${CLIENTE_RG_MAXIMO}}$`);
+
 const RE_DATA_CIVIL = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
 
 /** Aceita apenas YYYY-MM-DD com dia real, sem interpretar fuso horário. */
@@ -154,9 +156,9 @@ export function ehDataCivil(valor: unknown): valor is string {
   return data.getUTCFullYear() === ano && data.getUTCMonth() === mes - 1 && data.getUTCDate() === dia;
 }
 
-/** RG: texto não vazio, limitado ao VARCHAR(30) do banco. */
+/** RG: até 11 dígitos numéricos, limite aceito no cadastro. */
 export function ehRg(valor: unknown): valor is string {
-  return ehTexto(valor, 1, CLIENTE_RG_MAXIMO);
+  return typeof valor === 'string' && RE_RG.test(valor);
 }
 
 /** Data de nascimento: civil válida, não futura e dentro de faixa plausível. */
@@ -396,7 +398,7 @@ export function ehDadosNovoUsuario(valor: unknown): valor is DadosNovoUsuario {
     typeof valor.senha === 'string' &&
     valor.senha.length >= 6 &&
     (valor.crmv === null || (typeof valor.crmv === 'string' && valor.crmv.length <= 30)) &&
-    (valor.rg === null || (typeof valor.rg === 'string' && valor.rg.length <= 30)) &&
+    (valor.rg === null || ehRg(valor.rg)) &&
     (valor.ativo === undefined || typeof valor.ativo === 'boolean')
   );
 }
@@ -407,7 +409,7 @@ export function ehDadosAtualizacaoUsuario(valor: unknown): valor is DadosAtualiz
     ehTexto(valor.nome, 2, 120) &&
     ehEmail(valor.email) &&
     (valor.crmv === null || (typeof valor.crmv === 'string' && valor.crmv.length <= 30)) &&
-    (valor.rg === null || (typeof valor.rg === 'string' && valor.rg.length <= 30)) &&
+    (valor.rg === null || ehRg(valor.rg)) &&
     typeof valor.ativo === 'boolean'
   );
 }

@@ -1,5 +1,7 @@
 /** Administração de usuários: criação em abas, listagem e inativação auditada. */
 
+import { CLIENTE_RG_MAXIMO } from '../../shared/constants';
+import { ehRg } from '../../shared/validators';
 import type { BootstrapModal, DadosAtualizacaoUsuario, Role, Usuario } from '../types';
 import {
   criarBadge,
@@ -119,6 +121,16 @@ export class UsuarioController {
             'btn-outline-warning'
           )
         );
+      } else {
+        botoes.push(
+          criarBotaoAcao(
+            'reativar-usuario',
+            usuario.id,
+            'Reativar',
+            `Reativar o usuário ${usuario.nome}`,
+            'btn-outline-success'
+          )
+        );
       }
       grupo.append(...botoes);
       acoes.append(grupo);
@@ -167,7 +179,11 @@ export class UsuarioController {
       exigir(nome, nome.value.trim().length >= 2, 'Informe o nome completo do usuário.'),
       exigir(email, email.value.trim() !== '' && email.checkValidity(), 'Informe um e-mail válido.'),
       exigir(senha, senha.value.length >= 6, 'A senha deve ter pelo menos 6 caracteres.'),
-      exigir(rg, rg.value.trim().length <= 30, 'O RG deve ter no máximo 30 caracteres.'),
+      exigir(
+        rg,
+        rg.value.trim() === '' || ehRg(rg.value.trim()),
+        `O RG deve ter no máximo ${CLIENTE_RG_MAXIMO} dígitos (somente números).`
+      ),
     ];
     if (opcoes.crmv !== null) {
       resultados.push(
@@ -230,6 +246,21 @@ export class UsuarioController {
     }
   }
 
+  private async reativar(usuario: Usuario, botao: HTMLButtonElement): Promise<void> {
+    if (!this.contexto.auth.isAdmin()) return;
+
+    setCarregando(botao, true, 'Reativando…');
+    try {
+      await window.api.reativarUsuario(usuario.id);
+      mostrarToast('Usuário reativado com sucesso.', 'sucesso');
+      await this.carregar();
+    } catch (erro) {
+      mostrarToast(mensagemErro(erro), 'erro');
+    } finally {
+      setCarregando(botao, false);
+    }
+  }
+
   private abrirModalEdicao(usuario: Usuario): void {
     if (!this.contexto.auth.isAdmin()) return;
     obrigatorio<HTMLInputElement>('#euId').value = String(usuario.id);
@@ -239,6 +270,7 @@ export class UsuarioController {
     obrigatorio<HTMLInputElement>('#euRg').value = usuario.rg ?? '';
     obrigatorio<HTMLSelectElement>('#euRole').value = usuario.role;
     obrigatorio<HTMLInputElement>('#euAtivo').checked = usuario.ativo;
+    this.atualizarVisibilidadeCrmv();
     obrigatorio<HTMLElement>('#modalEditarUsuarioTitulo').textContent = `Editar usuário — ${usuario.nome}`;
 
     const formulario = obrigatorio<HTMLFormElement>('#formEditarUsuario');
@@ -257,6 +289,17 @@ export class UsuarioController {
     this.modalEdicao.show();
   }
 
+  /** CRMV é campo exclusivo de veterinário; ao trocar o perfil, limpa o valor. */
+  private atualizarVisibilidadeCrmv(): void {
+    const formulario = obrigatorio<HTMLFormElement>('#formEditarUsuario');
+    const visivel = obrigatorio<HTMLSelectElement>('#euRole').value === 'VETERINARIO';
+    obrigatorio<HTMLElement>('#euGrupoCrmv').hidden = !visivel;
+    if (!visivel) {
+      obrigatorio<HTMLInputElement>('#euCrmv').value = '';
+      limparValidacao(formulario);
+    }
+  }
+
   private async salvarEdicao(botao: HTMLButtonElement): Promise<void> {
     if (!this.contexto.auth.isAdmin()) return;
     const formulario = obrigatorio<HTMLFormElement>('#formEditarUsuario');
@@ -270,6 +313,7 @@ export class UsuarioController {
 
     const role = roleSelect.value as Role;
     const roleValida = role === 'ADMIN' || role === 'VETERINARIO' || role === 'ATENDENTE';
+    const crmvVisivel = role === 'VETERINARIO';
     const id = Number(obrigatorio<HTMLInputElement>('#euId').value);
     const resultados = [
       exigir(
@@ -279,9 +323,17 @@ export class UsuarioController {
       ),
       exigir(email, email.value.trim() !== '' && email.checkValidity(), 'Informe um e-mail válido.'),
       exigir(roleSelect, roleValida, 'Selecione um perfil válido.'),
-      exigir(crmv, crmv.value.trim().length <= 30, 'O CRMV deve ter no máximo 30 caracteres.'),
-      exigir(rg, rg.value.trim().length <= 30, 'O RG deve ter no máximo 30 caracteres.'),
+      exigir(
+        rg,
+        rg.value.trim() === '' || ehRg(rg.value.trim()),
+        `O RG deve ter no máximo ${CLIENTE_RG_MAXIMO} dígitos (somente números).`
+      ),
     ];
+    if (crmvVisivel) {
+      resultados.push(exigir(crmv, crmv.value.trim().length <= 30, 'O CRMV deve ter no máximo 30 caracteres.'));
+    } else {
+      crmv.value = '';
+    }
     if (!resultados.every(Boolean)) {
       focarPrimeiroInvalido(formulario);
       return;
@@ -295,7 +347,7 @@ export class UsuarioController {
       id,
       nome: nome.value.trim(),
       email: email.value.trim(),
-      crmv: crmv.value.trim() || null,
+      crmv: crmvVisivel ? crmv.value.trim() || null : null,
       rg: rg.value.trim() || null,
       role,
       ativo: ativo.checked,
@@ -346,6 +398,9 @@ export class UsuarioController {
       evento.preventDefault();
       void this.salvarEdicao(obrigatorio<HTMLButtonElement>('#btnSalvarEdicaoUsuario'));
     });
+    obrigatorio<HTMLSelectElement>('#euRole').addEventListener('change', () => {
+      this.atualizarVisibilidadeCrmv();
+    });
     obrigatorio<HTMLTableSectionElement>('#tbUsuarios').addEventListener('click', (evento) => {
       const alvo = evento.target;
       if (!(alvo instanceof Element)) return;
@@ -358,6 +413,7 @@ export class UsuarioController {
 
       if (botao.dataset.acao === 'editar-usuario') this.abrirModalEdicao(usuario);
       else if (botao.dataset.acao === 'inativar-usuario') void this.inativar(usuario, botao);
+      else if (botao.dataset.acao === 'reativar-usuario') void this.reativar(usuario, botao);
     });
   }
 }

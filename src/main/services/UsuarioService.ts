@@ -88,7 +88,11 @@ export class UsuarioService {
       throw new ErroAplicacao('Já existe outro usuário com este e-mail.');
     }
 
-    await this.repo.atualizar({ ...dados, email });
+    await this.repo.atualizar({
+      ...dados,
+      email,
+      crmv: dados.role === 'VETERINARIO' ? dados.crmv?.trim() || null : null,
+    });
     const atualizado = await this.repo.buscarPorId(dados.id);
     if (atualizado === null) {
       throw new ErroAplicacao('Usuário não encontrado após a atualização.');
@@ -112,6 +116,23 @@ export class UsuarioService {
     const atualizado = await this.repo.buscarPorId(dados.id);
     if (atualizado === null) {
       throw new ErroAplicacao('Usuário não encontrado após a inativação.');
+    }
+    return paraDto(atualizado);
+  }
+
+  async reativar(id: number, responsavel: Usuario): Promise<Usuario> {
+    this.policy.exigirAdmin(responsavel);
+    const registroAlvo = await this.repo.buscarPorId(id);
+    if (registroAlvo === null) {
+      throw new ErroAplicacao('Usuário não encontrado.');
+    }
+    const alvo = paraDto(registroAlvo);
+    if (alvo.ativo) {
+      throw new ErroAplicacao('Este usuário já está ativo.');
+    }
+    const atualizado = await this.repo.reativar(id);
+    if (atualizado === null) {
+      throw new ErroAplicacao('Não foi possível reativar o usuário. Tente novamente.');
     }
     return paraDto(atualizado);
   }

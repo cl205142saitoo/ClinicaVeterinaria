@@ -1,7 +1,15 @@
-/** Agenda de consultas: filtros, cadastro, ações, reagendamento e exclusão auditada. */
+/** Agenda de consultas: filtros, cadastro, ações, reagendamento e cancelamento auditado. */
 
 import { STATUS_CANCELAVEIS, STATUS_CONCLUIVEIS } from '../../shared/constants';
-import type { ConsultaAgenda, DadosAtualizacaoConsulta, FiltroAgenda, Pet, Role, VeterinarioResumo } from '../types';
+import type {
+  BootstrapModal,
+  ConsultaAgenda,
+  DadosAtualizacaoConsulta,
+  FiltroAgenda,
+  Pet,
+  Role,
+  VeterinarioResumo,
+} from '../types';
 import {
   criarBadge,
   criarBotaoAcao,
@@ -43,6 +51,7 @@ export class AgendaController {
   private consultasVisiveis = new Map<number, ConsultaAgenda>();
   private veterinarios: VeterinarioResumo[] = [];
   private idReagendamento: number | null = null;
+  private modalReagendamento: BootstrapModal | null = null;
   private eventosLigados = false;
 
   constructor(private readonly contexto: ContextoApp) {}
@@ -103,6 +112,7 @@ export class AgendaController {
     this.filtroAtual = undefined;
     this.selectsCarregados = false;
     this.idReagendamento = null;
+    this.modalReagendamento?.hide();
     for (const seletor of ['#aPet', '#aVeterinario', '#reVeterinario']) {
       const select = obrigatorio<HTMLSelectElement>(seletor);
       select.replaceChildren();
@@ -258,13 +268,11 @@ export class AgendaController {
       cancelar: 'Cancelar',
       concluir: 'Concluir',
       reagendar: 'Reagendar',
-      excluir: 'Excluir',
     };
     const classes: Readonly<Record<string, string>> = {
       cancelar: 'btn-outline-danger',
       concluir: 'btn-outline-success',
       reagendar: 'btn-outline-primary',
-      excluir: 'btn-outline-danger danger',
     };
     const botao = criarBotaoAcao(
       acao,
@@ -292,12 +300,10 @@ export class AgendaController {
       papel === 'ADMIN' || papel === 'ATENDENTE' || (papel === 'VETERINARIO' && responsavel);
     const podeConcluir = papel === 'ADMIN' || (papel === 'VETERINARIO' && responsavel);
     const podeReagendar = papel === 'ADMIN' || papel === 'ATENDENTE' || (papel === 'VETERINARIO' && responsavel);
-    const podeExcluir = papel === 'ADMIN';
 
     if (reagendavel && podeReagendar) botoes.push(this.criarBotaoAcao('reagendar', consulta));
     if (cancelavel && podeCancelar) botoes.push(this.criarBotaoAcao('cancelar', consulta));
     if (concluivel && podeConcluir) botoes.push(this.criarBotaoAcao('concluir', consulta));
-    if (podeExcluir) botoes.push(this.criarBotaoAcao('excluir', consulta));
     return botoes;
   }
 
@@ -504,7 +510,6 @@ export class AgendaController {
       if (botao.dataset.acao === 'cancelar') void this.cancelar(consulta, botao);
       else if (botao.dataset.acao === 'concluir') void this.concluir(consulta, botao);
       else if (botao.dataset.acao === 'reagendar') this.abrirReagendamento(consulta);
-      else if (botao.dataset.acao === 'excluir') void this.excluir(consulta, botao);
     });
   }
 
@@ -517,6 +522,7 @@ export class AgendaController {
       await window.api.consultasCancelar(consulta.id, motivo);
       mostrarToast('Consulta cancelada. O motivo foi registrado na auditoria.', 'sucesso');
       await this.carregar();
+      await this.contexto.recarregarClientesEPets();
     } catch (erro) {
       mostrarToast(mensagemErro(erro), 'erro');
     } finally {
@@ -532,29 +538,7 @@ export class AgendaController {
       await window.api.consultasConcluir(consulta.id);
       mostrarToast('Consulta concluída com sucesso.', 'sucesso');
       await this.carregar();
-    } catch (erro) {
-      mostrarToast(mensagemErro(erro), 'erro');
-    } finally {
-      setCarregando(botao, false);
-    }
-  }
-
-  private async excluir(consulta: ConsultaAgenda, botao: HTMLButtonElement): Promise<void> {
-    if (!this.contexto.auth.isAdmin()) return;
-    const motivo = await pedirMotivo({
-      titulo: 'Excluir registro de consulta',
-      descricao:
-        `A consulta de ${consulta.pet.nome} em ${formatarDataHora(consulta.dataHora)} ` +
-        'será marcada como excluída. O registro é preservado para auditoria.',
-      rotuloConfirmar: 'Excluir consulta',
-    });
-    if (motivo === null) return;
-
-    setCarregando(botao, true, 'Excluindo…');
-    try {
-      await window.api.consultasExcluir({ id: consulta.id, motivo });
-      mostrarToast('Registro de consulta excluído. O motivo foi registrado na auditoria.', 'sucesso');
-      await this.carregar();
+      await this.contexto.recarregarClientesEPets();
     } catch (erro) {
       mostrarToast(mensagemErro(erro), 'erro');
     } finally {
@@ -572,7 +556,7 @@ export class AgendaController {
       void this.reagendar(evento, botaoSalvar);
     });
     botaoFechar.addEventListener('click', () => {
-      new window.bootstrap.Modal(modalElemento).hide();
+      this.modalReagendamento?.hide();
     });
     modalElemento.addEventListener('hidden.bs.modal', () => {
       this.idReagendamento = null;
@@ -608,11 +592,12 @@ export class AgendaController {
 
     const formulario = obrigatorio<HTMLFormElement>('#formReagendarConsulta');
     limparValidacao(formulario);
-    const modal = new window.bootstrap.Modal(obrigatorio<HTMLDivElement>('#modalReagendarConsulta'), {
+    const modalElemento = obrigatorio<HTMLDivElement>('#modalReagendarConsulta');
+    this.modalReagendamento ??= new window.bootstrap.Modal(modalElemento, {
       backdrop: 'static',
       keyboard: false,
     });
-    modal.show();
+    this.modalReagendamento.show();
   }
 
   /** `datetime-local` usa o fuso local da clínica (sem UTC). */
@@ -665,7 +650,7 @@ export class AgendaController {
     setCarregando(botao, true, 'Reagendando…');
     try {
       await window.api.consultasAtualizar(dados);
-      new window.bootstrap.Modal(obrigatorio<HTMLDivElement>('#modalReagendarConsulta')).hide();
+      this.modalReagendamento?.hide();
       mostrarToast('Consulta reagendada com sucesso.', 'sucesso');
       await this.carregar();
     } catch (erro) {

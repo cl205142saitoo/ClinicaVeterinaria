@@ -16,6 +16,11 @@ export const LGPD_VERSAO_TERMO = '1.0';
 export const STATUS_CONSULTA = ['AGENDADA', 'CONFIRMADA', 'CONCLUIDA', 'CANCELADA'] as const;
 export const STATUS_CANCELAVEIS = ['AGENDADA', 'CONFIRMADA'] as const;
 export const STATUS_CONCLUIVEIS = ['AGENDADA', 'CONFIRMADA'] as const;
+/** Status em que o prontuário pode ser registrado ou editado. */
+export const STATUS_PRONTUARIO_PERMITIDO = ['CONCLUIDA'] as const;
+
+/** Status que permanecem na agenda e impedem a edição do pet. */
+export const STATUS_AGENDA_ATIVA = ['AGENDADA', 'CONFIRMADA'] as const;
 
 /** Duração padrão de uma consulta; o banco também aplica este valor como default. */
 export const DURACAO_PADRAO_CONSULTA_MINUTOS = 60;
@@ -24,7 +29,7 @@ export const DURACAO_PADRAO_CONSULTA_MINUTOS = 60;
 export const LIMITE_LISTAGEM_CONSULTAS = 200;
 
 /** Limites dos dados cadastrais exigidos pela especificação do sistema. */
-export const CLIENTE_RG_MAXIMO = 30;
+export const CLIENTE_RG_MAXIMO = 11;
 export const CLIENTE_NASCIMENTO_ANO_MINIMO = 1900;
 export const PET_IDADE_MAXIMA_ANOS = 100;
 

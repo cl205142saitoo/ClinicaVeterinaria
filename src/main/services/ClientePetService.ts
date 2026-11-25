@@ -163,6 +163,11 @@ export class ClientePetService {
     if (!atual.ativo) {
       throw new ErroAplicacao('Não é possível editar um pet inativado.');
     }
+    if (await this.repo.petComConsultaAgendada(dados.id)) {
+      throw new ErroAplicacao(
+        'Não é possível editar este pet enquanto houver consulta agendada ou confirmada. Cancele ou conclua a consulta antes de alterar os dados.'
+      );
+    }
 
     const cliente = await this.repo.buscarClientePorId(dados.clienteId);
     if (cliente === null) {
@@ -191,6 +196,23 @@ export class ClientePetService {
     if (atualizado === null) {
       throw new ErroAplicacao('Não foi possível inativar o pet. Tente novamente.');
     }
+    return atualizado;
+  }
+
+  async reativarPet(id: number, usuario: Usuario): Promise<Pet> {
+    const atual = await this.repo.buscarPetPorId(id);
+    if (atual === null) {
+      throw new ErroAplicacao('Pet não encontrado.');
+    }
+    if (atual.ativo !== false) {
+      throw new ErroAplicacao('Este pet já está ativo.');
+    }
+    const atualizado = await this.repo.reativarPet(id);
+    if (atualizado === null) {
+      throw new ErroAplicacao('Não foi possível reativar o pet. Tente novamente.');
+    }
+    // Autorização feita no handler; `usuario` fica no contrato por simetria.
+    void usuario;
     return atualizado;
   }
 

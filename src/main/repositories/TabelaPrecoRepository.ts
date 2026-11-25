@@ -41,6 +41,7 @@ export interface TabelaPrecoRepositorio {
     agora: Date,
     motivo: string
   ): Promise<TabelaPrecoPersistido | null>;
+  reativar(id: number): Promise<TabelaPrecoPersistido | null>;
 }
 
 function paraTabela(registro: RegistroTabela): TabelaPrecoPersistido {
@@ -124,6 +125,21 @@ export class TabelaPrecoRepository implements TabelaPrecoRepositorio {
         inativadoPorId: responsavelId,
         inativadoEm: agora,
         motivoInativacao: motivo.trim(),
+      },
+    });
+    if (resultado.count !== 1) return null;
+    return this.buscarPorId(id);
+  }
+
+  /** Reativação limpa os campos de inativação para manter o estado coerente. */
+  async reativar(id: number): Promise<TabelaPrecoPersistido | null> {
+    const resultado = await this.prisma.tabelaPreco.updateMany({
+      where: { id, ativo: false },
+      data: {
+        ativo: true,
+        inativadoPorId: null,
+        inativadoEm: null,
+        motivoInativacao: null,
       },
     });
     if (resultado.count !== 1) return null;

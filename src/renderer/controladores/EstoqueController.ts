@@ -37,6 +37,8 @@ const NOME_MAXIMO = 120;
 const CATEGORIA_MAXIMA = 80;
 const FABRICANTE_MAXIMO = 120;
 const CODIGO_LOTE_MAXIMO = 64;
+const CONFIRMACAO_EXCLUIR_LOTE =
+  'Tem certeza que deseja apagar este lote? Essa ação não pode ser desfeita.';
 
 interface Situacao {
   readonly texto: string;
@@ -319,9 +321,9 @@ export class EstoqueController {
           criarBotaoAcao(
             'inativar-produto',
             produto.id,
-            'Inativar',
-            `Inativar o produto ${produto.nome}`,
-            'btn-outline-warning'
+            'Excluir',
+            `Excluir o produto ${produto.nome}`,
+            'btn-outline-danger danger'
           )
         );
       }
@@ -360,9 +362,9 @@ export class EstoqueController {
           criarBotaoAcao(
             'baixar-lote',
             lote.id,
-            'Baixar',
-            `Baixar o lote ${lote.codigo}`,
-            'btn-outline-warning'
+            'Excluir',
+            `Excluir o lote ${lote.codigo}`,
+            'btn-outline-danger danger'
           )
         );
       }
@@ -661,19 +663,19 @@ export class EstoqueController {
   private async inativarProduto(produto: Produto, botao: HTMLButtonElement): Promise<void> {
     if (!this.contexto.auth.isAdmin()) return;
     const motivo = await pedirMotivo({
-      titulo: 'Inativar produto',
+      titulo: 'Excluir produto',
       descricao:
         `O produto "${produto.nome}" deixará de aparecer nas listagens ativas. ` +
         'O histórico é preservado e o motivo fica registrado na auditoria.',
-      rotuloConfirmar: 'Inativar produto',
+      rotuloConfirmar: 'Excluir produto',
     });
     if (motivo === null) return;
 
-    setCarregando(botao, true, 'Inativando…');
+    setCarregando(botao, true, 'Excluindo…');
     try {
       await window.api.estoqueProdutosInativar({ id: produto.id, motivo });
       if (this.idProdutoEdicao === produto.id) this.limparCamposProduto();
-      mostrarToast('Produto inativado. O motivo foi registrado na auditoria.', 'sucesso');
+      mostrarToast('Produto excluído. O motivo foi registrado na auditoria.', 'sucesso');
       await this.carregar();
     } catch (erro) {
       mostrarToast(mensagemErro(erro), 'erro');
@@ -684,20 +686,21 @@ export class EstoqueController {
 
   private async baixarLote(lote: Lote, botao: HTMLButtonElement): Promise<void> {
     if (!this.contexto.auth.isAdmin()) return;
+    if (!window.confirm(CONFIRMACAO_EXCLUIR_LOTE)) return;
     const motivo = await pedirMotivo({
-      titulo: 'Baixar lote',
+      titulo: 'Excluir lote',
       descricao:
-        `O lote "${lote.codigo}" será baixado. ` +
+        `O lote "${lote.codigo}" deixará de aparecer nas listagens ativas. ` +
         'A quantidade não desaparece sem rastreio e o motivo fica registrado na auditoria.',
-      rotuloConfirmar: 'Baixar lote',
+      rotuloConfirmar: 'Excluir lote',
     });
     if (motivo === null) return;
 
-    setCarregando(botao, true, 'Baixando…');
+    setCarregando(botao, true, 'Excluindo…');
     try {
       await window.api.estoqueLotesBaixar({ id: lote.id, motivo });
       if (this.idLoteEdicao === lote.id) this.limparCamposLote();
-      mostrarToast('Lote baixado. O motivo foi registrado na auditoria.', 'sucesso');
+      mostrarToast('Lote excluído. O motivo foi registrado na auditoria.', 'sucesso');
       await this.carregar();
     } catch (erro) {
       mostrarToast(mensagemErro(erro), 'erro');

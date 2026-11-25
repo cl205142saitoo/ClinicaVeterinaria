@@ -148,7 +148,7 @@
                 <div class="row g-3">
                   <div class="col-12 col-md-6 mb-3">
                     <label for="cRg" class="form-label">RG</label>
-                    <input id="cRg" type="text" class="form-control" maxlength="30" aria-describedby="cRgFeedback" required />
+                    <input id="cRg" type="text" class="form-control" inputmode="numeric" maxlength="11" aria-describedby="cRgFeedback" required />
                     <div id="cRgFeedback" class="invalid-feedback"></div>
                   </div>
                   <div class="col-12 col-md-6 mb-3">
@@ -441,10 +441,15 @@
                   </div>
 
                   <div class="col-12 col-xl-5">
-                    <h3 id="prFormTitulo" class="h6">Registrar prontuário</h3>
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                      <h3 id="prFormTitulo" class="h6 mb-0">Registrar prontuário</h3>
+                      <button id="btnExportarProntuario" type="button" class="btn btn-sm btn-outline-secondary" disabled>
+                        Exportar Prontuário (.txt)
+                      </button>
+                    </div>
                     <div class="alert alert-warning py-2 small" role="note">
-                      Salvar o prontuário <strong>não conclui</strong> a consulta automaticamente.
-                      Use <strong>Concluir consulta</strong> no histórico quando o atendimento terminar.
+                      O prontuário só pode ser registrado ou editado se a consulta estiver com o status
+                      <strong>CONCLUÍDA</strong>. Vá até a aba de Agenda (Consultas) para concluir esta consulta primeiro.
                     </div>
                     <form id="formProntuario" novalidate>
                       <input id="prConsultaId" type="hidden" />
@@ -526,7 +531,7 @@
                 <div id="vcAlertas" class="card mb-3">
                   <div class="card-header bg-transparent border-0 pb-0">
                     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-                      <h3 class="h6 mb-0">Alertas de próxima dose</h3>
+                      <h3 class="h6 mb-0">Alertas de dose</h3>
                       <div class="d-flex flex-wrap align-items-center gap-2">
                         <span id="vcResumoAlertas" class="badge text-bg-light border" hidden></span>
                         <button id="btnEnviarAvisosVacina" type="button" class="btn btn-sm btn-outline-primary">Enviar avisos por e-mail</button>
@@ -554,35 +559,11 @@
                   </div>
                 </div>
 
-                <div class="row g-3 mt-1">
-                  <div class="col-12 col-lg-7">
-                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
-                      <h3 class="h6 mb-0">Histórico de vacinação</h3>
-                      <span id="vcResumo" class="badge text-bg-light border" hidden></span>
-                    </div>
-                    <div class="table-responsive">
-                      <table class="table table-striped table-hover align-middle mb-0">
-                        <thead>
-                          <tr>
-                            <th scope="col">Data da aplicação</th>
-                            <th scope="col">Vacina / Fabricante</th>
-                            <th scope="col">Código do lote</th>
-                            <th scope="col">Validade do lote</th>
-                            <th scope="col">Sequência da dose</th>
-                            <th scope="col">Próxima dose (informada)</th>
-                            <th scope="col">Reação adversa</th>
-                            <th scope="col">Aplicada por</th>
-                            <th scope="col">Observações</th>
-                            <th scope="col">Registrado em</th>
-                          </tr>
-                        </thead>
-                        <tbody id="tbVacinas" aria-busy="false"></tbody>
-                      </table>
-                    </div>
+                <div class="card mb-3">
+                  <div class="card-header bg-transparent border-0 pb-0">
+                    <h3 id="vcFormTitulo" class="h6 mb-0">Registrar vacinação</h3>
                   </div>
-
-                  <div class="col-12 col-lg-5">
-                    <h3 id="vcFormTitulo" class="h6">Registrar vacinação</h3>
+                  <div class="card-body">
                     <form id="formVacina" novalidate>
                       <div class="mb-3">
                         <label for="vcVacina" class="form-label">Vacina</label>
@@ -653,6 +634,32 @@
                       <button id="btnSalvarVacina" type="submit" class="btn btn-primary w-100">Registrar vacinação</button>
                       <button id="btnCancelarEdicaoVacina" type="button" class="btn btn-outline-secondary w-100 mt-2" hidden>Cancelar edição</button>
                     </form>
+                  </div>
+                </div>
+
+                <div class="card">
+                  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                    <h3 class="h6 mb-0">Histórico de vacinação</h3>
+                    <span id="vcResumo" class="badge text-bg-light border" hidden></span>
+                  </div>
+                  <div class="table-responsive">
+                    <table class="table table-striped table-hover align-middle mb-0">
+                      <thead>
+                        <tr>
+                          <th scope="col">Data da aplicação</th>
+                          <th scope="col">Vacina / Fabricante</th>
+                          <th scope="col">Código do lote</th>
+                          <th scope="col">Validade do lote</th>
+                          <th scope="col">Sequência da dose</th>
+                          <th scope="col">Próxima dose (informada)</th>
+                          <th scope="col">Reação adversa</th>
+                          <th scope="col">Aplicada por</th>
+                          <th scope="col">Observações</th>
+                          <th scope="col">Registrado em</th>
+                        </tr>
+                      </thead>
+                      <tbody id="tbVacinas" aria-busy="false"></tbody>
+                    </table>
                   </div>
                 </div>
               </div>
@@ -1575,7 +1582,7 @@
                           </div>
                           <div class="col-12 col-sm-6 mb-3">
                             <label for="nuRg" class="form-label">RG</label>
-                            <input id="nuRg" type="text" class="form-control" maxlength="30" aria-describedby="nuRgFeedback" />
+                            <input id="nuRg" type="text" class="form-control" inputmode="numeric" maxlength="11" aria-describedby="nuRgFeedback" />
                             <div id="nuRgFeedback" class="invalid-feedback"></div>
                           </div>
                         </div>
@@ -1607,7 +1614,7 @@
                         </div>
                         <div class="mb-3">
                           <label for="naRg" class="form-label">RG</label>
-                          <input id="naRg" type="text" class="form-control" maxlength="30" aria-describedby="naRgFeedback" />
+                          <input id="naRg" type="text" class="form-control" inputmode="numeric" maxlength="11" aria-describedby="naRgFeedback" />
                           <div id="naRgFeedback" class="invalid-feedback"></div>
                         </div>
                         <div class="form-check mb-3">
@@ -1712,19 +1719,20 @@
     </div>
   </div>
 
-  <!-- CONFIRMAÇÃO DE CONCLUSÃO A PARTIR DO PRONTUÁRIO -->
-  <div class="modal fade" id="modalConcluirProntuario" tabindex="-1" aria-labelledby="modalConcluirProntuarioTitulo" aria-hidden="true">
+  <!-- ESCOLHA DE REGISTRAR NOVO OU EDITAR PRONTUÁRIO EXISTENTE -->
+  <div class="modal fade" id="modalEscolhaProntuario" tabindex="-1" aria-labelledby="modalEscolhaProntuarioTitulo" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
         <div class="modal-header">
-          <h2 class="modal-title h5" id="modalConcluirProntuarioTitulo">Confirmar conclusão</h2>
+          <h2 class="modal-title h5" id="modalEscolhaProntuarioTitulo">Registrar ou editar prontuário</h2>
         </div>
         <div class="modal-body">
-          <p id="modalConcluirProntuarioDescricao" class="mb-0"></p>
+          <p id="modalEscolhaProntuarioDescricao" class="mb-0"></p>
         </div>
         <div class="modal-footer">
-          <button id="btnFecharConclusaoProntuario" type="button" class="btn btn-outline-secondary">Voltar</button>
-          <button id="btnConfirmarConclusaoProntuario" type="button" class="btn btn-success">Concluir consulta</button>
+          <button id="btnFecharEscolhaProntuario" type="button" class="btn btn-outline-secondary">Cancelar</button>
+          <button id="btnEditarProntuarioExistente" type="button" class="btn btn-outline-primary">Editar existente</button>
+          <button id="btnRegistrarNovoProntuario" type="button" class="btn btn-primary">Registrar novo</button>
         </div>
       </div>
     </div>
@@ -1921,14 +1929,14 @@
                 <input id="euEmail" type="email" class="form-control" autocomplete="email" aria-describedby="euEmailFeedback" required />
                 <div id="euEmailFeedback" class="invalid-feedback"></div>
               </div>
-              <div class="col-12 col-sm-6 mb-3">
+              <div id="euGrupoCrmv" class="col-12 col-sm-6 mb-3">
                 <label for="euCrmv" class="form-label">CRMV</label>
                 <input id="euCrmv" type="text" class="form-control" maxlength="30" aria-describedby="euCrmvFeedback" />
                 <div id="euCrmvFeedback" class="invalid-feedback"></div>
               </div>
               <div class="col-12 col-sm-6 mb-3">
                 <label for="euRg" class="form-label">RG</label>
-                <input id="euRg" type="text" class="form-control" maxlength="30" aria-describedby="euRgFeedback" />
+                <input id="euRg" type="text" class="form-control" inputmode="numeric" maxlength="11" aria-describedby="euRgFeedback" />
                 <div id="euRgFeedback" class="invalid-feedback"></div>
               </div>
             </div>

@@ -336,6 +336,14 @@ export class AnexoController {
     }
   }
 
+  /** Chamado após criar/inativar/reativar usuários: o cache de veterinários ficou inválido. */
+  async recarregarResponsaveis(): Promise<void> {
+    if (!this.contexto.auth.isAdmin()) return;
+    this.veterinariosCarregados = false;
+    await this.garantirVeterinarios();
+    this.aplicarResponsavelDaConsulta();
+  }
+
   private resetarConsulta(): void {
     const select = obrigatorio<HTMLSelectElement>('#axConsulta');
     this.consultasVisiveis = new Map();
@@ -589,7 +597,7 @@ export class AnexoController {
     formulario.reset();
     limparValidacao(formulario);
     // Uma única instância por elemento: recriá-la deixa o backdrop preso.
-    this.modalInativacao ??= new window.bootstrap.Modal(elemento, {
+    this.modalInativacao ??= window.bootstrap.Modal.getOrCreateInstance(elemento, {
       backdrop: 'static',
       keyboard: false,
     });
@@ -641,7 +649,7 @@ export class AnexoController {
 
     const elemento = obrigatorio<HTMLDivElement>('#modalEditarAnexo');
     // Uma única instância por elemento: criar outra no hide deixaria o backdrop preso.
-    this.modalEdicao ??= new window.bootstrap.Modal(elemento, {
+    this.modalEdicao ??= window.bootstrap.Modal.getOrCreateInstance(elemento, {
       backdrop: 'static',
       keyboard: false,
     });

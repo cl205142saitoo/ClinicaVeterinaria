@@ -125,7 +125,13 @@ class App implements ContextoApp {
 
   async recarregarTabelasPreco(): Promise<void> {
     if (this.auth.obterUsuario() === null) return;
-    await this.orcamentos.recarregarTabelas();
+    // Uma única sincronização: a aba Preços e o seletor de orçamentos leem a mesma API.
+    await Promise.all([this.tabelasPreco.carregar(), this.orcamentos.recarregarTabelas()]);
+  }
+
+  async recarregarVeterinarios(): Promise<void> {
+    if (this.auth.obterUsuario() === null) return;
+    await Promise.all([this.agenda.carregar(), this.anexos.recarregarResponsaveis()]);
   }
 
   async recarregarClientesEPets(): Promise<void> {

@@ -78,6 +78,11 @@ export interface BootstrapModal {
 
 export interface BootstrapModalConstructor {
   new (element: HTMLElement, options?: { backdrop?: boolean | 'static'; keyboard?: boolean }): BootstrapModal;
+  /** Reutiliza a instância que o Bootstrap já associou ao elemento. */
+  getOrCreateInstance(
+    element: HTMLElement,
+    options?: { backdrop?: boolean | 'static'; keyboard?: boolean }
+  ): BootstrapModal;
 }
 
 export interface BootstrapToastConstructor {

@@ -321,7 +321,6 @@ export class TabelaPrecoController {
         mostrarToast('Tabela de preço atualizada; a alteração foi registrada no histórico.', 'sucesso');
       }
       salvoComSucesso = true;
-      await this.carregar();
       await this.contexto.recarregarTabelasPreco();
     } catch (erro) {
       mostrarToast(mensagemErro(erro), 'erro');
@@ -348,7 +347,6 @@ export class TabelaPrecoController {
       await window.api.tabelaPrecoInativar({ id: tabela.id, motivo });
       if (this.idEdicao === tabela.id) this.sairDaEdicao(false);
       mostrarToast('Tabela inativada. O motivo foi registrado na auditoria.', 'sucesso');
-      await this.carregar();
       await this.contexto.recarregarTabelasPreco();
     } catch (erro) {
       mostrarToast(mensagemErro(erro), 'erro');
@@ -364,7 +362,6 @@ export class TabelaPrecoController {
     try {
       await window.api.tabelaPrecoReativar(tabela.id);
       mostrarToast('Tabela de preço reativada com sucesso.', 'sucesso');
-      await this.carregar();
       await this.contexto.recarregarTabelasPreco();
     } catch (erro) {
       mostrarToast(mensagemErro(erro), 'erro');

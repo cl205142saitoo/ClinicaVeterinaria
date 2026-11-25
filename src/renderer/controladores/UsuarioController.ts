@@ -213,6 +213,7 @@ export class UsuarioController {
         'sucesso'
       );
       await this.carregar();
+      await this.contexto.recarregarVeterinarios();
     } catch (erro) {
       const mensagem = mensagemErro(erro);
       marcarInvalido(email, mensagem);
@@ -239,6 +240,7 @@ export class UsuarioController {
       await window.api.inativarUsuario({ id: usuario.id, motivo });
       mostrarToast('Usuário inativado. O motivo foi registrado na auditoria.', 'sucesso');
       await this.carregar();
+      await this.contexto.recarregarVeterinarios();
     } catch (erro) {
       mostrarToast(mensagemErro(erro), 'erro');
     } finally {
@@ -254,6 +256,7 @@ export class UsuarioController {
       await window.api.reativarUsuario(usuario.id);
       mostrarToast('Usuário reativado com sucesso.', 'sucesso');
       await this.carregar();
+      await this.contexto.recarregarVeterinarios();
     } catch (erro) {
       mostrarToast(mensagemErro(erro), 'erro');
     } finally {
@@ -282,7 +285,7 @@ export class UsuarioController {
       { once: true }
     );
     // Uma única instância por elemento: criar outra no hide deixaria o backdrop preso.
-    this.modalEdicao ??= new window.bootstrap.Modal(modalElemento, {
+    this.modalEdicao ??= window.bootstrap.Modal.getOrCreateInstance(modalElemento, {
       backdrop: 'static',
       keyboard: false,
     });
@@ -359,6 +362,7 @@ export class UsuarioController {
       this.modalEdicao?.hide();
       mostrarToast('Usuário atualizado com sucesso.', 'sucesso');
       await this.carregar();
+      await this.contexto.recarregarVeterinarios();
     } catch (erro) {
       const mensagem = mensagemErro(erro);
       marcarInvalido(email, mensagem);

@@ -11,6 +11,8 @@ export interface ContextoApp {
   recarregarAgenda(): Promise<void>;
   /** Atualiza o dropdown de serviços após criar/inativar/reativar tabelas de preço. */
   recarregarTabelasPreco(): Promise<void>;
+  /** Atualiza os seletores de veterinários após alterações de perfil ou situação. */
+  recarregarVeterinarios(): Promise<void>;
   /** Recarrega clientes, pets e os seletores dependentes. */
   recarregarClientesEPets(): Promise<void>;
   /** Limpa tabelas e formulários quando a sessão termina. */

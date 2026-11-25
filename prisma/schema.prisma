@@ -1,87 +1,406 @@
+// PetHealthPD — schema MySQL 8.
+//
+// Convenções:
+// - Toda coluna DATETIME é gravada em UTC pela aplicação. A formatação pt-BR
+//   acontece somente na interface (renderer), nunca no banco. Em especial,
+//   RegistroVacina.aplicadaEm e RegistroVacina.registradoEm são DATETIME(6)
+//   em UTC (instante da aplicação/registro do ato).
+// - Colunas `@db.Date` (por exemplo RegistroVacina.validade e
+//   RegistroVacina.proximaDose) guardam apenas data, sem hora nem timezone:
+//   a aplicação envia/recebe sempre no formato `YYYY-MM-DD`. Não converter
+//   para ISO com hora, para não deslocar o dia por fuso horário.
+// - Charset/collation: utf8mb4 / utf8mb4_unicode_ci. O Prisma não expõe
+//   cláusulas de charset no schema, mas emite isso na migração MySQL.
+// - Valores monetários usam Decimal(10,2); Pet.peso permanece Float (DOUBLE).
+// - Nenhuma exclusão em cascata sobre prontuário: use RESTRICT.
+// - Status de Consulta usa tokens ASCII sem acento (AGENDADA, CONFIRMADA,
+//   CONCLUIDA, CANCELADA) para evitar divergência entre utf8mb4_unicode_ci,
+//   JavaScript e qualquer comparação feita fora do banco.
+
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "mysql"
+  url      = env("DATABASE_URL")
 }
 
 model Usuario {
-  id        Int        @id @default(autoincrement())
-  nome      String
-  email     String     @unique
-  senhaHash String
-  role      String     @default("ATENDENTE")
-  ativo     Boolean    @default(true)
-  criadoEm  DateTime   @default(now())
-  consultas Consulta[]
+  id           Int      @id @default(autoincrement())
+  nome         String   @db.VarChar(120)
+  email        String   @unique @db.VarChar(254)
+  senhaHash    String   @db.VarChar(255)
+  role         String   @default("ATENDENTE") @db.VarChar(30)
+  ativo        Boolean  @default(true)
+  crmv         String?  @db.VarChar(30)
+  rg           String?  @db.VarChar(30)
+  inativadoPorId    Int?
+  inativadoPor      Usuario?  @relation("InativadorUsuarios", fields: [inativadoPorId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  inativadoEm       DateTime? @db.DateTime(6)
+  motivoInativacao  String?   @db.VarChar(500)
+  criadoEm     DateTime @default(now()) @db.DateTime(6)
+  atualizadoEm DateTime @updatedAt @db.DateTime(6)
+
+  usuariosInativados  Usuario[]        @relation("InativadorUsuarios")
+  consultas           Consulta[]       @relation("VeterinarioConsultas")
+  consultasCriadas    Consulta[]       @relation("CriadorConsulta")
+  consultasCanceladas Consulta[]       @relation("CanceladorConsulta")
+  consultasConcluidas Consulta[]       @relation("ConcluidorConsulta")
+  clientesCriados     Cliente[]        @relation("CriadorCliente")
+  petsCriados         Pet[]            @relation("CriadorPet")
+  vacinasAplicadas    RegistroVacina[] @relation("VeterinarioVacinas")
+  vacinasRegistradas  RegistroVacina[] @relation("RegistradorVacinas")
+  anexosResponsaveis  AnexoClinico[]   @relation("ResponsavelAnexos")
+  anexosRegistrados   AnexoClinico[]   @relation("RegistradorAnexos")
+  anexosInativados    AnexoClinico[]   @relation("InativadorAnexos")
+  clientesInativados  Cliente[]        @relation("InativadorClientes")
+  petsInativados      Pet[]            @relation("InativadorPets")
+  produtosInativados  Produto[]        @relation("InativadorProdutos")
+  lotesBaixados       Lote[]           @relation("BaixadorLotes")
+  vacinasEstornadas   RegistroVacina[] @relation("EstornadorVacinas")
+  tabelasPrecoInativadas TabelaPreco[] @relation("InativadorTabelasPreco")
+  historicoPrecos     HistoricoPreco[] @relation("ResponsavelHistoricoPreco")
+  orcamentosCriados   Orcamento[]      @relation("CriadorOrcamentos")
+  orcamentosCancelados Orcamento[]     @relation("CanceladorOrcamentos")
+  movimentacoesCriadas MovimentacaoFinanceira[] @relation("CriadorMovimentacoes")
+  movimentacoesBaixadas MovimentacaoFinanceira[] @relation("BaixadorMovimentacoes")
+  movimentacoesCanceladas MovimentacaoFinanceira[] @relation("CanceladorMovimentacoes")
 }
 
 model Cliente {
-  id         Int      @id @default(autoincrement())
-  nome       String
-  cpf        String   @unique
-  telefone   String
-  email      String?
-  cep        String
-  logradouro String
-  bairro     String
-  cidade     String
-  uf         String
-  aceiteLgpd Boolean  @default(true)
-  criadoEm   DateTime @default(now())
-  pets       Pet[]
+  id              Int       @id @default(autoincrement())
+  nome            String    @db.VarChar(120)
+  cpf             String    @unique @db.VarChar(11)
+  rg              String?   @db.VarChar(30)
+  dataNascimento  DateTime? @db.Date
+  telefone        String    @db.VarChar(11)
+  email           String?   @db.VarChar(254)
+  cep             String    @db.VarChar(8)
+  logradouro      String    @db.VarChar(200)
+  bairro          String    @db.VarChar(120)
+  cidade          String    @db.VarChar(120)
+  uf              String    @db.VarChar(2)
+  aceiteLgpd      Boolean   @default(false)
+  lgpdAceiteEm    DateTime? @db.DateTime(6)
+  lgpdFinalidade  String?   @db.VarChar(255)
+  lgpdVersaoTermo String?   @db.VarChar(20)
+  ativo           Boolean   @default(true)
+  inativadoPorId  Int?
+  inativadoPor    Usuario?  @relation("InativadorClientes", fields: [inativadoPorId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  inativadoEm     DateTime? @db.DateTime(6)
+  motivoInativacao String?  @db.VarChar(500)
+  criadoEm        DateTime  @default(now()) @db.DateTime(6)
+  atualizadoEm    DateTime  @updatedAt @db.DateTime(6)
+  criadoPorId     Int?
+  criadoPor       Usuario?  @relation("CriadorCliente", fields: [criadoPorId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  pets Pet[]
+  orcamentos Orcamento[]
+
+  @@index([ativo])
 }
 
 model Pet {
-  id         Int        @id @default(autoincrement())
-  nome       String
-  especie    String
-  raca       String
-  peso       Float
-  nascimento String?
-  clienteId  Int
-  cliente    Cliente    @relation(fields: [clienteId], references: [id], onDelete: Cascade)
-  consultas  Consulta[]
-  anexos     Anexo[]
+  id             Int              @id @default(autoincrement())
+  nome           String           @db.VarChar(120)
+  especie        String           @db.VarChar(80)
+  raca           String           @db.VarChar(120)
+  idade          Int
+  peso           Float
+  nascimento     String?          @db.VarChar(20)
+  clienteId      Int
+  cliente        Cliente          @relation(fields: [clienteId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  criadoEm       DateTime         @default(now()) @db.DateTime(6)
+  atualizadoEm   DateTime         @updatedAt @db.DateTime(6)
+  criadoPorId    Int?
+  criadoPor      Usuario?         @relation("CriadorPet", fields: [criadoPorId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  ativo           Boolean          @default(true)
+  inativadoPorId  Int?
+  inativadoPor    Usuario?         @relation("InativadorPets", fields: [inativadoPorId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  inativadoEm     DateTime?        @db.DateTime(6)
+  motivoInativacao String?         @db.VarChar(500)
+  consultas      Consulta[]
+  anexosClinicos AnexoClinico[]
+  vacinas        RegistroVacina[]
+  orcamentos     Orcamento[]
+
+  @@index([clienteId])
+  @@index([ativo])
 }
 
 model Consulta {
-  id            Int      @id @default(autoincrement())
-  dataHora      DateTime
-  motivo        String
-  diagnostico   String?
-  status        String   @default("AGENDADA")
-  petId         Int
-  pet           Pet      @relation(fields: [petId], references: [id], onDelete: Cascade)
-  veterinarioId Int
-  veterinario   Usuario  @relation(fields: [veterinarioId], references: [id])
+  id                 Int              @id @default(autoincrement())
+  dataHora           DateTime         @db.DateTime(6)
+  duracaoMinutos     Int              @default(60)
+  motivo             String           @db.Text
+  diagnostico        String?          @db.Text
+  exameClinico       String?          @db.Text
+  conduta            String?          @db.Text
+  prescricao         String?          @db.Text
+  pesoAferido        Float?
+  temperaturaC       Float?
+  status             String           @default("AGENDADA") @db.VarChar(30)
+  petId              Int
+  pet                Pet              @relation(fields: [petId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  veterinarioId      Int
+  veterinario        Usuario          @relation("VeterinarioConsultas", fields: [veterinarioId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  criadoEm           DateTime         @default(now()) @db.DateTime(6)
+  atualizadoEm       DateTime         @updatedAt @db.DateTime(6)
+  criadoPorId        Int?
+  criadoPor          Usuario?         @relation("CriadorConsulta", fields: [criadoPorId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  canceladoPorId     Int?
+  canceladoPor       Usuario?         @relation("CanceladorConsulta", fields: [canceladoPorId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  canceladoEm        DateTime?        @db.DateTime(6)
+  motivoCancelamento String?          @db.Text
+  concluidaPorId     Int?
+  concluidaPor       Usuario?         @relation("ConcluidorConsulta", fields: [concluidaPorId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  concluidaEm        DateTime?        @db.DateTime(6)
+  vacinas            RegistroVacina[]
+  anexosClinicos     AnexoClinico[]
+
+  // (veterinarioId, dataHora, status) e (petId, dataHora, status) substituem
+  // os índices isolados em veterinarioId/petId (prefixo esquerdo já atendido).
+  @@index([dataHora, status])
+  @@index([veterinarioId, dataHora, status])
+  @@index([petId, dataHora, status])
 }
 
 model Produto {
   id            Int     @id @default(autoincrement())
-  nome          String
-  categoria     String
+  nome          String  @db.VarChar(120)
+  categoria     String  @db.VarChar(80)
+  /// Fabricante do produto; usado no preenchimento automático da vacinação.
+  fabricante    String? @db.VarChar(120)
   estoqueMinimo Int     @default(5)
-  precoBrl      Float
+  /// Liga/desliga somente o alerta de quantidade mínima; validade continua ativa.
+  alertaEstoque Boolean @default(true)
+  precoBrl      Decimal @db.Decimal(10, 2)
+  ativo         Boolean @default(true)
+  inativadoPorId  Int?
+  inativadoPor    Usuario? @relation("InativadorProdutos", fields: [inativadoPorId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  inativadoEm     DateTime? @db.DateTime(6)
+  motivoInativacao String?  @db.VarChar(500)
   lotes         Lote[]
+  itensOrcamento OrcamentoItem[]
+
+  @@index([ativo])
+  @@index([alertaEstoque])
 }
 
 model Lote {
-  id         Int      @id @default(autoincrement())
-  codigo     String
-  validade   DateTime
-  quantidade Int
-  produtoId  Int
-  produto    Produto  @relation(fields: [produtoId], references: [id], onDelete: Cascade)
+  id           Int      @id @default(autoincrement())
+  codigo       String   @unique @db.VarChar(64)
+  validade     DateTime @db.DateTime(6)
+  quantidade   Int
+  produtoId    Int
+  produto      Produto  @relation(fields: [produtoId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  ativo        Boolean  @default(true)
+  baixadoPorId Int?
+  baixadoPor   Usuario? @relation("BaixadorLotes", fields: [baixadoPorId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  baixadoEm    DateTime? @db.DateTime(6)
+  motivoBaixa  String?  @db.VarChar(500)
+  criadoEm     DateTime @default(now()) @db.DateTime(6)
+  atualizadoEm DateTime @updatedAt @db.DateTime(6)
+
+  @@index([produtoId])
+  @@index([validade])
+  @@index([ativo])
 }
 
-model Anexo {
-  id           Int    @id @default(autoincrement())
-  nomeArquivo  String
-  caminhoLocal String
-  tipo         String
-  petId        Int
-  pet          Pet    @relation(fields: [petId], references: [id], onDelete: Cascade)
+// Anexos clínicos (Etapa 9): evolução do stub `Anexo`, sem criar uma 9ª tabela.
+// `dataDocumento` é DATE civil (YYYY-MM-DD); a regra "não pode ser futura" é do
+// service, não um CHECK (NOW() não é determinístico e quebraria `migrate diff`).
+// `nomeArquivoGerado` é UUID v4 + extensão, gerado no processo principal.
+// Categoria: EXAME_LABORATORIAL | IMAGEM | DOCUMENTO | PRESCRICAO | OUTRO.
+// MIME aceito: application/pdf | image/jpeg | image/png. Tamanho: até 10 MiB.
+model AnexoClinico {
+  id                Int       @id @default(autoincrement())
+  petId             Int
+  pet               Pet       @relation(fields: [petId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  consultaId        Int?
+  consulta          Consulta? @relation(fields: [consultaId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  responsavelId     Int
+  responsavel       Usuario   @relation("ResponsavelAnexos", fields: [responsavelId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  descricao         String    @db.VarChar(200)
+  categoria         String    @db.VarChar(40)
+  dataDocumento     DateTime  @db.Date
+  nomeOriginal      String    @db.VarChar(255)
+  nomeArquivoGerado String    @unique @db.VarChar(64)
+  mimeType          String    @db.VarChar(100)
+  tamanhoBytes      Int
+  checksumSha256    String    @db.VarChar(64)
+  registradoPorId   Int
+  registradoPor     Usuario   @relation("RegistradorAnexos", fields: [registradoPorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  registradoEm      DateTime  @default(now()) @db.DateTime(6)
+  atualizadoEm      DateTime  @updatedAt @db.DateTime(6)
+  inativo           Boolean   @default(false)
+  inativadoPorId    Int?
+  inativadoPor      Usuario?  @relation("InativadorAnexos", fields: [inativadoPorId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  inativadoEm       DateTime? @db.DateTime(6)
+  motivoInativacao  String?   @db.VarChar(500)
+
+  @@index([petId, inativo, registradoEm])
+  @@index([consultaId, inativo, registradoEm])
+}
+
+// Carteira de vacinação: rastreabilidade do que foi aplicado.
+// Não há aqui calendário vacinal, obrigatoriedade por município ou lembretes
+// (regras clínicas ficam com o domínio, fora da camada de dados).
+model RegistroVacina {
+  id              Int       @id @default(autoincrement())
+  petId           Int
+  pet             Pet       @relation(fields: [petId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  veterinarioId   Int
+  veterinario     Usuario   @relation("VeterinarioVacinas", fields: [veterinarioId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  consultaId      Int?
+  consulta        Consulta? @relation(fields: [consultaId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  vacina          String    @db.VarChar(120)
+  fabricante      String    @db.VarChar(120)
+  lote            String    @db.VarChar(64)
+  validade        DateTime  @db.Date
+  aplicadaEm      DateTime  @db.DateTime(6)
+  dose            String    @db.VarChar(60)
+  proximaDose     DateTime? @db.Date
+  reacao          String?   @db.VarChar(500)
+  observacoes     String?   @db.Text
+  registradoPorId Int
+  registradoPor   Usuario   @relation("RegistradorVacinas", fields: [registradoPorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  registradoEm    DateTime  @default(now()) @db.DateTime(6)
+  atualizadoEm    DateTime  @updatedAt @db.DateTime(6)
+  estornado       Boolean   @default(false)
+  estornadoPorId  Int?
+  estornadoPor    Usuario?  @relation("EstornadorVacinas", fields: [estornadoPorId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  estornadoEm     DateTime? @db.DateTime(6)
+  motivoEstorno   String?   @db.VarChar(500)
+  /// Auditoria do último e-mail automático enviado ao tutor.
+  ultimoAvisoEm          DateTime? @db.DateTime(6)
+  /// Próxima dose para a qual o último aviso foi enviado.
+  ultimoAvisoProximaDose DateTime? @db.Date
+
+  @@index([petId, aplicadaEm])
+  @@index([veterinarioId])
+  @@index([consultaId])
+  @@index([proximaDose, estornado])
+}
+
+/// Cotação diária persistida do dólar (BRL por USD), usada no custo de importação.
+model CotacaoDolar {
+  id             Int      @id @default(autoincrement())
+  dataReferencia DateTime @unique @db.Date
+  valor          Decimal  @db.Decimal(10, 4)
+  fonte          String   @db.VarChar(80)
+  consultadoEm   DateTime @db.DateTime(6)
+}
+
+/* ---------------- Fase 2: preços, orçamentos e financeiro ---------------- */
+
+/// Tabela de preços de serviços (vacinas, consultas, exames etc.).
+model TabelaPreco {
+  id               Int       @id @default(autoincrement())
+  codigo           String    @unique @db.VarChar(40)
+  descricao        String    @db.VarChar(160)
+  categoria        String    @db.VarChar(80)
+  preco            Decimal   @db.Decimal(10, 2)
+  ativo            Boolean   @default(true)
+  inativadoPorId   Int?
+  inativadoPor     Usuario?  @relation("InativadorTabelasPreco", fields: [inativadoPorId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  inativadoEm      DateTime? @db.DateTime(6)
+  motivoInativacao String?   @db.VarChar(500)
+  itens            OrcamentoItem[]
+  criadoEm         DateTime  @default(now()) @db.DateTime(6)
+  atualizadoEm     DateTime  @updatedAt @db.DateTime(6)
+
+  @@index([ativo])
+  @@index([categoria])
+}
+
+/// Auditoria de alterações de preço, tanto de produtos quanto da tabela de serviços.
+model HistoricoPreco {
+  id            Int      @id @default(autoincrement())
+  origem        String   @db.VarChar(20)
+  origemId      Int
+  anterior      Decimal  @db.Decimal(10, 2)
+  novo          Decimal  @db.Decimal(10, 2)
+  responsavelId Int
+  responsavel   Usuario  @relation("ResponsavelHistoricoPreco", fields: [responsavelId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  motivo        String   @db.VarChar(255)
+  criadoEm      DateTime @default(now()) @db.DateTime(6)
+
+  @@index([origem, origemId, criadoEm])
+}
+
+/// Orçamento: proposta comercial com itens, desconto e situação.
+model Orcamento {
+  id                 Int                      @id @default(autoincrement())
+  numero             String                   @unique @db.VarChar(30)
+  clienteId          Int
+  cliente            Cliente                  @relation(fields: [clienteId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  petId              Int?
+  pet                Pet?                     @relation(fields: [petId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  status             String                   @default("PENDENTE") @db.VarChar(30)
+  validade           DateTime                 @db.Date
+  desconto           Decimal                  @default(0) @db.Decimal(10, 2)
+  observacoes        String?                  @db.Text
+  criadoPorId        Int
+  criadoPor          Usuario                  @relation("CriadorOrcamentos", fields: [criadoPorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  canceladoPorId     Int?
+  canceladoPor       Usuario?                 @relation("CanceladorOrcamentos", fields: [canceladoPorId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  canceladoEm        DateTime?                @db.DateTime(6)
+  motivoCancelamento String?                  @db.VarChar(500)
+  itens              OrcamentoItem[]
+  movimentacoes      MovimentacaoFinanceira[]
+  criadoEm           DateTime                 @default(now()) @db.DateTime(6)
+  atualizadoEm       DateTime                 @updatedAt @db.DateTime(6)
+
+  @@index([status])
+  @@index([clienteId, criadoEm])
+}
+
+/// Item de orçamento: produto do estoque ou serviço da tabela de preços.
+model OrcamentoItem {
+  id            Int          @id @default(autoincrement())
+  orcamentoId   Int
+  orcamento     Orcamento    @relation(fields: [orcamentoId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  tipo          String       @db.VarChar(20)
+  produtoId     Int?
+  produto       Produto?     @relation(fields: [produtoId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  tabelaPrecoId Int?
+  tabelaPreco   TabelaPreco? @relation(fields: [tabelaPrecoId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  descricao     String       @db.VarChar(200)
+  quantidade    Int
+  precoUnitario Decimal      @db.Decimal(10, 2)
+  subtotal      Decimal      @db.Decimal(10, 2)
+  criadoEm      DateTime     @default(now()) @db.DateTime(6)
+
+  @@index([orcamentoId])
+}
+
+/// Receitas e despesas, opcionalmente vinculadas a um orçamento.
+model MovimentacaoFinanceira {
+  id                 Int        @id @default(autoincrement())
+  tipo               String     @db.VarChar(20)
+  categoria          String     @db.VarChar(80)
+  descricao          String     @db.VarChar(200)
+  valor              Decimal    @db.Decimal(10, 2)
+  vencimento         DateTime   @db.Date
+  pagamento          DateTime?  @db.Date
+  status             String     @default("PENDENTE") @db.VarChar(30)
+  formaPagamento     String?    @db.VarChar(40)
+  orcamentoId        Int?
+  orcamento          Orcamento? @relation(fields: [orcamentoId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  criadoPorId        Int
+  criadoPor          Usuario    @relation("CriadorMovimentacoes", fields: [criadoPorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  baixadoPorId       Int?
+  baixadoPor         Usuario?   @relation("BaixadorMovimentacoes", fields: [baixadoPorId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  baixadoEm          DateTime?  @db.DateTime(6)
+  canceladoPorId     Int?
+  canceladoPor       Usuario?   @relation("CanceladorMovimentacoes", fields: [canceladoPorId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  canceladoEm        DateTime?  @db.DateTime(6)
+  motivoCancelamento String?    @db.VarChar(500)
+  criadoEm           DateTime   @default(now()) @db.DateTime(6)
+  atualizadoEm       DateTime   @updatedAt @db.DateTime(6)
+
+  @@index([tipo, status, vencimento])
+  @@index([orcamentoId])
 }

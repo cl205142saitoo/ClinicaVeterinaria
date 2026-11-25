@@ -1,0 +1,146 @@
+/* Tema do PetHealthPD: identidade clínica sobre o Bootstrap 5. */
+:root {
+  --bs-primary: #0b6b5e;
+  --bs-primary-rgb: 11, 107, 94;
+  --bs-success: #2f855a;
+  --bs-success-rgb: 47, 133, 90;
+  --bs-body-bg: #f4f7f6;
+  --bs-body-color: #1f2d2b;
+  --bs-secondary-color: #5c6663;
+  --phd-cor-foco: #0a58ca;
+}
+
+/* Foco visível reforçado para navegação por teclado.
+   Especificidade igual à do Bootstrap (0,2,0); este arquivo é carregado depois. */
+.btn:focus-visible,
+.form-control:focus-visible,
+.form-select:focus-visible,
+.form-check-input:focus-visible,
+a:focus-visible {
+  outline: 3px solid var(--phd-cor-foco);
+  outline-offset: 2px;
+}
+
+/* Layout da barra do usuário (não coberto por utilitários do Bootstrap). */
+.barra-usuario {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.65rem 1rem;
+  border-radius: 0.5rem;
+  background: #123b36;
+  color: #fff;
+}
+
+/* Gráficos dos relatórios: SVG e barras CSS, sem bibliotecas adicionais. */
+.grafico-relatorio {
+  min-height: 11rem;
+}
+.grafico-relatorio svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.grafico-relatorio .grafico-barra {
+  fill: var(--bs-primary);
+}
+.grafico-relatorio .grafico-eixo {
+  stroke: #c7d2d0;
+  stroke-width: 1;
+}
+.grafico-relatorio .grafico-texto {
+  fill: var(--bs-secondary-color);
+  font-size: 9px;
+}
+.grafico-relatorio .grafico-valor {
+  fill: var(--bs-body-color);
+  font-size: 10px;
+  font-weight: 600;
+}
+.grafico-relatorio .progress {
+  height: 0.5rem;
+}
+
+/* Módulos de preços, orçamentos e financeiro: densidade uniforme das tabelas. */
+.tabela-fase2 th,
+.tabela-fase2 td {
+  vertical-align: middle;
+}
+.tabela-fase2 td small {
+  white-space: normal;
+}
+.valor-monetario {
+  font-variant-numeric: tabular-nums;
+}
+.resumo-fase2 .card-body {
+  min-height: 6.5rem;
+}
+.resumo-fase2 .card {
+  border-color: rgba(11, 107, 94, 0.18);
+}
+
+/* Na impressão, apenas o painel de relatórios é exibido. */
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 10mm;
+  }
+
+  body {
+    background: #fff !important;
+  }
+  body * {
+    visibility: hidden !important;
+  }
+  #abaRelatorios,
+  #abaRelatorios * {
+    visibility: visible !important;
+  }
+  #abaRelatorios {
+    position: absolute !important;
+    inset: 0 auto auto 0 !important;
+    display: block !important;
+    opacity: 1 !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+  #navAbas,
+  .barra-usuario,
+  #toastContainer,
+  .toast,
+  .modal,
+  #abaRelatorios button,
+  #abaRelatorios .btn,
+  #abaRelatorios .invalid-feedback {
+    display: none !important;
+  }
+  .container-fluid,
+  main,
+  #appPrincipal,
+  .tab-content,
+  .card,
+  .card-body,
+  .table-responsive {
+    overflow: visible !important;
+  }
+  .card,
+  .shadow-sm {
+    box-shadow: none !important;
+  }
+  .card,
+  tr,
+  .grafico-relatorio {
+    break-inside: avoid;
+  }
+  #relKpis .card {
+    border: 1px solid #dee2e6 !important;
+  }
+  .table {
+    font-size: 0.8rem;
+  }
+}

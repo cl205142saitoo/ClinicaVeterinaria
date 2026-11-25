@@ -1,0 +1,8 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  // O arquiteto coordena a equipe e pede aprovação antes de cada etapa.
+  "default_agent": "arquiteto",
+  "watcher": {
+    "ignore": ["dist/**", "node_modules/**"]
+  }
+}

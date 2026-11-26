@@ -9,7 +9,6 @@ export const IPC_CHANNELS = {
   PETS_CRIAR: 'pets:criar',
   PETS_DELETAR: 'pets:deletar',
   AUTH_LOGIN: 'auth:login',
-  AUTH_REGISTRAR: 'auth:registrar',
   AUTH_LOGOUT: 'auth:logout',
   CONSULTAS_LISTAR: 'consultas:listar',
   CONSULTAS_CRIAR: 'consultas:criar',

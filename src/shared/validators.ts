@@ -59,7 +59,6 @@ import type {
   DadosPet,
   DadosProduto,
   DadosProntuario,
-  DadosRegistro,
   DadosRegistroAnexo,
   DadosRegistroVacina,
   DadosStatusOrcamento,
@@ -228,11 +227,6 @@ export function ehDadosPet(valor: unknown): valor is DadosPet {
     (valor.nascimento === undefined ||
       (typeof valor.nascimento === 'string' && valor.nascimento.length <= 20))
   );
-}
-
-export function ehDadosRegistro(valor: unknown): valor is DadosRegistro {
-  if (!ehObjeto(valor)) return false;
-  return ehTexto(valor.nome, 2, 120) && ehEmail(valor.email) && ehSenha(valor.senha);
 }
 
 export function ehDadosConsulta(valor: unknown): valor is DadosConsulta {
@@ -411,7 +405,9 @@ export function ehDadosAtualizacaoUsuario(valor: unknown): valor is DadosAtualiz
     ehEmail(valor.email) &&
     (valor.crmv === null || (typeof valor.crmv === 'string' && valor.crmv.length <= 30)) &&
     (valor.rg === null || ehRg(valor.rg)) &&
-    typeof valor.ativo === 'boolean'
+    typeof valor.ativo === 'boolean' &&
+    (valor.novaSenha === undefined ||
+      (typeof valor.novaSenha === 'string' && valor.novaSenha.length >= 6))
   );
 }
 

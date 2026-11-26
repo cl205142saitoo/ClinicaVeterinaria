@@ -19,7 +19,7 @@ import {
 } from '../ui';
 import type { ContextoApp } from './contexto';
 
-const COLUNAS = 6;
+const COLUNAS = 7;
 
 const ROTULOS_ROLE: Readonly<Record<Role, string>> = {
   ADMIN: 'Administrador',
@@ -98,6 +98,7 @@ export class UsuarioController {
         criarCelula(usuario.nome, 'text-break small'),
         criarCelula(usuario.email, 'text-break small'),
         this.celulaRole(usuario.role),
+        this.celulaCrmv(usuario),
         this.celulaSituacao(usuario.ativo),
         criarCelula(Number.isNaN(criadoEm.getTime()) ? '—' : criadoEm.toLocaleDateString('pt-BR'), 'text-nowrap small')
       );
@@ -142,6 +143,15 @@ export class UsuarioController {
     const celula = document.createElement('td');
     celula.append(criarBadge(ROTULOS_ROLE[role] ?? role, CLASSES_ROLE[role] ?? 'text-bg-secondary'));
     return celula;
+  }
+
+  /** CRMV existe só para veterinário; demais perfis exibem "Não possui". */
+  private celulaCrmv(usuario: Usuario): HTMLTableCellElement {
+    if (usuario.role !== 'VETERINARIO') {
+      return criarCelula('Não possui', 'small text-muted');
+    }
+    const crmv = usuario.crmv?.trim();
+    return criarCelula(crmv || 'Não informado', 'small');
   }
 
   private celulaSituacao(ativo: boolean): HTMLTableCellElement {
@@ -266,6 +276,7 @@ export class UsuarioController {
     obrigatorio<HTMLInputElement>('#euEmail').value = usuario.email;
     obrigatorio<HTMLInputElement>('#euCrmv').value = usuario.crmv ?? '';
     obrigatorio<HTMLInputElement>('#euRg').value = usuario.rg ?? '';
+    obrigatorio<HTMLInputElement>('#euNovaSenha').value = '';
     obrigatorio<HTMLSelectElement>('#euRole').value = usuario.role;
     obrigatorio<HTMLInputElement>('#euAtivo').checked = usuario.ativo;
     this.atualizarVisibilidadeCrmv();
@@ -305,6 +316,7 @@ export class UsuarioController {
     const email = obrigatorio<HTMLInputElement>('#euEmail');
     const crmv = obrigatorio<HTMLInputElement>('#euCrmv');
     const rg = obrigatorio<HTMLInputElement>('#euRg');
+    const novaSenha = obrigatorio<HTMLInputElement>('#euNovaSenha');
     const roleSelect = obrigatorio<HTMLSelectElement>('#euRole');
     const ativo = obrigatorio<HTMLInputElement>('#euAtivo');
     limparValidacao(formulario);
@@ -328,6 +340,11 @@ export class UsuarioController {
     } else {
       crmv.value = '';
     }
+    if (novaSenha.value !== '') {
+      resultados.push(
+        exigir(novaSenha, novaSenha.value.length >= 6, 'A nova senha deve ter pelo menos 6 caracteres.')
+      );
+    }
     if (!resultados.every(Boolean)) {
       focarPrimeiroInvalido(formulario);
       return;
@@ -345,12 +362,14 @@ export class UsuarioController {
       rg: rg.value.trim() || null,
       role,
       ativo: ativo.checked,
+      ...(novaSenha.value !== '' ? { novaSenha: novaSenha.value } : {}),
     };
 
     setCarregando(botao, true, 'Salvando…');
     try {
       await window.api.atualizarUsuario(dados);
       this.modalEdicao?.hide();
+      novaSenha.value = '';
       mostrarToast('Usuário atualizado com sucesso.', 'sucesso');
       await this.carregar();
       await this.contexto.recarregarVeterinarios();

@@ -183,6 +183,27 @@ export function focarPrimeiroInvalido(formulario: HTMLFormElement): void {
   invalido?.focus();
 }
 
+/** Liga o botão de olho de todos os campos de senha declarados no HTML. */
+export function configurarVisibilidadeSenhas(): void {
+  document.querySelectorAll<HTMLButtonElement>('button[data-mostrar-senha]').forEach((botao) => {
+    const campo = document.getElementById(botao.dataset.mostrarSenha ?? '');
+    if (!(campo instanceof HTMLInputElement)) return;
+    const uso = botao.querySelector<SVGUseElement>('use');
+
+    const definirVisibilidade = (visivel: boolean): void => {
+      campo.type = visivel ? 'text' : 'password';
+      uso?.setAttribute('href', visivel ? '#iconeOlhoCortado' : '#iconeOlho');
+      const rotulo = visivel ? 'Ocultar senha' : 'Mostrar senha';
+      botao.setAttribute('aria-label', rotulo);
+      botao.setAttribute('aria-pressed', String(visivel));
+      botao.title = rotulo;
+    };
+
+    botao.addEventListener('click', () => definirVisibilidade(campo.type === 'password'));
+    campo.form?.addEventListener('reset', () => definirVisibilidade(false));
+  });
+}
+
 const textosOriginais = new WeakMap<HTMLButtonElement, string>();
 
 export function setCarregando(botao: HTMLButtonElement, ativo: boolean, texto = 'Carregando…'): void {

@@ -11,9 +11,12 @@ export function exigirPerfilConhecido(usuario: Usuario, modulo: string): void {
   }
 }
 
-/** ADMIN, VETERINARIO e ATENDENTE leem todos os módulos da Fase 2. */
+/** Somente ADMIN acessa os módulos comerciais (menu oculto aos demais perfis). */
 export function exigirLeituraFase2(usuario: Usuario, modulo: string): void {
   exigirPerfilConhecido(usuario, modulo);
+  if (usuario.role !== 'ADMIN') {
+    throw new ErroAplicacao(`Seu perfil não tem acesso a ${modulo}. Procure um administrador.`);
+  }
 }
 
 /** Somente ADMIN altera tabelas de preço (e o preço dos produtos do estoque). */

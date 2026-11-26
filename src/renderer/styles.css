@@ -21,6 +21,19 @@ a:focus-visible {
   outline-offset: 2px;
 }
 
+/* O feedback de validação também fica dentro do input-group: mantém a borda arredondada do olho. */
+.input-group > button[data-mostrar-senha] {
+  border-top-right-radius: var(--bs-border-radius);
+  border-bottom-right-radius: var(--bs-border-radius);
+}
+
+/* Centraliza o cartão de login no viewport (o container já tem py-3 = 1rem em cada lado). */
+#telaLogin {
+  min-height: calc(100vh - 2rem);
+  min-height: calc(100dvh - 2rem);
+  align-items: center;
+}
+
 /* Layout da barra do usuário (não coberto por utilitários do Bootstrap). */
 .barra-usuario {
   display: flex;

@@ -43,7 +43,7 @@ export class UsuarioRepository {
     return this.prisma.usuario.create({ data: dados });
   }
 
-  async atualizar(dados: DadosAtualizacaoUsuario) {
+  async atualizar(dados: Omit<DadosAtualizacaoUsuario, 'novaSenha'> & { senhaHash?: string }) {
     return this.prisma.usuario.update({
       where: { id: dados.id },
       data: {
@@ -53,6 +53,7 @@ export class UsuarioRepository {
         rg: dados.rg,
         role: dados.role,
         ativo: dados.ativo,
+        ...(dados.senhaHash !== undefined ? { senhaHash: dados.senhaHash } : {}),
         // Reativação pelo formulário limpa os dados da inativação anterior;
         // a desativação auditada continua exclusiva de `inativar()`.
         ...(dados.ativo

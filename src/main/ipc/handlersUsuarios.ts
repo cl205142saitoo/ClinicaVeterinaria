@@ -47,7 +47,7 @@ export function criarHandlersUsuarios(
       const dados = exigir(
         args[0],
         ehDadosAtualizacaoUsuario,
-        'Dados do usuário inválidos. Confira nome, e-mail e perfil.'
+        'Dados do usuário inválidos. Confira nome, e-mail, perfil e nova senha (6+).'
       );
       return usuarioService.atualizar(dados, usuario);
     },

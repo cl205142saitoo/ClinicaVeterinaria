@@ -1,4 +1,4 @@
-/** Autenticação, primeiro acesso e controle de permissões por perfil. */
+/** Autenticação e controle de permissões por perfil. */
 
 import type { Usuario } from './types';
 import {
@@ -57,9 +57,7 @@ function mostrarTelaAutenticada(): void {
 
 export function iniciarAuth(callbacks: CallbacksAuth): void {
   const formLogin = obrigatorio<HTMLFormElement>('#formLogin');
-  const formRegistro = obrigatorio<HTMLFormElement>('#formRegistro');
   const botaoLogin = obrigatorio<HTMLButtonElement>('#btnLogin');
-  const botaoRegistrar = obrigatorio<HTMLButtonElement>('#btnRegistrar');
   const botaoSair = obrigatorio<HTMLButtonElement>('#btnSair');
 
   formLogin.addEventListener('submit', async (evento) => {
@@ -89,44 +87,6 @@ export function iniciarAuth(callbacks: CallbacksAuth): void {
       senha.focus();
     } finally {
       setCarregando(botaoLogin, false);
-    }
-  });
-
-  formRegistro.addEventListener('submit', async (evento) => {
-    evento.preventDefault();
-    const nome = obrigatorio<HTMLInputElement>('#rNome');
-    const email = obrigatorio<HTMLInputElement>('#rEmail');
-    const senha = obrigatorio<HTMLInputElement>('#rSenha');
-    limparValidacao(formRegistro);
-
-    const resultados = [
-      exigir(nome, nome.value.trim().length >= 2, 'Informe seu nome completo.'),
-      exigir(email, email.value.trim() !== '' && email.checkValidity(), 'Informe um e-mail válido.'),
-      exigir(senha, senha.value.length >= 6, 'A senha deve ter pelo menos 6 caracteres.'),
-    ];
-    if (!resultados.every(Boolean)) {
-      focarPrimeiroInvalido(formRegistro);
-      return;
-    }
-
-    setCarregando(botaoRegistrar, true, 'Cadastrando…');
-    try {
-      await window.api.registrarUsuario({
-        nome: nome.value.trim(),
-        email: email.value.trim(),
-        senha: senha.value,
-      });
-      formRegistro.reset();
-      limparValidacao(formRegistro);
-      mostrarToast('Usuário criado com sucesso! Agora faça login.', 'sucesso');
-      email.focus();
-    } catch (erro) {
-      const mensagem = mensagemErro(erro);
-      marcarInvalido(email, mensagem);
-      mostrarToast(mensagem, 'erro');
-      email.focus();
-    } finally {
-      setCarregando(botaoRegistrar, false);
     }
   });
 

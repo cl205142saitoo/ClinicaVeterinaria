@@ -88,10 +88,17 @@ export class UsuarioService {
       throw new ErroAplicacao('Já existe outro usuário com este e-mail.');
     }
 
+    const { novaSenha, ...dadosBase } = dados;
+    const senhaHash =
+      novaSenha === undefined || novaSenha === ''
+        ? undefined
+        : await bcrypt.hash(novaSenha, CUSTO_HASH_SENHA);
+
     await this.repo.atualizar({
-      ...dados,
+      ...dadosBase,
       email,
       crmv: dados.role === 'VETERINARIO' ? dados.crmv?.trim() || null : null,
+      ...(senhaHash !== undefined ? { senhaHash } : {}),
     });
     const atualizado = await this.repo.buscarPorId(dados.id);
     if (atualizado === null) {

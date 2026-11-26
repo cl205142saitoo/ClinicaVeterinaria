@@ -15,7 +15,7 @@ import { RelatorioController } from './controladores/RelatorioController';
 import { TabelaPrecoController } from './controladores/TabelaPrecoController';
 import { UsuarioController } from './controladores/UsuarioController';
 import { VacinaController } from './controladores/VacinaController';
-import { limparInvalido, mensagemErro, mostrarToast } from './ui';
+import { configurarVisibilidadeSenhas, limparInvalido, mensagemErro, mostrarToast } from './ui';
 
 class App implements ContextoApp {
   readonly auth: AuthController;
@@ -57,6 +57,7 @@ class App implements ContextoApp {
   /** Liga os eventos uma única vez; nenhuma tela é carregada antes do login. */
   iniciar(): void {
     this.configurarValidacaoDinamica();
+    configurarVisibilidadeSenhas();
     this.auth.iniciar();
     this.clientes.iniciar();
     this.pets.iniciar();
@@ -95,18 +96,21 @@ class App implements ContextoApp {
       this.anexos.preencherSelectPets(pets);
       this.integracoes.definirClientes(clientes);
 
+      // Módulos administrativos não são carregados para os demais perfis:
+      // além de ocultos no menu, seus canais IPC agora os bloqueiam.
+      const admin = this.auth.isAdmin();
       const [orcamentos] = await Promise.all([
-        this.orcamentos.carregar(clientes, pets),
-        this.tabelasPreco.carregar(),
+        admin ? this.orcamentos.carregar(clientes, pets) : Promise.resolve([]),
+        admin ? this.tabelasPreco.carregar() : Promise.resolve(),
         this.agenda.carregar(),
         this.estoque.carregar(),
-        this.usuarios.carregar(),
+        admin ? this.usuarios.carregar() : Promise.resolve(),
         this.integracoes.carregar(),
         this.relatorios.carregar(),
       ]);
 
       await Promise.all([
-        this.financeiro.carregar(orcamentos),
+        admin ? this.financeiro.carregar(orcamentos) : Promise.resolve(),
         this.prontuario.carregarSessao(),
         this.vacinas.carregarSessao(),
         this.anexos.carregarSessao(),
@@ -124,7 +128,7 @@ class App implements ContextoApp {
   }
 
   async recarregarTabelasPreco(): Promise<void> {
-    if (this.auth.obterUsuario() === null) return;
+    if (this.auth.obterUsuario() === null || !this.auth.isAdmin()) return;
     // Uma única sincronização: a aba Preços e o seletor de orçamentos leem a mesma API.
     await Promise.all([this.tabelasPreco.carregar(), this.orcamentos.recarregarTabelas()]);
   }

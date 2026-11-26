@@ -22,19 +22,14 @@ export class AuthController {
 
   constructor(private readonly callbacks: CallbacksAuth) {}
 
-  /** Liga os eventos de login, registro e logout. */
+  /** Liga os eventos de login e logout. */
   iniciar(): void {
     const formLogin = obrigatorio<HTMLFormElement>('#formLogin');
-    const formRegistro = obrigatorio<HTMLFormElement>('#formRegistro');
     const botaoLogin = obrigatorio<HTMLButtonElement>('#btnLogin');
-    const botaoRegistrar = obrigatorio<HTMLButtonElement>('#btnRegistrar');
     const botaoSair = obrigatorio<HTMLButtonElement>('#btnSair');
 
     formLogin.addEventListener('submit', (evento) => {
       void this.entrar(evento, formLogin, botaoLogin);
-    });
-    formRegistro.addEventListener('submit', (evento) => {
-      void this.registrar(evento, formRegistro, botaoRegistrar);
     });
     botaoSair.addEventListener('click', () => {
       void this.sair();
@@ -55,33 +50,46 @@ export class AuthController {
     return papel === 'ADMIN' || papel === 'VETERINARIO';
   }
 
-  /** Esconde ações exclusivas de administrador. */
+  /** Esconde abas e ações sem permissão para o perfil autenticado. */
   aplicarPermissoes(): void {
-    const visivel = this.isAdmin();
+    const admin = this.isAdmin();
+    const clinico = this.temAcessoClinico();
+
     document.querySelectorAll<HTMLElement>('.danger, .somente-admin').forEach((elemento) => {
-      elemento.hidden = !visivel;
+      elemento.hidden = !admin;
     });
-    // A aba de administração é controlada separadamente: nenhuma classe de
-    // permissão é usada nela para não conflitar com os botões `.danger` das
-    // tabelas (que também são escondidos para não-admin).
-    obrigatorio<HTMLElement>('#abaUsuarios-item').hidden = !visivel;
-    if (!visivel && obrigatorio<HTMLElement>('#abaUsuarios').classList.contains('active')) {
-      obrigatorio<HTMLElement>('#abaClientes').classList.add('active', 'show');
-      obrigatorio<HTMLElement>('#abaUsuarios').classList.remove('active', 'show');
-      obrigatorio<HTMLElement>('#abaClientes-tab').classList.add('active');
-      obrigatorio<HTMLElement>('#abaUsuarios-tab').classList.remove('active');
+    // Administração e módulos comerciais ficam só com o ADMIN.
+    for (const id of ['#abaPrecos-item', '#abaOrcamentos-item', '#abaFinanceiro-item', '#abaUsuarios-item']) {
+      this.definirVisibilidadeAba(id, admin);
     }
 
-    // Relatórios contêm dados clínicos agregados: disponíveis só para quem tem
-    // acesso clínico (o backend continua sendo a autoridade final).
-    const acessoRelatorios = this.temAcessoClinico();
-    obrigatorio<HTMLElement>('#abaRelatorios-item').hidden = !acessoRelatorios;
-    if (!acessoRelatorios && obrigatorio<HTMLElement>('#abaRelatorios').classList.contains('active')) {
-      obrigatorio<HTMLElement>('#abaClientes').classList.add('active', 'show');
-      obrigatorio<HTMLElement>('#abaRelatorios').classList.remove('active', 'show');
-      obrigatorio<HTMLElement>('#abaClientes-tab').classList.add('active');
-      obrigatorio<HTMLElement>('#abaRelatorios-tab').classList.remove('active');
+    // Prontuário e relatórios contêm dados clínicos: ADMIN e VETERINARIO.
+    for (const id of ['#abaProntuario-item', '#abaRelatorios-item']) {
+      this.definirVisibilidadeAba(id, clinico);
     }
+  }
+
+  /** Esconde a aba; se ela estiver ativa, devolve o painel para Clientes. */
+  private definirVisibilidadeAba(itemId: string, visivel: boolean): void {
+    const item = obrigatorio<HTMLElement>(itemId);
+    item.hidden = !visivel;
+
+    const tab = item.querySelector<HTMLButtonElement>('button[data-bs-target]');
+    const painelId = tab?.dataset.bsTarget;
+    if (visivel || painelId === undefined) return;
+
+    const painel = document.querySelector<HTMLElement>(painelId);
+    if (painel === null || !painel.classList.contains('active')) return;
+
+    painel.classList.remove('active', 'show');
+    tab?.classList.remove('active');
+    tab?.setAttribute('aria-selected', 'false');
+
+    const clientes = obrigatorio<HTMLElement>('#abaClientes');
+    const clientesTab = obrigatorio<HTMLElement>('#abaClientes-tab');
+    clientes.classList.add('active', 'show');
+    clientesTab.classList.add('active');
+    clientesTab.setAttribute('aria-selected', 'true');
   }
 
   /** Exibe a aplicação autenticada e move o foco para o primeiro controle útil. */
@@ -138,48 +146,6 @@ export class AuthController {
       marcarInvalido(senha, mensagem);
       mostrarToast(mensagem, 'erro');
       senha.focus();
-    } finally {
-      setCarregando(botao, false);
-    }
-  }
-
-  private async registrar(
-    evento: Event,
-    formulario: HTMLFormElement,
-    botao: HTMLButtonElement
-  ): Promise<void> {
-    evento.preventDefault();
-    const nome = obrigatorio<HTMLInputElement>('#rNome');
-    const email = obrigatorio<HTMLInputElement>('#rEmail');
-    const senha = obrigatorio<HTMLInputElement>('#rSenha');
-    limparValidacao(formulario);
-
-    const resultados = [
-      exigir(nome, nome.value.trim().length >= 2, 'Informe seu nome completo.'),
-      exigir(email, email.value.trim() !== '' && email.checkValidity(), 'Informe um e-mail válido.'),
-      exigir(senha, senha.value.length >= 6, 'A senha deve ter pelo menos 6 caracteres.'),
-    ];
-    if (!resultados.every(Boolean)) {
-      focarPrimeiroInvalido(formulario);
-      return;
-    }
-
-    setCarregando(botao, true, 'Cadastrando…');
-    try {
-      await window.api.registrarUsuario({
-        nome: nome.value.trim(),
-        email: email.value.trim(),
-        senha: senha.value,
-      });
-      formulario.reset();
-      limparValidacao(formulario);
-      mostrarToast('Usuário criado com sucesso! Agora faça login.', 'sucesso');
-      email.focus();
-    } catch (erro) {
-      const mensagem = mensagemErro(erro);
-      marcarInvalido(email, mensagem);
-      mostrarToast(mensagem, 'erro');
-      email.focus();
     } finally {
       setCarregando(botao, false);
     }

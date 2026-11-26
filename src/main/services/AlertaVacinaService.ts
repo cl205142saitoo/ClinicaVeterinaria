@@ -1,4 +1,4 @@
-import nodemailer, { type SendMailOptions } from 'nodemailer';
+import nodemailer, { type SendMailOptions, type SentMessageInfo } from 'nodemailer';
 import { SMTP_ASSUNTO_PREFIXO, VACINA_ALERTA_DIAS } from '../../shared/constants';
 import { carregarEnv } from '../config/carregarEnv';
 import { dataCivilClinica, formatarDataCivil } from '../../shared/datas';
@@ -28,7 +28,7 @@ export interface ConfiguracaoSmtp {
 }
 
 export interface TransportadorAvisos {
-  sendMail(opcoes: SendMailOptions): Promise<unknown>;
+  sendMail(opcoes: SendMailOptions): Promise<SentMessageInfo>;
 }
 
 function criarTransportador(config: ConfiguracaoSmtp): TransportadorAvisos {
@@ -257,7 +257,11 @@ export class AlertaVacinaService {
         text: mensagemEmail(alerta),
       };
       try {
-        await transportador.sendMail(opcoes);
+        const info = await transportador.sendMail(opcoes);
+        const linkEthereal = nodemailer.getTestMessageUrl(info);
+        if (linkEthereal) {
+          console.log('[Vacinas] Link do E-mail no Ethereal: ' + linkEthereal);
+        }
         const proximaDose = new Date(`${alerta.proximaDose}T00:00:00.000Z`);
         const registrado = await this.repo.marcarAvisoEnviado(
           alerta.registroVacinaId,

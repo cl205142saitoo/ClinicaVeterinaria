@@ -22,8 +22,8 @@ import type { ContextoApp } from './contexto';
 
 const COLUNAS = 4;
 
-const MENSAGEM_EDICAO_COM_CONSULTA =
-  'Não é possível editar este pet enquanto houver consulta agendada ou confirmada. Cancele ou conclua a consulta antes de alterar os dados.';
+const MENSAGEM_CONSULTA_ATIVA =
+  'Não é possível editar este pet enquanto houver consulta agendada ou confirmada. Cancele ou conclua a consulta primeiro.';
 
 export class PetController {
   private petsVisiveis = new Map<number, Pet>();
@@ -136,7 +136,7 @@ export class PetController {
 
     if (botao.dataset.acao === 'editar-pet') {
       if (pet.possuiConsultaAgendada) {
-        window.alert(MENSAGEM_EDICAO_COM_CONSULTA);
+        window.alert(MENSAGEM_CONSULTA_ATIVA);
         return;
       }
       this.preencherFormulario(pet);
@@ -235,6 +235,7 @@ export class PetController {
       await this.contexto.recarregarTudo();
     } catch (erro) {
       const mensagem = mensagemErro(erro);
+      if (this.avisarConsultaAtiva(mensagem)) return;
       marcarInvalido(nome, mensagem);
       mostrarToast(mensagem, 'erro');
       nome.focus();
@@ -245,6 +246,10 @@ export class PetController {
 
   private async inativar(pet: Pet, botao: HTMLButtonElement): Promise<void> {
     if (!this.contexto.auth.isAdmin()) return;
+    if (pet.possuiConsultaAgendada) {
+      window.alert(MENSAGEM_CONSULTA_ATIVA);
+      return;
+    }
     const motivo = await pedirMotivo({
       titulo: 'Inativar pet',
       descricao:
@@ -261,10 +266,19 @@ export class PetController {
       mostrarToast('Pet inativado. O motivo foi registrado na auditoria.', 'sucesso');
       await this.contexto.recarregarTudo();
     } catch (erro) {
-      mostrarToast(mensagemErro(erro), 'erro');
+      const mensagem = mensagemErro(erro);
+      if (this.avisarConsultaAtiva(mensagem)) return;
+      mostrarToast(mensagem, 'erro');
     } finally {
       setCarregando(botao, false);
     }
+  }
+
+  /** Fallback para lista desatualizada: o backend sinaliza consulta ativa na mensagem. */
+  private avisarConsultaAtiva(mensagem: string): boolean {
+    if (!/consulta/i.test(mensagem)) return false;
+    window.alert(MENSAGEM_CONSULTA_ATIVA);
+    return true;
   }
 
   private async reativar(pet: Pet, botao: HTMLButtonElement): Promise<void> {

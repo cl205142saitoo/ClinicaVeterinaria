@@ -34,7 +34,6 @@ export type {
   DadosPet,
   DadosProntuario,
   DadosProduto,
-  DadosRegistro,
   DadosRegistroAnexo,
   DadosRegistroVacina,
   DadosStatusOrcamento,

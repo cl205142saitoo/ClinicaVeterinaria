@@ -31,7 +31,6 @@ import type {
   DadosPet,
   DadosProduto,
   DadosProntuario,
-  DadosRegistro,
   DadosRegistroAnexo,
   DadosRegistroVacina,
   DadosStatusOrcamento,
@@ -70,7 +69,6 @@ const api: Api = {
   criarPet: (dados: DadosPet) => invocar<Pet>(IPC_CHANNELS.PETS_CRIAR, dados),
   deletarPet: (id: number) => invocar<Pet>(IPC_CHANNELS.PETS_DELETAR, id),
   login: (email: string, senha: string) => invocar<Usuario>(IPC_CHANNELS.AUTH_LOGIN, email, senha),
-  registrarUsuario: (dados: DadosRegistro) => invocar<Usuario>(IPC_CHANNELS.AUTH_REGISTRAR, dados),
   logout: () => invocar<void>(IPC_CHANNELS.AUTH_LOGOUT),
   consultasListar: (filtro?: FiltroAgenda) =>
     invocar<ConsultaAgenda[]>(IPC_CHANNELS.CONSULTAS_LISTAR, filtro),

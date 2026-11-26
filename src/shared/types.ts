@@ -111,13 +111,6 @@ export interface DadosPet {
   nascimento?: string;
 }
 
-/** Cadastro público: o perfil é fixado no backend e nunca vem do renderer. */
-export interface DadosRegistro {
-  nome: string;
-  email: string;
-  senha: string;
-}
-
 /** Status em ASCII para evitar divergência entre banco, backend e renderer. */
 export type StatusConsulta = 'AGENDADA' | 'CONFIRMADA' | 'CONCLUIDA' | 'CANCELADA';
 
@@ -362,6 +355,8 @@ export interface DadosAtualizacaoUsuario {
   rg: string | null;
   role: Role;
   ativo: boolean;
+  /** Opcional; ausente/vazio = mantém o hash atual. */
+  novaSenha?: string;
 }
 
 /** Reagendamento/correção administrativa; nunca altera campos clínicos. */
@@ -691,7 +686,6 @@ export interface Api {
   criarPet(dados: DadosPet): Promise<Pet>;
   deletarPet(id: number): Promise<Pet>;
   login(email: string, senha: string): Promise<Usuario>;
-  registrarUsuario(dados: DadosRegistro): Promise<Usuario>;
   logout(): Promise<void>;
   consultasListar(filtro?: FiltroAgenda): Promise<ConsultaAgenda[]>;
   consultasCriar(dados: DadosConsulta): Promise<ConsultaAgenda>;

@@ -8,12 +8,25 @@
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body class="bg-light">
+  <!-- Sprite local de ícones de senha (evita dependência de Bootstrap Icons). -->
+  <svg xmlns="http://www.w3.org/2000/svg" style="display: none" aria-hidden="true">
+    <symbol id="iconeOlho" viewBox="0 0 16 16">
+      <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z" />
+      <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z" />
+    </symbol>
+    <symbol id="iconeOlhoCortado" viewBox="0 0 16 16">
+      <path d="M13.359 11.238C15.06 9.72 16 8 16 8s-3-5.5-8-5.5a7.028 7.028 0 0 0-2.79.588l.77.771A5.944 5.944 0 0 1 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.134 13.134 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755-.165.165-.337.328-.517.486l.708.709z" />
+      <path d="M11.297 9.176a3.5 3.5 0 0 0-4.474-4.474l.823.823a2.5 2.5 0 0 1 2.829 2.829l.822.822zm-2.943 1.299.822.822a3.5 3.5 0 0 1-4.474-4.474l.823.823a2.5 2.5 0 0 0 2.829 2.829z" />
+      <path d="M3.35 5.47c-.18.16-.353.322-.518.487A13.134 13.134 0 0 0 1.172 8l.195.288c.335.48.83 1.12 1.465 1.755C4.121 11.332 5.881 12.5 8 12.5c.716 0 1.39-.133 2.02-.36l.77.772A7.029 7.029 0 0 1 8 13.5C3 13.5 0 8 0 8s.939-1.721 2.641-3.238l.708.709z" />
+      <path d="M13.646 14.354l-12-12 .708-.708 12 12-.708.708z" />
+    </symbol>
+  </svg>
   <noscript>
     <div class="alert alert-warning m-3" role="alert">É necessário habilitar JavaScript para utilizar o PetHealthPD.</div>
   </noscript>
 
   <div class="container-fluid py-3">
-    <!-- TELA DE LOGIN / PRIMEIRO ACESSO -->
+    <!-- TELA DE LOGIN -->
     <section id="telaLogin" class="row justify-content-center" aria-labelledby="tituloLogin">
       <div class="col-12 col-md-10 col-lg-7 col-xl-5">
         <div class="card shadow-sm">
@@ -29,35 +42,15 @@
               </div>
               <div class="mb-3">
                 <label for="lSenha" class="form-label">Senha</label>
-                <input id="lSenha" type="password" class="form-control" autocomplete="current-password" aria-describedby="lSenhaFeedback" required />
-                <div id="lSenhaFeedback" class="invalid-feedback"></div>
+                <div class="input-group has-validation">
+                  <input id="lSenha" type="password" class="form-control" autocomplete="current-password" aria-describedby="lSenhaFeedback" required />
+                  <button type="button" class="btn btn-outline-secondary" data-mostrar-senha="lSenha" aria-label="Mostrar senha" aria-pressed="false" title="Mostrar senha">
+                    <svg width="16" height="16" fill="currentColor" aria-hidden="true"><use href="#iconeOlho" /></svg>
+                  </button>
+                  <div id="lSenhaFeedback" class="invalid-feedback"></div>
+                </div>
               </div>
               <button id="btnLogin" type="submit" class="btn btn-primary w-100">Entrar</button>
-            </form>
-
-            <hr class="my-4" />
-
-            <h2 class="h5 card-title mb-3">Primeiro acesso — criar conta</h2>
-            <div class="alert alert-info py-2 small" role="note">
-              Contas criadas aqui recebem o perfil de <strong>Atendente</strong>. Perfis com mais permissões são definidos por um administrador.
-            </div>
-            <form id="formRegistro" novalidate>
-              <div class="mb-3">
-                <label for="rNome" class="form-label">Nome completo</label>
-                <input id="rNome" type="text" class="form-control" autocomplete="name" aria-describedby="rNomeFeedback" required />
-                <div id="rNomeFeedback" class="invalid-feedback"></div>
-              </div>
-              <div class="mb-3">
-                <label for="rEmail" class="form-label">E-mail</label>
-                <input id="rEmail" type="email" class="form-control" autocomplete="email" aria-describedby="rEmailFeedback" required />
-                <div id="rEmailFeedback" class="invalid-feedback"></div>
-              </div>
-              <div class="mb-3">
-                <label for="rSenha" class="form-label">Senha</label>
-                <input id="rSenha" type="password" class="form-control" autocomplete="new-password" aria-describedby="rSenhaFeedback" minlength="6" required />
-                <div id="rSenhaFeedback" class="invalid-feedback"></div>
-              </div>
-              <button id="btnRegistrar" type="submit" class="btn btn-success w-100">Cadastrar usuário</button>
             </form>
           </div>
         </div>
@@ -81,7 +74,7 @@
         <li class="nav-item" role="presentation">
           <button class="nav-link" id="abaAgenda-tab" data-bs-toggle="tab" data-bs-target="#abaAgenda" type="button" role="tab" aria-controls="abaAgenda" aria-selected="false">Agenda</button>
         </li>
-        <li class="nav-item" role="presentation">
+        <li class="nav-item" role="presentation" id="abaProntuario-item">
           <button class="nav-link" id="abaProntuario-tab" data-bs-toggle="tab" data-bs-target="#abaProntuario" type="button" role="tab" aria-controls="abaProntuario" aria-selected="false">Prontuário</button>
         </li>
         <li class="nav-item" role="presentation">
@@ -1584,8 +1577,13 @@
                         </div>
                         <div class="mb-3">
                           <label for="nuSenha" class="form-label">Senha (mínimo 6 caracteres)</label>
-                          <input id="nuSenha" type="password" class="form-control" autocomplete="new-password" aria-describedby="nuSenhaFeedback" required />
-                          <div id="nuSenhaFeedback" class="invalid-feedback"></div>
+                          <div class="input-group has-validation">
+                            <input id="nuSenha" type="password" class="form-control" autocomplete="new-password" aria-describedby="nuSenhaFeedback" required />
+                            <button type="button" class="btn btn-outline-secondary" data-mostrar-senha="nuSenha" aria-label="Mostrar senha" aria-pressed="false" title="Mostrar senha">
+                              <svg width="16" height="16" fill="currentColor" aria-hidden="true"><use href="#iconeOlho" /></svg>
+                            </button>
+                            <div id="nuSenhaFeedback" class="invalid-feedback"></div>
+                          </div>
                         </div>
                         <div class="row g-3">
                           <div class="col-12 col-sm-6 mb-3">
@@ -1622,8 +1620,13 @@
                         </div>
                         <div class="mb-3">
                           <label for="naSenha" class="form-label">Senha (mínimo 6 caracteres)</label>
-                          <input id="naSenha" type="password" class="form-control" autocomplete="new-password" aria-describedby="naSenhaFeedback" required />
-                          <div id="naSenhaFeedback" class="invalid-feedback"></div>
+                          <div class="input-group has-validation">
+                            <input id="naSenha" type="password" class="form-control" autocomplete="new-password" aria-describedby="naSenhaFeedback" required />
+                            <button type="button" class="btn btn-outline-secondary" data-mostrar-senha="naSenha" aria-label="Mostrar senha" aria-pressed="false" title="Mostrar senha">
+                              <svg width="16" height="16" fill="currentColor" aria-hidden="true"><use href="#iconeOlho" /></svg>
+                            </button>
+                            <div id="naSenhaFeedback" class="invalid-feedback"></div>
+                          </div>
                         </div>
                         <div class="mb-3">
                           <label for="naRg" class="form-label">RG</label>
@@ -1649,6 +1652,7 @@
                           <th scope="col">Nome</th>
                           <th scope="col">E-mail</th>
                           <th scope="col">Perfil</th>
+                          <th scope="col">CRMV</th>
                           <th scope="col">Situação</th>
                           <th scope="col">Criado em</th>
                           <th scope="col">Ações</th>
@@ -1952,6 +1956,17 @@
                 <label for="euRg" class="form-label">RG</label>
                 <input id="euRg" type="text" class="form-control" inputmode="numeric" maxlength="11" aria-describedby="euRgFeedback" />
                 <div id="euRgFeedback" class="invalid-feedback"></div>
+              </div>
+              <div class="col-12 col-sm-6 mb-3">
+                <label for="euNovaSenha" class="form-label">Nova senha</label>
+                <div class="input-group has-validation">
+                  <input id="euNovaSenha" type="password" class="form-control" autocomplete="new-password" aria-describedby="euNovaSenhaHelp euNovaSenhaFeedback" />
+                  <button type="button" class="btn btn-outline-secondary" data-mostrar-senha="euNovaSenha" aria-label="Mostrar senha" aria-pressed="false" title="Mostrar senha">
+                    <svg width="16" height="16" fill="currentColor" aria-hidden="true"><use href="#iconeOlho" /></svg>
+                  </button>
+                  <div id="euNovaSenhaFeedback" class="invalid-feedback"></div>
+                </div>
+                <div id="euNovaSenhaHelp" class="form-text">Deixe em branco para manter a senha atual.</div>
               </div>
             </div>
             <div class="mb-3">
